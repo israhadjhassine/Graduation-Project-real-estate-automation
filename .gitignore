@@ -32,3 +32,15 @@ Thumbs.db
 dist/
 build/
 *.tgz
+.nuxt/
+.output/
+
+# 7. Python specific
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+.pytest_cache/
+.mypy_cache/

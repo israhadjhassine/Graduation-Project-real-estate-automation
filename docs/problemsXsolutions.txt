@@ -1,0 +1,13 @@
+-Why Using One Client ID Can Be Problematic
+
+If both use the same Client ID:
+
+All redirect URIs must be added to one OAuth config
+
+Harder to debug redirect mismatch errors
+
+If you change something for one app, it may break the other
+
+If you deploy one app, you must update the same client again
+
+Security becomes less isolated
