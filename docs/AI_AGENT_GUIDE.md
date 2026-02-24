@@ -49,26 +49,23 @@ Refer to the following files in the repository for the most up-to-date status:
 - **Advanced Search**: Filter by price, location, bedrooms, property type (sale/rent).
 - **AI Semantic Search**: Natural language queries (e.g., "Cozy quiet house near the beach").
 - **Interactive Map**: Visualize property locations using Leaflet.
-- **Favorites**: Heart/Save properties for later (Personalized dashboard).
-- **Saved Searches**: Get notified when new properties match specific criteria.
+- **AI Property Assistant**: Chatbot that answers specific questions about a property (e.g., "Is there a school nearby?") using RAG.
 - **Telegram Bot**: Search properties and inquire via chat.
 
 ### 2. Sub-Agent
-- **Listing Management**: CRUD properties (Title, price, detailed specs).
-- **Image Gallery**: Upload and manage multiple photos (Set primary image).
-- **Amenities Logic**: Tag properties with features (Pool, Garden, WIFI).
-- **Calendar Sync**: View and manage visit appointments synced with Google Calendar.
-- **Inquiry Management**: Respond to leads from Telegram/Web.
+- **Inquiry Management**: Dashboard to view and respond to leads coming from the Web or Telegram.
+- **Visit Management**: View appointments and Check the finished visits for the properties.
+- **Communication**: Bridge between the platform and the client for specific properties.
 
 ### 3. Head Agent (Manager)
+- **Listing Management**: **Exclusive role** for creating and editing property listings.
+- **Image Gallery**: Responsibility for uploading and managing high-quality property photos.
 - **Staff Control**: Recruit and manage Sub-Agents for their Agency.
-- **Performance View**: Monitor total listings and visit counts for the agency.
-- **Trust Score**: Responsible for maintaining the agency's verification status.
+- **Analytics**: Monitor total listings and visit counts for the agency.
 
 ### 4. Administrator
-- **Platform Moderation**: Use the `ModerationLog` to verify/block suspicious listings.
 - **User Management**: Approve/Revoke access for Head Agents and Agencies.
-- **Trust Analytics**: Monitor platform-wide safety trends.
+- **Analytics**: Monitor platform-wide performance and growth trends.
 
 ---
 
@@ -78,27 +75,12 @@ Refer to the following files in the repository for the most up-to-date status:
 1. **Request**: User enters "Modern villa for a large family" on Nuxt frontend.
 2. **FastAPI**: Sends text to **Google Gemini API** (`text-embedding-004`).
 3. **PostgreSQL**: Performs a **Cosine Similarity** search on the `description_vector` column using `pgvector`.
-4. **Result**: Returns top matches based on "concept" rather than just keywords.
+4. **Result**: Returns top matches based on "concept".
 
-### ⚡ Workflow B: Visit Scheduling (The "n8n Glue")
-1. **Trigger**: User clicks "Schedule Visit" on a Property page or Telegram.
-2. **n8n Workflow**:
-   - Checks the assigned Agent's **Google Calendar** for free slots.
-   - Proposes slots to the User.
-   - User picks a time.
-3. **Action**: n8n creates the Calendar event AND sends a **Telegram Notification** to the Agent.
-4. **Update**: FastAPI updates the appointment status in the database to `confirmed`.
-
-### ⚡ Workflow C: Lead Acquisition via Telegram
-1. **Bot Interaction**: User finds a property on the Telegram Bot.
-2. **Webhook**: Telegram sends data to **n8n**.
-3. **Capture**: n8n stores the lead details in the DB and notifies the listing Agent.
-
-### ⚡ Workflow D: Trust & Moderation Audit
-1. **AI Flag**: Gemini scans a newly uploaded description.
-2. **Risk Check**: If spam/toxicity is high, the property is set to `pending`.
-3. **Logging**: A record is created in `ModerationLog`.
-4. **Admin Review**: Admin sees the flag in the dashboard and decides to Approve/Reject.
+### ⚡ Workflow C: AI Property Assistant (RAG)
+1. **Question**: Visitor asks "Does this villa have a lot of sun?" on a property page.
+2. **Context Retrieval**: FastAPI fetches all text data (Description, Features, Neighborhood tags) for that specific property.
+3. **AI Generation**: **Google Gemini Pro** processes the question *only* using the retrieved data as context (RAG).
 
 ---
 

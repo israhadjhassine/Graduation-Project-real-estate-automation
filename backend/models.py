@@ -41,8 +41,6 @@ class Agency(Base):
     id = Column(BigInteger, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
     license_number = Column(String(100), unique=True)
-    trust_score = Column(Integer, default=50) # 0 to 100
-    is_verified = Column(Boolean, default=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
     members = relationship("User", back_populates="agency")
@@ -106,7 +104,6 @@ class Property(Base):
     
     # System Fields
     is_featured = Column(Boolean, default=False)
-    is_verified = Column(Boolean, default=False)
     published_at = Column(TIMESTAMP)
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())

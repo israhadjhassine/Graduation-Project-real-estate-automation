@@ -26,9 +26,7 @@ def seed_db():
         print("🏢 Creating Agency...")
         agency = models.Agency(
             name="Elite Real Estate Tunisia",
-            license_number="LIC-2026-001",
-            trust_score=95,
-            is_verified=True
+            license_number="LIC-2026-001"
         )
         db.add(agency)
         db.commit()
@@ -139,7 +137,6 @@ def seed_db():
                 agency_id=agency.id,
                 agent_id=created_users[p["agent"]].id,
                 owner_id=created_users["manager@elite.tn"].id,
-                is_verified=True,
                 published_at=datetime.utcnow()
             )
             
