@@ -61,7 +61,26 @@ Send these instructions to your partner:
     ```bash
     docker-compose up --build -d
     ```
-4.  **Seed the Database** (Optional):
+
+---
+
+## 🔍 How to find your n8n Data Path
+
+If your partner wants to use their existing n8n account (workflows and credentials), they need to find their `.n8n` folder:
+
+- **Windows (Standard)**: `C:/Users/<Username>/.n8n`
+- **Windows (Custom)**: `C:/n8n` (If they installed it directly on C:)
+- **Mac/Linux**: `/home/<Username>/.n8n` or `~/.n8n`
+
+**To find it quickly on Windows:**
+1. Open File Explorer.
+2. If it's not in your User folder, check `C:/n8n`.
+3. Copy that full path into the `.env` file under `N8N_USER_DATA_PATH`.
+   - Example: `N8N_USER_DATA_PATH=C:/n8n`
+
+---
+
+## 4. Seed the Database (Optional)
     If they want the same test data:
     ```bash
     docker exec -it FastAPI_backend python seed.py
@@ -69,7 +88,7 @@ Send these instructions to your partner:
 
 ---
 
-## 4. Daily Workflow
+## 5. Daily Workflow
 
 - **Before starting work**: Pull latest changes.
   ```bash
