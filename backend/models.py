@@ -1,9 +1,9 @@
 from sqlalchemy import (
-    Column, Integer, String, Boolean, Text, Numeric, Decimal, 
+    Column, Integer, String, Boolean, Text, Numeric, 
     TIMESTAMP, ForeignKey, Table, Enum, BigInteger, func
 )
 from sqlalchemy.orm import relationship
-from .database import Base
+from database import Base
 from pgvector.sqlalchemy import Vector
 import datetime
 
@@ -108,8 +108,8 @@ class Property(Base):
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
-    # AI SEARCH: Store Gemini Embedding (768 dimensions)
-    description_vector = Column(Vector(768))
+    # AI SEARCH: Store Gemini Embedding (3072 dimensions for gemini-embedding-001)
+    description_vector = Column(Vector(3072))
 
     # Relationships
     owner_id = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"))

@@ -1,0 +1,69 @@
+{
+    "name": "Google Calendar Visit Sync",
+    "nodes": [
+        {
+            "parameters": {
+                "pollTimes": {
+                    "item": [
+                        {
+                            "mode": "everyMinute"
+                        }
+                    ]
+                },
+                "calendar": {
+                    "__rl": true,
+                    "value": "primary",
+                    "mode": "list",
+                    "cachedResultName": "primary"
+                }
+            },
+            "id": "1",
+            "name": "Calendar Trigger",
+            "type": "n8n-nodes-base.googleCalendarTrigger",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "url": "http://backend:8000/visits",
+                "method": "POST",
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "summary",
+                            "value": "={{ $json.summary }}"
+                        },
+                        {
+                            "name": "start_time",
+                            "value": "={{ $json.start.dateTime }}"
+                        }
+                    ]
+                }
+            },
+            "id": "2",
+            "name": "Sync to Dashboard",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 1,
+            "position": [
+                450,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "1": {
+            "main": [
+                [
+                    {
+                        "node": "2",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

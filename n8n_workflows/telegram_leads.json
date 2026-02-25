@@ -1,0 +1,91 @@
+{
+    "name": "Telegram Lead Capture to Agent",
+    "nodes": [
+        {
+            "parameters": {
+                "updates": [
+                    "message"
+                ]
+            },
+            "id": "1",
+            "name": "Telegram Trigger",
+            "type": "n8n-nodes-base.telegramTrigger",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "modelId": {
+                    "__rl": true,
+                    "value": "gemini-1.5-pro",
+                    "mode": "list",
+                    "cachedResultName": "gemini-1.5-pro"
+                },
+                "messages": {
+                    "messageValues": [
+                        {
+                            "message": "Extract the following from the message: Property Name/Location, Budget, and Contact Info if provided. Reply ONLY in JSON format."
+                        }
+                    ]
+                }
+            },
+            "id": "2",
+            "name": "AI Lead Extraction",
+            "type": "n8n-nodes-base.googleGeminiChat",
+            "typeVersion": 1,
+            "position": [
+                450,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "url": "http://backend:8000/inquiries",
+                "method": "POST",
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "message",
+                            "value": "={{ $json.text }}"
+                        }
+                    ]
+                }
+            },
+            "id": "3",
+            "name": "FastAPI Record",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 1,
+            "position": [
+                650,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "1": {
+            "main": [
+                [
+                    {
+                        "node": "2",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "2": {
+            "main": [
+                [
+                    {
+                        "node": "3",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

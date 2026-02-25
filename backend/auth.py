@@ -7,7 +7,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 import os
 
-from . import models, schemas, database
+import models, schemas, database
 
 # --- Configuration ---
 # Secret key and algorithm for signing the JWT
@@ -16,9 +16,8 @@ SECRET_KEY = os.getenv("JWT_SECRET_KEY", "doublechawarma")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
-# --- Password Hashing ---
-# CryptContext handles the "bcrypt" hashing algorithm automatically
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# CryptContext handles the "pbkdf2_sha256" hashing algorithm for better container compatibility
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 # --- Security ---
 # OAuth2PasswordBearer is a class that FastAPI uses to extract the token from the Header

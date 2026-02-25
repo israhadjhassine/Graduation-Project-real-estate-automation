@@ -8,19 +8,30 @@ from sqlalchemy.orm import Session
 from database import SessionLocal, engine
 import models
 import auth
+import ai_utils
 from datetime import datetime
 
 def seed_db():
     print("🚀 Starting Database Seeding...")
+    # Ensure pgvector extension and tables exist
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        conn.commit()
+    
+    models.Base.metadata.drop_all(bind=engine)
+    models.Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     
     try:
-        # 1. Clear existing data (Optional, be careful with this in production!)
-        # db.query(models.PropertyImage).delete()
-        # db.query(models.Property).delete()
-        # db.query(models.User).delete()
-        # db.query(models.Agency).delete()
-        # db.commit()
+        # 1. Clear existing data
+        db.query(models.PropertyImage).delete()
+        db.query(models.PropertyFavorite).delete()
+        db.query(models.Feature).delete()
+        db.query(models.Property).delete()
+        db.query(models.User).delete()
+        db.query(models.Agency).delete()
+        db.commit()
 
         # 2. Create an Agency
         print("🏢 Creating Agency...")
@@ -83,7 +94,7 @@ def seed_db():
                 "bedrooms": 5,
                 "bathrooms": 4,
                 "area": 450,
-                "image": "/seed-images/villa.png",
+                "image": "/static/seed-images/villa.png",
                 "agent": "agent1@elite.tn",
                 "features": ["Swimming Pool", "Sea View", "Smart Home", "Garage"]
             },
@@ -99,7 +110,7 @@ def seed_db():
                 "bedrooms": 3,
                 "bathrooms": 2,
                 "area": 180,
-                "image": "/seed-images/apartment.png",
+                "image": "/static/seed-images/apartment.png",
                 "agent": "agent2@elite.tn",
                 "features": ["Gym", "High-speed Internet", "Garage"]
             },
@@ -115,7 +126,7 @@ def seed_db():
                 "bedrooms": 4,
                 "bathrooms": 3,
                 "area": 320,
-                "image": "/seed-images/house.png",
+                "image": "/static/seed-images/house.png",
                 "agent": "agent1@elite.tn",
                 "features": ["Garden", "Garage"]
             }
@@ -137,7 +148,8 @@ def seed_db():
                 agency_id=agency.id,
                 agent_id=created_users[p["agent"]].id,
                 owner_id=created_users["manager@elite.tn"].id,
-                published_at=datetime.utcnow()
+                published_at=datetime.utcnow(),
+                description_vector=ai_utils.get_embedding(p["description"])
             )
             
             # Add features
