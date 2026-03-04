@@ -6,8 +6,8 @@
       <!-- Header -->
       <div class="p-8 border-b border-primary-50 flex items-center justify-between bg-primary-50/30">
         <div>
-          <h2 class="text-3xl font-bold text-primary-950">List New Property</h2>
-          <p class="text-primary-400 text-sm">Fill in the details for your exclusive listing</p>
+          <h2 class="text-3xl font-bold text-primary-950">{{ isEdit ? 'Edit Property Details' : 'List New Property' }}</h2>
+          <p class="text-primary-400 text-sm">{{ isEdit ? 'Update the information for this listing' : 'Fill in the details for your exclusive listing' }}</p>
         </div>
         <button @click="$emit('close')" class="w-12 h-12 rounded-full hover:bg-white transition-colors flex items-center justify-center">
           <LucideX class="w-6 h-6 text-primary-400" />
@@ -21,16 +21,16 @@
            <div class="space-y-6">
              <div>
                <label class="block text-xs font-bold text-primary-400 uppercase tracking-widest mb-3">Property Title</label>
-               <input v-model="form.title" type="text" placeholder="Luxury Penthouse in Gammarth" class="form-input" />
+               <input v-model="form.title" type="text" :disabled="readOnly" placeholder="Luxury Penthouse in Gammarth" class="form-input" />
              </div>
              <div>
                <label class="block text-xs font-bold text-primary-400 uppercase tracking-widest mb-3">Address / City</label>
-               <input v-model="form.city" type="text" placeholder="Gammarth, Tunis" class="form-input" />
+               <input v-model="form.city" type="text" :disabled="readOnly" placeholder="Gammarth, Tunis" class="form-input" />
              </div>
              <div class="grid grid-cols-2 gap-4">
                 <div>
                   <label class="block text-xs font-bold text-primary-400 uppercase tracking-widest mb-3">Type</label>
-                  <select v-model="form.property_type" class="form-input">
+                  <select v-model="form.property_type" :disabled="readOnly" class="form-input">
                     <option value="apartment">Apartment</option>
                     <option value="house">House</option>
                     <option value="villa">Villa</option>
@@ -38,7 +38,7 @@
                 </div>
                 <div>
                   <label class="block text-xs font-bold text-primary-400 uppercase tracking-widest mb-3">Listing</label>
-                  <select v-model="form.listing_type" class="form-input">
+                  <select v-model="form.listing_type" :disabled="readOnly" class="form-input">
                     <option value="sale">For Sale</option>
                     <option value="rent">For Rent</option>
                   </select>
@@ -49,17 +49,35 @@
            <div class="space-y-6">
              <div>
                 <label class="block text-xs font-bold text-primary-400 uppercase tracking-widest mb-3">Description</label>
-                <textarea v-model="form.description" rows="4" placeholder="Describe the property... High-quality descriptions improve AI matching." class="form-input resize-none"></textarea>
+                <textarea v-model="form.description" :disabled="readOnly" rows="4" placeholder="Describe the property... High-quality descriptions improve AI matching." class="form-input resize-none"></textarea>
              </div>
              <div class="grid grid-cols-2 gap-4">
                 <div>
                   <label class="block text-xs font-bold text-primary-400 uppercase tracking-widest mb-3">Price (TND)</label>
-                  <input v-model="form.price" type="number" class="form-input" />
+                  <input v-model="form.price" type="number" :disabled="readOnly" class="form-input" />
                 </div>
                 <div>
                   <label class="block text-xs font-bold text-primary-400 uppercase tracking-widest mb-3">Area (m²)</label>
-                  <input v-model="form.area" type="number" class="form-input" />
+                  <input v-model="form.area" type="number" :disabled="readOnly" class="form-input" />
                 </div>
+             </div>
+             
+             <!-- Agent Assignment -->
+             <div v-if="auth.isAdmin || auth.isHeadAgent">
+                <label class="block text-xs font-bold text-primary-400 uppercase tracking-widest mb-3">Assign Agent</label>
+                <select v-model="form.agent_id" :disabled="readOnly" class="form-input">
+                   <option :value="null">Unassigned</option>
+                   <option v-for="agent in staff" :key="agent.id" :value="agent.id">{{ agent.full_name }}</option>
+                </select>
+             </div>
+             
+             <!-- Owner Assignment (Admin only) -->
+             <div v-if="auth.isAdmin">
+                <label class="block text-xs font-bold text-primary-400 uppercase tracking-widest mb-3">Team Assignment (Head Agent)</label>
+                <select v-model="form.owner_id" :disabled="readOnly" class="form-input">
+                   <option :value="null">No Team (Admin Managed)</option>
+                   <option v-for="head in heads" :key="head.id" :value="head.id">{{ head.full_name }}</option>
+                </select>
              </div>
            </div>
         </section>
@@ -70,14 +88,14 @@
               <LucideBedDouble class="w-6 h-6 text-primary-300" />
               <div class="flex-1">
                 <p class="text-[10px] uppercase font-bold text-primary-300">Bedrooms</p>
-                <input v-model="form.bedrooms" type="number" class="bg-transparent border-none p-0 focus:ring-0 text-xl font-bold w-full" />
+                <input v-model="form.bedrooms" type="number" :disabled="readOnly" class="bg-transparent border-none p-0 focus:ring-0 text-xl font-bold w-full" />
               </div>
            </div>
            <div class="flex items-center gap-4 bg-primary-50/50 p-4 rounded-3xl border border-primary-100/50">
               <LucideBath class="w-6 h-6 text-primary-300" />
               <div class="flex-1">
                 <p class="text-[10px] uppercase font-bold text-primary-300">Bathrooms</p>
-                <input v-model="form.bathrooms" type="number" class="bg-transparent border-none p-0 focus:ring-0 text-xl font-bold w-full" />
+                <input v-model="form.bathrooms" type="number" :disabled="readOnly" class="bg-transparent border-none p-0 focus:ring-0 text-xl font-bold w-full" />
               </div>
            </div>
         </section>
@@ -88,11 +106,11 @@
            <div class="grid grid-cols-4 gap-4">
               <div v-for="(img, i) in previews" :key="i" class="relative group aspect-square rounded-2xl overflow-hidden border border-primary-100">
                  <img :src="img" class="w-full h-full object-cover" />
-                 <button @click="removeImage(i)" class="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                 <button v-if="!readOnly" @click="removeImage(i)" class="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                     <LucideX class="w-3 h-3" />
                  </button>
               </div>
-              <label class="aspect-square rounded-2xl border-2 border-dashed border-primary-200 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-primary-50 hover:border-primary-400 transition-all text-primary-300 hover:text-primary-600">
+              <label v-if="!readOnly" class="aspect-square rounded-2xl border-2 border-dashed border-primary-200 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-primary-50 hover:border-primary-400 transition-all text-primary-300 hover:text-primary-600">
                  <LucidePlus class="w-6 h-6" />
                  <span class="text-[10px] font-bold uppercase tracking-widest">Add Photos</span>
                  <input type="file" multiple @change="handleFileChange" class="hidden" accept="image/*" />
@@ -103,10 +121,10 @@
 
       <!-- Footer -->
       <div class="p-8 bg-primary-50/50 border-t border-primary-50 flex justify-end gap-4">
-        <button @click="$emit('close')" class="px-8 py-3 text-sm font-bold text-primary-400 hover:text-primary-950 transition-colors">Cancel</button>
-        <button @click="handleSubmit" class="btn-primary !px-12" :disabled="loading">
+        <button @click="$emit('close')" class="px-8 py-3 text-sm font-bold text-primary-400 hover:text-primary-950 transition-colors">{{ readOnly ? 'Close' : 'Cancel' }}</button>
+        <button v-if="!readOnly" @click="handleSubmit" class="btn-primary !px-12" :disabled="loading">
           <LucideLoader2 v-if="loading" class="w-5 h-5 animate-spin" />
-          <span v-else>List Property</span>
+          <span v-else>{{ isEdit ? 'Save Changes' : 'List Property' }}</span>
         </button>
       </div>
     </div>
@@ -117,14 +135,27 @@
 import { LucideX, LucideBedDouble, LucideBath, LucideLoader2, LucidePlus } from 'lucide-vue-next'
 
 const props = defineProps({
-  show: Boolean
+  show: Boolean,
+  editData: {
+    type: Object,
+    default: null
+  },
+  readOnly: {
+    type: Boolean,
+    default: false
+  }
 })
+
+const auth = useAuthStore()
 
 const emit = defineEmits(['close', 'success'])
 const api = useApi()
 const loading = ref(false)
 const selectedFiles = ref([])
 const previews = ref([])
+const staff = ref([])
+const heads = ref([])
+const isEdit = computed(() => !!props.editData)
 
 const form = ref({
   title: '',
@@ -137,7 +168,42 @@ const form = ref({
   bedrooms: 0,
   bathrooms: 0,
   city: '',
-  country: 'Tunisia'
+  country: 'Tunisia',
+  agent_id: null,
+  owner_id: null
+})
+
+watch(() => props.editData, (newVal) => {
+  if (newVal) {
+    form.value = { ...newVal }
+    // Ensure nested objects don't break simple binding if any
+  } else {
+    form.value = {
+      title: '', slug: '', description: '', property_type: 'villa',
+      listing_type: 'sale', price: 0, area: 0, bedrooms: 0,
+      bathrooms: 0, city: '', country: 'Tunisia', agent_id: null, owner_id: null
+    }
+  }
+}, { immediate: true })
+
+const fetchStaff = async () => {
+   if (auth.isAdmin || auth.isHeadAgent) {
+      try {
+         const res = await api.get('/agency/staff')
+         staff.value = res.data
+         
+         if (auth.isAdmin) {
+           const headsRes = await api.get('/admin/head_agents')
+           heads.value = headsRes.data
+         }
+      } catch (e) {
+         console.error("Failed to load staff", e)
+      }
+   }
+}
+
+onMounted(() => {
+   fetchStaff()
 })
 
 const handleFileChange = (e) => {
@@ -158,15 +224,22 @@ const removeImage = (index) => {
 
 const handleSubmit = async () => {
   loading.value = true
-  // Generate slug simple version
-  form.value.slug = form.value.title.toLowerCase().replace(/ /g, '-') + '-' + Date.now()
   
   try {
-    // 1. Create Property
-    const propRes = await api.post('/properties', form.value)
-    const propertyId = propRes.data.id
+    let propertyId
+    if (isEdit.value) {
+      // Update existing
+      await api.put(`/properties/${props.editData.id}`, form.value)
+      propertyId = props.editData.id
+    } else {
+      // Generate slug simple version for new props only
+      form.value.slug = form.value.title.toLowerCase().replace(/ /g, '-') + '-' + Date.now()
+      // Create Property
+      const propRes = await api.post('/properties', form.value)
+      propertyId = propRes.data.id
+    }
     
-    // 2. Upload Images if any
+    // 2. Upload Images if any NEW ones were selected
     if (selectedFiles.value.length > 0) {
       const formData = new FormData()
       selectedFiles.value.forEach(file => {
@@ -177,8 +250,11 @@ const handleSubmit = async () => {
     
     emit('success')
   } catch (e) {
-    console.error(e)
-    alert('Failed to list property. Check if fields are correct.')
+    console.error("Property save error:", e)
+    const errorMsg = e.response?.data?.detail 
+      ? (typeof e.response.data.detail === 'string' ? e.response.data.detail : JSON.stringify(e.response.data.detail))
+      : 'Failed to save property. Check if fields are correct.'
+    alert(errorMsg)
   } finally {
     loading.value = false
   }

@@ -76,7 +76,18 @@ const handleLogin = async () => {
   error.value = ''
   try {
     await auth.login(email.value, password.value)
-    navigateTo('/')
+    
+    // Redirect based on role
+    if (auth.isAdmin) {
+      navigateTo('/admin')
+    } else if (auth.isHeadAgent) {
+      navigateTo('/agency')
+    } else if (auth.isAgent) {
+      navigateTo('/agent')
+    } else {
+      navigateTo('/')
+    }
+    
   } catch (e) {
     error.value = 'Invalid email or password. Please try again.'
   } finally {

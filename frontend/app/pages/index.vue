@@ -6,38 +6,16 @@
       <div class="absolute -top-40 -left-20 w-96 h-96 bg-primary-200/30 blur-[120px] rounded-full"></div>
       <div class="absolute -bottom-40 -right-20 w-80 h-80 bg-accent-100/40 blur-[100px] rounded-full"></div>
 
-      <div class="relative z-10 max-w-4xl">
-        <h1 class="text-6xl md:text-8xl font-bold text-primary-950 mb-8 leading-[1.1]">
-          The Art of <span class="text-accent-500 font-serif italic font-normal">Living</span> <br/> 
-          Defined by AI.
+      <div class="relative z-10 max-w-3xl">
+        <h1 class="text-5xl lg:text-7xl font-bold text-primary-950 tracking-tight leading-tight mb-6">
+          Elevate Your <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-accent-600">Standard</span> of Living
         </h1>
-        <p class="text-xl text-primary-500 max-w-2xl mx-auto mb-12">
-          Experience the next generation of real estate. Our semantic engine understands your dreams beyond keywords. Find your perfect match in Tunisia with a simple sentence.
+        <p class="text-lg lg:text-xl text-primary-600 mb-10 max-w-2xl mx-auto leading-relaxed">
+          Discover exclusive, meticulously curated properties tailored to your highest aspirations. Experience the future of real estate.
         </p>
-
-        <!-- Semantic Search Bar -->
-        <div class="max-w-2xl mx-auto w-full group">
-          <div class="relative flex items-center p-2 bg-white rounded-full shadow-2xl shadow-primary-900/10 border border-primary-100 focus-within:border-accent-400 focus-within:ring-4 focus-within:ring-accent-50 transition-all duration-300">
-            <LucideSearch class="ml-4 text-primary-300 w-6 h-6" />
-            <input 
-              v-model="searchQuery"
-              @keyup.enter="handleSearch"
-              type="text" 
-              placeholder="e.g. 'Cozy quiet villa with a pool in Tunis near the beach'..."
-              class="w-full bg-transparent border-none focus:ring-0 text-primary-950 placeholder:text-primary-200 px-4 py-3"
-            />
-            <button 
-              @click="handleSearch"
-              class="btn-accent !py-3 !px-8 hover:scale-105 active:scale-95 transition-transform"
-              :disabled="loading"
-            >
-              <LucideSparkles v-if="!loading" class="w-5 h-5" />
-              <LucideLoader2 v-else class="w-5 h-5 animate-spin" />
-              <span>Find Home</span>
-            </button>
-          </div>
-          <p class="mt-4 text-[10px] text-primary-300 uppercase tracking-widest font-bold">Powered by Google Gemini 1.5 & pgvector</p>
-        </div>
+        <NuxtLink to="/properties" class="inline-flex items-center gap-2 px-8 py-4 bg-primary-950 text-white rounded-full font-bold hover:bg-primary-800 transition-all shadow-xl shadow-primary-900/20 group">
+          Explore Portfolio <LucideArrowRight class="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+        </NuxtLink>
       </div>
     </section>
 
