@@ -4,7 +4,6 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 from database import Base
-from pgvector.sqlalchemy import Vector
 import datetime
 
 # Association Table for Many-to-Many relationship between Properties and Features
@@ -23,28 +22,17 @@ class User(Base):
     id = Column(BigInteger, primary_key=True, index=True)
     full_name = Column(String(255), nullable=False)
     email = Column(String(255), unique=True, index=True, nullable=False)
+    phone_number = Column(String(50), nullable=True)
     hashed_password = Column(String(255), nullable=False)
     role = Column(String(20), default="visitor") # visitor, agent, head_agent, admin
     is_active = Column(Boolean, default=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     
-    # Relationships
-    agency_id = Column(BigInteger, ForeignKey("agencies.id", ondelete="SET NULL"), nullable=True)
-    agency = relationship("Agency", back_populates="members")
+    manager_id = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    manager = relationship("User", remote_side=[id], backref="team_members")
     owned_properties = relationship("Property", back_populates="owner", foreign_keys="Property.owner_id")
     assigned_properties = relationship("Property", back_populates="agent", foreign_keys="Property.agent_id")
     favorites = relationship("PropertyFavorite", back_populates="user")
-
-class Agency(Base):
-    __tablename__ = "agencies"
-
-    id = Column(BigInteger, primary_key=True, index=True)
-    name = Column(String(255), nullable=False)
-    license_number = Column(String(100), unique=True)
-    created_at = Column(TIMESTAMP, server_default=func.now())
-
-    members = relationship("User", back_populates="agency")
-    properties = relationship("Property", back_populates="agency")
 
 class Property(Base):
     __tablename__ = "properties"
@@ -108,17 +96,15 @@ class Property(Base):
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
-    # AI SEARCH: Store Gemini Embedding (3072 dimensions for gemini-embedding-001)
-    description_vector = Column(Vector(3072))
+    # AI SEARCH: Store Gemini Embedding
+    # Removed temporarily to avoid pgvector requirement
 
     # Relationships
     owner_id = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"))
     agent_id = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"))
-    agency_id = Column(BigInteger, ForeignKey("agencies.id", ondelete="CASCADE"))
 
     owner = relationship("User", back_populates="owned_properties", foreign_keys=[owner_id])
     agent = relationship("User", back_populates="assigned_properties", foreign_keys=[agent_id])
-    agency = relationship("Agency", back_populates="properties")
     images = relationship("PropertyImage", back_populates="property", cascade="all, delete-orphan")
     features = relationship("Feature", secondary=property_features, back_populates="properties")
 
@@ -140,6 +126,41 @@ class Feature(Base):
     name = Column(String(100), unique=True, nullable=False)
 
     properties = relationship("Property", secondary=property_features, back_populates="features")
+
+class Inquiry(Base):
+    __tablename__ = "inquiries"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    property_id = Column(BigInteger, ForeignKey("properties.id", ondelete="SET NULL"), nullable=True)
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True) # If logged in
+    name = Column(String(150))
+    email = Column(String(255))
+    phone = Column(String(50))
+    subject = Column(String(200))
+    message = Column(Text, nullable=False)
+    status = Column(String(50), default="new") # new, replied, closed
+    source = Column(String(50), default="web") # web, telegram
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
+
+    property = relationship("Property")
+    user = relationship("User")
+
+class Visit(Base):
+    __tablename__ = "visits"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    property_id = Column(BigInteger, ForeignKey("properties.id", ondelete="CASCADE"))
+    client_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"))
+    agent_id = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    visit_date = Column(TIMESTAMP, nullable=False)
+    status = Column(String(50), default="scheduled") # scheduled, finished, cancelled
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
+
+    property = relationship("Property")
+    client = relationship("User", foreign_keys=[client_id])
+    agent = relationship("User", foreign_keys=[agent_id])
 
 class PropertyFavorite(Base):
     __tablename__ = "property_favorites"

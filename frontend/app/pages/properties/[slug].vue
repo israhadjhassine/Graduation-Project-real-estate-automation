@@ -87,26 +87,61 @@
 
       <!-- Sidebar -->
       <div class="space-y-8">
-        <!-- AI Assistant -->
-        <AiChatBox :propertyId="property.id" />
+        <!-- Map Integration -->
+        <div class="h-80 w-full rounded-3xl overflow-hidden shadow-2xl border border-primary-50">
+           <PropertyMap :properties="[property]" />
+        </div>
 
         <!-- Agency Info -->
-        <div class="card-premium">
-           <h4 class="font-bold text-primary-950 mb-6 uppercase tracking-widest text-xs">Interested?</h4>
-           <div class="flex items-center gap-4 mb-8">
-              <div class="w-14 h-14 bg-primary-900 rounded-2xl flex items-center justify-center text-white text-xl font-bold">
+        <div class="bg-gradient-to-br from-primary-900 to-primary-950 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
+           <div class="absolute -top-20 -right-20 w-40 h-40 bg-accent-500/20 blur-3xl rounded-full"></div>
+           <h4 class="font-bold text-primary-300 mb-6 uppercase tracking-[0.2em] text-[10px]">Interested?</h4>
+           <div class="flex items-center gap-4 mb-8 relative z-10">
+              <div class="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-white text-2xl font-serif italic border border-white/20">
                 E
               </div>
               <div>
-                <p class="font-bold text-primary-950">Elite Agency</p>
-                <p class="text-xs text-primary-400">Exclusive Luxury Partner</p>
+                <p class="font-bold text-xl tracking-wide">Elite Agency</p>
+                <p class="text-xs text-primary-300 uppercase tracking-wider mt-1">Exclusive Luxury Partner</p>
               </div>
            </div>
-           <button class="btn-primary w-full shadow-primary-700/40">Schedule a Visit</button>
-           <p class="text-center mt-6 text-[10px] text-primary-300 font-bold uppercase tracking-widest">or inquire via Telegram</p>
+           
+           <div class="space-y-3 relative z-10">
+             <button @click="handleTelegramInquiry" class="w-full py-4 bg-[#229ED9] hover:bg-[#1E8CC0] text-white rounded-xl font-bold transition-all shadow-lg shadow-[#229ED9]/30 flex items-center justify-center gap-2 group">
+               <LucideSend class="w-4 h-4 group-hover:-translate-y-1 group-hover:translate-x-1 transition-transform" /> Inquire via Telegram
+             </button>
+           </div>
         </div>
       </div>
     </div>
+    
+    <!-- Auth Required Modal -->
+    <div v-if="showAuthModal" class="fixed inset-0 z-50 flex items-center justify-center p-6 bg-primary-950/40 backdrop-blur-sm transition-all" @click="showAuthModal = false">
+      <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl relative border border-primary-50" @click.stop>
+        <button @click="showAuthModal = false" class="absolute top-6 right-6 text-primary-400 hover:text-primary-950 transition-colors">
+          <LucideX class="w-6 h-6" />
+        </button>
+        
+        <div class="w-16 h-16 bg-accent-50 rounded-2xl flex items-center justify-center mb-6">
+          <LucideLock class="w-8 h-8 text-accent-600" />
+        </div>
+        
+        <h3 class="text-2xl font-bold text-primary-950 mb-3">Authentication Required</h3>
+        <p class="text-primary-600 mb-8 leading-relaxed">
+          For your security and a personalized experience, please sign in or create a client account to inquire about this exclusive property via Telegram.
+        </p>
+        
+        <div class="space-y-3">
+          <button @click="navigateTo('/login')" class="btn-primary w-full py-3.5 !rounded-xl">
+            Sign In to your Account
+          </button>
+          <button @click="navigateTo('/register')" class="w-full py-3.5 bg-primary-50 hover:bg-primary-100 text-primary-950 font-bold rounded-xl transition-colors border border-primary-200 text-sm">
+            Create an Elite Account
+          </button>
+        </div>
+      </div>
+    </div>
+    
   </div>
   
   <div v-else-if="loading" class="max-w-7xl mx-auto px-6 py-12 animate-pulse space-y-12">
@@ -122,13 +157,16 @@
 import { 
   LucideChevronLeft, LucideShare2, LucideHeart, 
   LucideMapPin, LucideBedDouble, LucideBath, LucideMaximize,
-  LucideImage
+  LucideImage, LucideSend, LucideLock, LucideX
 } from 'lucide-vue-next'
+import { useAuthStore } from '~/stores/auth'
 
 const route = useRoute()
 const api = useApi()
+const auth = useAuthStore()
 const property = ref(null)
 const loading = ref(true)
+const showAuthModal = ref(false)
 
 const fetchProperty = async () => {
   loading.value = true
@@ -157,6 +195,20 @@ const sideImages = computed(() => {
 
 const formatPrice = (price) => {
   return new Intl.NumberFormat('fr-TN').format(price)
+}
+
+const handleTelegramInquiry = () => {
+  if (!auth.isAuthenticated || !auth.user) {
+    showAuthModal.value = true
+    return
+  }
+  
+  // If user is authenticated, construct the custom telegram link with their User ID
+  const botUsername = "realestate_demo_bot" // Replace with the actual bot username once created
+  const payload = `userId_${auth.user.id}`
+  const telegramUrl = `https://t.me/${botUsername}?start=${payload}`
+  
+  window.open(telegramUrl, '_blank')
 }
 
 onMounted(() => {

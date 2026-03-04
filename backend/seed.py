@@ -13,60 +13,47 @@ from datetime import datetime
 
 def seed_db():
     print("🚀 Starting Database Seeding...")
-    # Ensure pgvector extension and tables exist
-    from sqlalchemy import text
-    with engine.connect() as conn:
-        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-        conn.commit()
-    
     models.Base.metadata.drop_all(bind=engine)
     models.Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     
     try:
         # 1. Clear existing data
+        db.query(models.Visit).delete()
+        db.query(models.Inquiry).delete()
         db.query(models.PropertyImage).delete()
         db.query(models.PropertyFavorite).delete()
         db.query(models.Feature).delete()
         db.query(models.Property).delete()
         db.query(models.User).delete()
-        db.query(models.Agency).delete()
         db.commit()
 
-        # 2. Create an Agency
-        print("🏢 Creating Agency...")
-        agency = models.Agency(
-            name="Elite Real Estate Tunisia",
-            license_number="LIC-2026-001"
-        )
-        db.add(agency)
-        db.commit()
-        db.refresh(agency)
-
-        # 3. Create Users
+        # 2. Create Users
         print("👥 Creating Users...")
-        users_data = [
-            {"email": "admin@elite.tn", "full_name": "Sami Ben Ali", "role": "admin", "password": "adminpassword"},
-            {"email": "manager@elite.tn", "full_name": "Laila Mansour", "role": "head_agent", "password": "managerpassword"},
-            {"email": "agent1@elite.tn", "full_name": "Ahmed Trabelsi", "role": "agent", "password": "agentpassword"},
-            {"email": "agent2@elite.tn", "full_name": "Amira Ghorbel", "role": "agent", "password": "agentpassword"},
-            {"email": "visitor@test.com", "full_name": "John Doe", "role": "visitor", "password": "visitorpassword"},
-        ]
-
-        created_users = {}
-        for u in users_data:
-            hashed_pwd = auth.get_password_hash(u["password"])
-            user = models.User(
-                email=u["email"],
-                full_name=u["full_name"],
-                hashed_password=hashed_pwd,
-                role=u["role"],
-                agency_id=agency.id if u["role"] != "visitor" else None
-            )
-            db.add(user)
-            created_users[u["email"]] = user
-        
+        admin = models.User(email="admin@elite.tn", full_name="Sami Ben Ali", role="admin", hashed_password=auth.get_password_hash("adminpassword"))
+        db.add(admin)
+        user_isra1 = models.User(email="israhadjhassine@gmail.com", full_name="Isra Hadj Hassine", role="admin", hashed_password=auth.get_password_hash("123"))
+        db.add(user_isra1)
+        user_isra2 = models.User(email="isra@gmail.com", full_name="Isra", role="admin", hashed_password=auth.get_password_hash("123"))
+        db.add(user_isra2)
+        manager = models.User(email="manager@elite.tn", full_name="Laila Mansour", role="head_agent", hashed_password=auth.get_password_hash("managerpassword"))
+        db.add(manager)
         db.commit()
+        db.refresh(manager)
+
+        agent1 = models.User(email="agent1@elite.tn", full_name="Ahmed Trabelsi", role="agent", hashed_password=auth.get_password_hash("agentpassword"), manager_id=manager.id)
+        db.add(agent1)
+        agent2 = models.User(email="agent2@elite.tn", full_name="Amira Ghorbel", role="agent", hashed_password=auth.get_password_hash("agentpassword"), manager_id=manager.id)
+        db.add(agent2)
+        visitor = models.User(email="visitor@test.com", full_name="John Doe", role="visitor", hashed_password=auth.get_password_hash("visitorpassword"))
+        db.add(visitor)
+        db.commit()
+
+        created_users = {
+            "manager@elite.tn": manager,
+            "agent1@elite.tn": agent1,
+            "agent2@elite.tn": agent2
+        }
 
         # 4. Create Features
         print("✨ Creating Features...")
@@ -145,11 +132,9 @@ def seed_db():
                 bedrooms=p["bedrooms"],
                 bathrooms=p["bathrooms"],
                 area=p["area"],
-                agency_id=agency.id,
                 agent_id=created_users[p["agent"]].id,
                 owner_id=created_users["manager@elite.tn"].id,
-                published_at=datetime.utcnow(),
-                description_vector=ai_utils.get_embedding(p["description"])
+                published_at=datetime.utcnow()
             )
             
             # Add features

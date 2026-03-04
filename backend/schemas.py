@@ -8,18 +8,33 @@ from enum import Enum
 class UserBase(BaseModel):
     email: EmailStr
     full_name: str
+    phone_number: Optional[str] = None
 
 class UserCreate(UserBase):
     password: str
     role: Optional[str] = "visitor"
-    agency_id: Optional[int] = None
+    manager_id: Optional[int] = None
+
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    phone_number: Optional[str] = None
+
+class PasswordUpdate(BaseModel):
+    current_password: str
+    new_password: str
+
+class UserCreateAdmin(UserBase):
+    password: str
+    role: str
+    manager_id: Optional[int] = None
 
 class User(UserBase):
     id: int
     role: str
     is_active: bool
     created_at: datetime
-    agency_id: Optional[int] = None
+    manager_id: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -76,14 +91,29 @@ class PropertyBase(BaseModel):
 
 class PropertyCreate(PropertyBase):
     agent_id: Optional[int] = None
+    owner_id: Optional[int] = None
     feature_ids: List[int] = []
+
+class PropertyUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    property_type: Optional[PropertyType] = None
+    listing_type: Optional[ListingType] = None
+    price: Optional[Decimal] = None
+    area: Optional[Decimal] = None
+    bedrooms: Optional[int] = None
+    bathrooms: Optional[int] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    agent_id: Optional[int] = None
+    owner_id: Optional[int] = None
+    feature_ids: Optional[List[int]] = None
 
 class Property(PropertyBase):
     id: int
     status: str
-    is_featured: bool
+    is_featured: Optional[bool] = None
     created_at: datetime
-    agency_id: int
     owner_id: int
     agent_id: Optional[int] = None
     images: List[PropertyImage] = []
@@ -99,3 +129,34 @@ class PropertyQuestion(BaseModel):
 class AIResponse(BaseModel):
     answer: str
     source_confidence: float
+
+# --- Interactions ---
+class InquiryCreate(BaseModel):
+    name: str
+    email: EmailStr
+    phone: Optional[str] = None
+    subject: str
+    message: str
+    source: Optional[str] = "web"
+
+class InquiryResponse(InquiryCreate):
+    id: int
+    property_id: Optional[int] = None
+    user_id: Optional[int] = None
+    status: str
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class VisitResponse(BaseModel):
+    id: int
+    property_id: int
+    client_id: int
+    agent_id: Optional[int] = None
+    visit_date: datetime
+    status: str
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
