@@ -33,6 +33,9 @@ services:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - WEBHOOK_URL=${WEBHOOK_URL}
+      - N8N_WEBHOOK_URL=${WEBHOOK_URL}
+      - N8N_EDITOR_BASE_URL=${WEBHOOK_URL}
+      - N8N_PROTOCOL=https
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}
@@ -77,6 +80,21 @@ services:
       - /app/node_modules
     depends_on:
       - backend
+    networks:
+      - real_estate_network
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    restart: always
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+    command:
+      - "http"
+      - "n8n_automation:5678"
+    ports:
+      - "4040:4040"
+    depends_on:
+      - n8n
     networks:
       - real_estate_network
 

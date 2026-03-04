@@ -21,7 +21,7 @@ app = FastAPI(
 )
 os.makedirs("static/uploads/properties", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
-# Configure CORS
+# Configure CORS make it more secure
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -52,7 +52,6 @@ def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
         role=user.role,
         agency_id=user.agency_id
     )
-    
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
