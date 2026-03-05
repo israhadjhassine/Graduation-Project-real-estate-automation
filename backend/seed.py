@@ -30,34 +30,41 @@ def seed_db():
 
         # 2. Create Users
         print("👥 Creating Users...")
-        admin = models.User(email="admin@elite.tn", full_name="Sami Ben Ali", role="admin", hashed_password=auth.get_password_hash("adminpassword"))
-        db.add(admin)
-        user_isra1 = models.User(email="israhadjhassine@gmail.com", full_name="Isra Hadj Hassine", role="admin", hashed_password=auth.get_password_hash("123"))
-        db.add(user_isra1)
-        user_isra2 = models.User(email="isra@gmail.com", full_name="Isra", role="admin", hashed_password=auth.get_password_hash("123"))
-        db.add(user_isra2)
-        manager = models.User(email="manager@elite.tn", full_name="Laila Mansour", role="head_agent", hashed_password=auth.get_password_hash("managerpassword"))
-        db.add(manager)
+        # Admins
+        admin1 = models.User(email="admin@elite.tn", full_name="Sami Ben Ali", role="admin", hashed_password=auth.get_password_hash("adminpassword"))
+        db.add(admin1)
+        user_isra = models.User(email="israhadjhassine@gmail.com", full_name="Isra Hadj Hassine", role="admin", hashed_password=auth.get_password_hash("123"))
+        db.add(user_isra)
+        
+        # Head Agents (Managers)
+        head1 = models.User(email="h.kallel@elite.tn", full_name="Hedi Kallel", role="head_agent", hashed_password=auth.get_password_hash("managerpassword"))
+        db.add(head1)
+        head2 = models.User(email="m.ayadi@elite.tn", full_name="Mona Ayadi", role="head_agent", hashed_password=auth.get_password_hash("managerpassword"))
+        db.add(head2)
+        
         db.commit()
-        db.refresh(manager)
+        db.refresh(head1)
+        db.refresh(head2)
 
-        agent1 = models.User(email="agent1@elite.tn", full_name="Ahmed Trabelsi", role="agent", hashed_password=auth.get_password_hash("agentpassword"), manager_id=manager.id)
-        db.add(agent1)
-        agent2 = models.User(email="agent2@elite.tn", full_name="Amira Ghorbel", role="agent", hashed_password=auth.get_password_hash("agentpassword"), manager_id=manager.id)
-        db.add(agent2)
+        # Sub-Agents
+        # Team Kallel
+        agent1 = models.User(email="a.trabelsi@elite.tn", full_name="Ahmed Trabelsi", role="agent", hashed_password=auth.get_password_hash("agentpassword"), manager_id=head1.id)
+        agent2 = models.User(email="s.dridi@elite.tn", full_name="Sonia Dridi", role="agent", hashed_password=auth.get_password_hash("agentpassword"), manager_id=head1.id)
+        # Team Ayadi
+        agent3 = models.User(email="k.jelassi@elite.tn", full_name="Karim Jelassi", role="agent", hashed_password=auth.get_password_hash("agentpassword"), manager_id=head2.id)
+        agent4 = models.User(email="n.moussa@elite.tn", full_name="Nadine Moussa", role="agent", hashed_password=auth.get_password_hash("agentpassword"), manager_id=head2.id)
+        
+        db.add_all([agent1, agent2, agent3, agent4])
+        
+        # Visitor
         visitor = models.User(email="visitor@test.com", full_name="John Doe", role="visitor", hashed_password=auth.get_password_hash("visitorpassword"))
         db.add(visitor)
+        
         db.commit()
-
-        created_users = {
-            "manager@elite.tn": manager,
-            "agent1@elite.tn": agent1,
-            "agent2@elite.tn": agent2
-        }
 
         # 4. Create Features
         print("✨ Creating Features...")
-        features_list = ["Swimming Pool", "Garden", "Sea View", "Smart Home", "Gym", "Garage", "High-speed Internet"]
+        features_list = ["Swimming Pool", "Garden", "Sea View", "Smart Home", "Gym", "Garage", "High-speed Internet", "Central Heating", "Elevator"]
         created_features = {}
         for f_name in features_list:
             feature = models.Feature(name=f_name)
@@ -70,54 +77,77 @@ def seed_db():
         print("🏠 Creating Properties...")
         properties_data = [
             {
-                "title": "Modern Azure Villa",
-                "slug": "modern-azure-villa",
-                "description": "A stunning modern villa with panoramic sea views and a private infinity pool. Perfect for luxury seekers.",
-                "price": 1250000,
+                "title": "Ocean Breeze Mansion",
+                "slug": "ocean-breeze-mansion",
+                "description": "Luxurious 6-bedroom mansion in Gammarth with direct beach access and infinity pool.",
+                "price": 3500000,
+                "type": "villa",
+                "listing": "sale",
+                "city": "Gammarth",
+                "country": "Tunisia",
+                "bedrooms": 6,
+                "bathrooms": 5,
+                "area": 850,
+                "image": "/static/seed-images/villa.png",
+                "agent_email": "a.trabelsi@elite.tn",
+                "owner_email": "h.kallel@elite.tn",
+                "features": ["Swimming Pool", "Sea View", "Smart Home", "Garage", "Garden"]
+            },
+            {
+                "title": "Blue Horizon Penthouse",
+                "slug": "blue-horizon-penthouse",
+                "description": "Contemporary penthouse overlooking the Gulf of Tunis. High-end finishings and spacious terrace.",
+                "price": 5500,
+                "type": "apartment",
+                "listing": "rent",
+                "city": "Sidi Bou Said",
+                "country": "Tunisia",
+                "bedrooms": 3,
+                "bathrooms": 2,
+                "area": 220,
+                "image": "/static/seed-images/apartment.png",
+                "agent_email": "s.dridi@elite.tn",
+                "owner_email": "h.kallel@elite.tn",
+                "features": ["Sea View", "Elevator", "Gym", "Garage"]
+            },
+            {
+                "title": "Mediterranean Dream Estate",
+                "slug": "mediterranean-dream-estate",
+                "description": "Exclusive estate in Hammamet North. Features olive groves and private tennis court.",
+                "price": 2800000,
                 "type": "villa",
                 "listing": "sale",
                 "city": "Hammamet",
                 "country": "Tunisia",
                 "bedrooms": 5,
                 "bathrooms": 4,
-                "area": 450,
-                "image": "/static/seed-images/villa.png",
-                "agent": "agent1@elite.tn",
-                "features": ["Swimming Pool", "Sea View", "Smart Home", "Garage"]
+                "area": 1200,
+                "image": "/static/seed-images/house.png",
+                "agent_email": "k.jelassi@elite.tn",
+                "owner_email": "m.ayadi@elite.tn",
+                "features": ["Swimming Pool", "Garden", "Garage"]
             },
             {
-                "title": "Skyline Luxury Apartment",
-                "slug": "skyline-luxury-apartment",
-                "description": "Premium 20th-floor apartment in the heart of Tunis. Features floor-to-ceiling windows and world-class finishings.",
-                "price": 4500,
+                "title": "Urban Oasis Lofts",
+                "slug": "urban-oasis-lofts",
+                "description": "Chic industrial loft in Lac 2. Perfect for young professionals near the business district.",
+                "price": 2200,
                 "type": "apartment",
                 "listing": "rent",
-                "city": "Tunis",
+                "city": "Lac 2",
                 "country": "Tunisia",
-                "bedrooms": 3,
-                "bathrooms": 2,
-                "area": 180,
+                "bedrooms": 2,
+                "bathrooms": 1,
+                "area": 110,
                 "image": "/static/seed-images/apartment.png",
-                "agent": "agent2@elite.tn",
-                "features": ["Gym", "High-speed Internet", "Garage"]
-            },
-            {
-                "title": "Garden Heritage House",
-                "slug": "garden-heritage-house",
-                "description": "Charming traditional house with a massive private garden. Ideal for peaceful family living.",
-                "price": 850000,
-                "type": "house",
-                "listing": "sale",
-                "city": "Marsa",
-                "country": "Tunisia",
-                "bedrooms": 4,
-                "bathrooms": 3,
-                "area": 320,
-                "image": "/static/seed-images/house.png",
-                "agent": "agent1@elite.tn",
-                "features": ["Garden", "Garage"]
+                "agent_email": "n.moussa@elite.tn",
+                "owner_email": "m.ayadi@elite.tn",
+                "features": ["Smart Home", "Gym", "High-speed Internet"]
             }
         ]
+
+        # Map emails to IDs for quick lookup
+        user_map = {u.email: u.id for u in db.query(models.User).all()}
 
         for p in properties_data:
             prop = models.Property(
@@ -132,26 +162,31 @@ def seed_db():
                 bedrooms=p["bedrooms"],
                 bathrooms=p["bathrooms"],
                 area=p["area"],
-                agent_id=created_users[p["agent"]].id,
-                owner_id=created_users["manager@elite.tn"].id,
+                agent_id=user_map[p["agent_email"]],
+                owner_id=user_map[p["owner_email"]],
                 published_at=datetime.utcnow()
             )
             
-            # Add features
             for f_name in p["features"]:
                 prop.features.append(created_features[f_name])
             
             db.add(prop)
-            db.commit() # Commit to get property ID
+            db.commit()
             
-            # Add images
-            img = models.PropertyImage(
-                property_id=prop.id,
-                image_url=p["image"],
-                is_primary=True
-            )
+            img = models.PropertyImage(property_id=prop.id, image_url=p["image"], is_primary=True)
             db.add(img)
-            
+
+        # 6. Create Sample Interactions
+        print("💬 Creating Interactions...")
+        p1 = db.query(models.Property).first()
+        inquiry1 = models.Inquiry(
+            property_id=p1.id,
+            user_id=visitor.id,
+            message="I am very interested in this mansion. Can we discuss the pricing details?",
+            sentiment="positive"
+        )
+        db.add(inquiry1)
+
         db.commit()
         print("✅ Seeding Completed Successfully!")
 
