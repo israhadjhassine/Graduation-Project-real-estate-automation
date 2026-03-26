@@ -1,15 +1,24 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
-import models, schemas, database, auth, ai_utils
-from datetime import timedelta
+from sqlalchemy.orm import Session, joinedload
+from datetime import datetime
+import models, schemas, database, auth, ai_utils, cloud_storage
+from utils import embeddings
+
+def log_debug(msg):
+    with open("/app/upload_debug.log", "a") as f:
+        f.write(f"{datetime.now()}: {msg}\n")
+    print(msg, flush=True)
+from datetime import timedelta, timezone
 from typing import List, Optional
 import os
 import shutil
 from uuid import uuid4
 from fastapi import UploadFile, File
 from fastapi.staticfiles import StaticFiles
+from imagekitio import ImageKit
+import base64
 
 # Create the database tables
 models.Base.metadata.create_all(bind=database.engine)
@@ -19,8 +28,8 @@ app = FastAPI(
     description="Backend API for the AI-Driven Real Estate Automation Platform",
     version="1.0.0"
 )
-os.makedirs("static/uploads/properties", exist_ok=True)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# ImageKit is now handled in cloud_storage.py
+
 # Configure CORS make it more secure
 app.add_middleware(
     CORSMiddleware,
@@ -29,6 +38,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static files for property images (seeded)
+static_path = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(static_path):
+    app.mount("/static", StaticFiles(directory=static_path), name="static")
 
 # --- Authentication Routes ---
 
@@ -94,10 +108,25 @@ def update_profile(
         current_user.email = user_update.email
     if user_update.phone_number:
         current_user.phone_number = user_update.phone_number
+    if user_update.google_calendar_id:
+        current_user.google_calendar_id = user_update.google_calendar_id
         
     db.commit()
     db.refresh(current_user)
     return current_user
+
+@app.get("/agents/{agent_id}/calendar")
+def get_agent_calendar(agent_id: int, db: Session = Depends(database.get_db)):
+    """Returns the Google Calendar ID for a specific agent."""
+    agent = db.query(models.User).filter(models.User.id == agent_id, models.User.role == "agent").first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+        
+    return {
+        "agent_id": agent.id,
+        "full_name": agent.full_name,
+        "google_calendar_id": agent.google_calendar_id
+    }
 
 @app.put("/auth/password")
 def update_password(
@@ -112,6 +141,59 @@ def update_password(
     current_user.hashed_password = auth.get_password_hash(passwords.new_password)
     db.commit()
     return {"message": "Password updated successfully"}
+
+# --- Visit & Reminder Management ---
+
+@app.post("/visits/book", response_model=schemas.VisitResponse)
+def book_visit(
+    payload: schemas.VisitCreate,
+    db: Session = Depends(database.get_db)
+):
+    """Called by n8n after a Google Calendar event is successfully created."""
+    new_visit = models.Visit(
+        property_id=payload.property_id,
+        client_id=None,
+        agent_id=payload.agent_id,
+        visit_date=payload.visit_date,
+        telegram_chat_id=payload.client_telegram_id,
+        status="scheduled",
+        reminder_sent=False
+    )
+    db.add(new_visit)
+    db.commit()
+    db.refresh(new_visit)
+    return new_visit
+
+@app.get("/visits/upcoming", response_model=List[schemas.VisitResponse])
+def get_upcoming_visits(
+    db: Session = Depends(database.get_db)
+):
+    """Returns visits scheduled within the next window that haven't been notified yet."""
+    now = datetime.now(timezone.utc)
+    window_start = now + timedelta(minutes=40)
+    window_end = now + timedelta(minutes=50)
+    
+    visits = db.query(models.Visit).filter(
+        models.Visit.status == 'scheduled',
+        models.Visit.reminder_sent == False,
+        models.Visit.visit_date >= window_start,
+        models.Visit.visit_date <= window_end
+    ).all()
+    
+    return visits
+
+@app.put("/visits/{visit_id}/reminder-sent")
+def mark_reminder_sent(
+    visit_id: int,
+    db: Session = Depends(database.get_db)
+):
+    """Marks a visit as notified so reminders don't send twice."""
+    visit = db.query(models.Visit).filter(models.Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visit not found")
+    visit.reminder_sent = True
+    db.commit()
+    return {"message": "Reminder marked as sent"}
 
 # --- Basic Health & Testing ---
 
@@ -149,7 +231,11 @@ def create_property(
     if property_in.feature_ids:
         features = db.query(models.Feature).filter(models.Feature.id.in_(property_in.feature_ids)).all()
         new_property.features = features
-    # Save the property without vector embedding for now
+    
+    # Generate embedding for description
+    new_property.description_vector = embeddings.get_embedding(new_property.description)
+    
+    # Save the property
     db.add(new_property)
     db.commit()
     db.refresh(new_property)
@@ -175,6 +261,24 @@ def assign_property_to_agent(
     db.commit()
     return {"message": "Agent assigned successfully"}
 
+@app.delete("/properties/{property_id}")
+def delete_property(
+    property_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
+):
+    """Deletes a property listing. Only owner or admin can perform this."""
+    prop = db.query(models.Property).filter(models.Property.id == property_id).first()
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found")
+        
+    if current_user.role != "admin" and prop.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this property")
+        
+    db.delete(prop)
+    db.commit()
+    return {"message": "Property deleted successfully"}
+
 @app.put("/properties/{property_id}", response_model=schemas.Property)
 def update_property(
     property_id: int,
@@ -191,8 +295,15 @@ def update_property(
         raise HTTPException(status_code=403, detail="Not authorized to edit this property")
         
     update_data = property_in.dict(exclude_unset=True, exclude={"feature_ids"})
+    
+    # Check if description is being updated
+    description_changed = "description" in update_data and update_data["description"] != prop.description
+    
     for key, value in update_data.items():
         setattr(prop, key, value)
+        
+    if description_changed:
+        prop.description_vector = embeddings.get_embedding(prop.description)
         
     if property_in.feature_ids is not None:
         features = db.query(models.Feature).filter(models.Feature.id.in_(property_in.feature_ids)).all()
@@ -220,43 +331,20 @@ def get_agency_properties(
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
 ):
-    """Returns all properties for agency management. Head Agents can assign any property."""
-    return db.query(models.Property).all()
+    """Returns all properties for agency management. Head Agents only see their own listings."""
+    query = db.query(models.Property).options(
+        joinedload(models.Property.images),
+        joinedload(models.Property.features)
+    )
+    
+    if current_user.role == "admin":
+        return query.all()
+        
+    return query.filter(models.Property.owner_id == current_user.id).all()
+
 
 
 # --- Sub-Agent Operations ---
-@app.get("/agent/inquiries", response_model=List[schemas.InquiryResponse])
-def get_agent_inquiries(
-    db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(auth.RoleChecker(["agent", "head_agent", "admin"]))
-):
-    """Fetches inquiries linked to the properties assigned to the agent or agency."""
-    if current_user.role == "admin":
-        return db.query(models.Inquiry).all()
-        
-    # Find all properties assigned to this agent
-    agent_properties = db.query(models.Property.id).filter(models.Property.agent_id == current_user.id).subquery()
-    
-    return db.query(models.Inquiry).filter(
-        models.Inquiry.property_id.in_(agent_properties)
-    ).order_by(models.Inquiry.created_at.desc()).all()
-
-@app.put("/agent/inquiries/{inquiry_id}/status")
-def update_inquiry_status(
-    inquiry_id: int,
-    status: str,
-    db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(auth.RoleChecker(["agent", "head_agent", "admin"]))
-):
-    """Updates the status of an inquiry (e.g. 'new' -> 'replied')."""
-    inq = db.query(models.Inquiry).filter(models.Inquiry.id == inquiry_id).first()
-    if not inq:
-        raise HTTPException(status_code=404, detail="Inquiry not found")
-        
-    # Verify permission (simplified: assuming inter-agency trust for now)
-    inq.status = status
-    db.commit()
-    return {"message": "Status updated successfully"}
 
 @app.get("/agent/visits", response_model=List[schemas.VisitResponse])
 def get_agent_visits(
@@ -287,8 +375,11 @@ def update_visit_status(
 
 @app.get("/properties", response_model=List[schemas.Property])
 def list_properties(db: Session = Depends(database.get_db)):
-    """Publicly lists all available properties."""
-    return db.query(models.Property).filter(models.Property.status == "available").all()
+    """Publicly lists all available properties with images and features."""
+    return db.query(models.Property).options(
+        joinedload(models.Property.images),
+        joinedload(models.Property.features)
+    ).filter(models.Property.status == "available").all()
 # --- Admin View ---
 @app.get("/admin/properties", response_model=List[schemas.Property])
 def admin_view_all_properties(
@@ -344,6 +435,7 @@ def create_user_admin(
 
 # --- AI & Semantic Search Routes ---
 
+@app.post("/search/semantic", response_model=List[schemas.Property])
 @app.get("/search/semantic", response_model=List[schemas.Property])
 def semantic_search(
     query: Optional[str] = None,
@@ -352,37 +444,115 @@ def semantic_search(
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
     sort_price: Optional[str] = None,
+    payload: Optional[schemas.SemanticSearchQuery] = None,
     db: Session = Depends(database.get_db)
 ):
     """
-    Performs basic text search and complex filtering.
+    Performs vector-based semantic search OR filtered search.
+    Supports both POST (payload) and GET (query params) for frontend flexibility.
     """
-    query_obj = db.query(models.Property).filter(models.Property.status == "available")
+    search_text = payload.query if payload else query
     
-    if query:
-        query_obj = query_obj.filter(
-            (models.Property.title.ilike(f"%{query}%")) | (models.Property.description.ilike(f"%{query}%"))
-        )
-    
+    # Base query with joined images/features
+    q = db.query(models.Property).options(
+        joinedload(models.Property.images),
+        joinedload(models.Property.features)
+    ).filter(models.Property.status == 'available')
+
+    # Apply Filters
     if location:
-        query_obj = query_obj.filter(models.Property.city.ilike(f"%{location}%"))
+        q = q.filter(models.Property.city.ilike(f"%{location}%"))
+    if property_type and property_type.lower() != 'all':
+        q = q.filter(models.Property.property_type == property_type.lower())
+    if min_price:
+        q = q.filter(models.Property.price >= min_price)
+    if max_price:
+        q = q.filter(models.Property.price <= max_price)
+
+    # Apply Semantic Search if query exists
+    if search_text:
+        query_vector = embeddings.get_query_embedding(search_text)
+        if query_vector:
+            q = q.order_by(models.Property.description_vector.cosine_distance(query_vector))
+    
+    # Apply Sorting
+    if sort_price == 'asc':
+        q = q.order_by(models.Property.price.asc())
+    elif sort_price == 'desc':
+        q = q.order_by(models.Property.price.desc())
+
+    return q.limit(20).all()
+
+@app.post("/search/rag", response_model=schemas.RAGSearchResponse)
+def rag_search(
+    payload: schemas.SemanticSearchQuery,
+    db: Session = Depends(database.get_db)
+):
+    """
+    Returns a clean, context-formatted response for RAG systems.
+    """
+    query_vector = embeddings.get_query_embedding(payload.query)
+    if not query_vector:
+        raise HTTPException(status_code=500, detail="Failed to generate query embedding")
         
-    if property_type and property_type.lower() != "all":
-        query_obj = query_obj.filter(models.Property.property_type.ilike(f"%{property_type}%"))
+    results = db.query(models.Property).filter(
+        models.Property.status == 'available',
+        models.Property.description_vector.isnot(None)
+    ).order_by(
+        models.Property.description_vector.cosine_distance(query_vector)
+    ).limit(5).all()
+    
+    if not results:
+        return {"context": "No properties found matching this search.", "properties": []}
         
-    if min_price is not None:
-        query_obj = query_obj.filter(models.Property.price >= min_price)
-        
-    if max_price is not None:
-        query_obj = query_obj.filter(models.Property.price <= max_price)
-        
-    if sort_price:
-        if sort_price.lower() == 'asc':
-            query_obj = query_obj.order_by(models.Property.price.asc())
-        elif sort_price.lower() == 'desc':
-            query_obj = query_obj.order_by(models.Property.price.desc())
+    rag_properties = []
+    context_parts = []
+    
+    for i, prop in enumerate(results):
+        # Format google_maps_url if coords exist
+        maps_url = None
+        if prop.latitude and prop.longitude:
+            maps_url = f"https://maps.google.com/?q={prop.latitude},{prop.longitude}"
             
-    return query_obj.all()
+        # Create RAGProperty object
+        features_list = [f.name for f in prop.features]
+        rag_prop = schemas.RAGProperty(
+            id=prop.id,
+            agent_id=prop.agent_id,
+            title=prop.title,
+            property_type=prop.property_type,
+            listing_type=prop.listing_type,
+            price=prop.price,
+            currency=prop.currency,
+            city=prop.city,
+            area=prop.area,
+            bedrooms=prop.bedrooms,
+            bathrooms=prop.bathrooms,
+            features=features_list,
+            description=prop.description,
+            latitude=prop.latitude,
+            longitude=prop.longitude,
+            google_maps_url=maps_url,
+            agent_calendar_id=prop.agent.google_calendar_id if prop.agent else None
+        )
+        rag_properties.append(rag_prop)
+        
+        # Build context string
+        context_parts.append(
+            f"Property {i+1}: {prop.title}\n"
+            f"Type: {prop.property_type.capitalize()} for {prop.listing_type.capitalize()}\n"
+            f"Price: {prop.price:,.0f} {prop.currency}\n"
+            f"Location: {prop.city}, {prop.country}\n"
+            f"Area: {prop.area}m²\n"
+            f"Bedrooms: {prop.bedrooms} | Bathrooms: {prop.bathrooms}\n"
+            f"Features: {', '.join(features_list)}\n"
+            f"Description: {prop.description}"
+        )
+        
+    return {
+        "context": "\n\n".join(context_parts),
+        "properties": rag_properties
+    }
 # --- AI Assistant (RAG Pipeline Entry) ---
 @app.post("/properties/{property_id}/ask", response_model=schemas.AIResponse)
 def ask_ai_about_property(
@@ -429,28 +599,64 @@ async def upload_property_images(
     # Check ownership (Admin can do anything)
     if current_user.role != "admin" and prop.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="You don't own this property")
+    log_debug(f"📥 Received {len(files)} files for property {property_id}")
     uploaded_images = []
     
     for file in files:
-        # Generate unique filename
-        file_ext = file.filename.split(".")[-1]
-        file_name = f"{uuid4()}.{file_ext}"
-        file_path = f"static/uploads/properties/{file_name}"
+        log_debug(f"🚀 Processing file: {file.filename}")
+        # Use our new cloud storage utility
+        image_url = await cloud_storage.upload_to_imagekit(file, file.filename)
         
-        # Save file to disk
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        
-        # Create DB record
-        # Note: First image uploaded becomes primary automatically
-        is_primary = len(prop.images) == 0 and len(uploaded_images) == 0
-        
-        db_image = models.PropertyImage(
-            property_id=property_id,
-            image_url=f"/static/uploads/properties/{file_name}",
-            is_primary=is_primary
-        )
-        db.add(db_image)
-        uploaded_images.append(db_image)
+        if image_url:
+            log_debug(f"✅ Image URL received: {image_url}")
+            # Create DB record
+            is_primary = (len(prop.images) == 0 and len(uploaded_images) == 0)
+            
+            db_image = models.PropertyImage(
+                property_id=property_id,
+                image_url=image_url,
+                is_primary=is_primary
+            )
+            db.add(db_image)
+            uploaded_images.append(db_image)
+        else:
+            log_debug(f"⚠️ Skipping DB record for failed upload: {file.filename}")
+
     db.commit()
+    log_debug(f"🏁 Final result: {len(uploaded_images)} images saved to DB.")
     return uploaded_images
+
+@app.get("/properties/{property_id}/images", response_model=List[schemas.PropertyImage])
+def get_property_images(property_id: int, db: Session = Depends(database.get_db)):
+    """Returns all images for a specific property."""
+    log_debug(f"🔍 GET /properties/{property_id}/images called")
+    
+    # Check if property exists first
+    prop_exists = db.query(models.Property).filter(models.Property.id == property_id).first()
+    if not prop_exists:
+        log_debug(f"❌ Property {property_id} not found in DB")
+        raise HTTPException(status_code=404, detail="Property not found")
+        
+    # Query images directly
+    images = db.query(models.PropertyImage).filter(models.PropertyImage.property_id == property_id).all()
+    log_debug(f"✅ Found {len(images)} images for property {property_id} (Direct query)")
+    
+    for img in images:
+        log_debug(f"  - Image ID: {img.id}, URL: {img.image_url}")
+        
+    return images
+@app.get("/properties/{property_id}/map")
+def get_property_map(property_id: int, db: Session = Depends(database.get_db)):
+    """Returns Google Maps URL for a property."""
+    prop = db.query(models.Property).filter(models.Property.id == property_id).first()
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found")
+    if not prop.latitude or not prop.longitude:
+        raise HTTPException(status_code=404, detail="No coordinates available for this property")
+    
+    maps_url = f"https://maps.google.com/?q={prop.latitude},{prop.longitude}"
+    return {
+        "latitude": float(prop.latitude),
+        "longitude": float(prop.longitude),
+        "google_maps_url": maps_url
+    }

@@ -19,6 +19,7 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     email: Optional[EmailStr] = None
     phone_number: Optional[str] = None
+    google_calendar_id: Optional[str] = None
 
 class PasswordUpdate(BaseModel):
     current_password: str
@@ -88,11 +89,15 @@ class PropertyBase(BaseModel):
     bathrooms: int = 0
     city: str
     country: str = "Tunisia"
+    latitude: Optional[Decimal] = None
+    longitude: Optional[Decimal] = None
 
 class PropertyCreate(PropertyBase):
     agent_id: Optional[int] = None
     owner_id: Optional[int] = None
     feature_ids: List[int] = []
+    latitude: Optional[Decimal] = None
+    longitude: Optional[Decimal] = None
 
 class PropertyUpdate(BaseModel):
     title: Optional[str] = None
@@ -108,6 +113,8 @@ class PropertyUpdate(BaseModel):
     agent_id: Optional[int] = None
     owner_id: Optional[int] = None
     feature_ids: Optional[List[int]] = None
+    latitude: Optional[Decimal] = None
+    longitude: Optional[Decimal] = None
 
 class Property(PropertyBase):
     id: int
@@ -131,32 +138,51 @@ class AIResponse(BaseModel):
     source_confidence: float
 
 # --- Interactions ---
-class InquiryCreate(BaseModel):
-    name: str
-    email: EmailStr
-    phone: Optional[str] = None
-    subject: str
-    message: str
-    source: Optional[str] = "web"
-
-class InquiryResponse(InquiryCreate):
-    id: int
-    property_id: Optional[int] = None
-    user_id: Optional[int] = None
-    status: str
-    created_at: datetime
-    
-    class Config:
-        from_attributes = True
 
 class VisitResponse(BaseModel):
     id: int
     property_id: int
-    client_id: int
+    client_id: Optional[int] = None
     agent_id: Optional[int] = None
     visit_date: datetime
     status: str
+    reminder_sent: bool = False
+    telegram_chat_id: Optional[str] = None
     created_at: datetime
     
     class Config:
         from_attributes = True
+
+class VisitCreate(BaseModel):
+    property_id: int
+    client_telegram_id: str
+    client_email: Optional[str] = None
+    agent_id: Optional[int] = None
+    visit_date: datetime
+    google_calendar_event_id: Optional[str] = None
+
+class SemanticSearchQuery(BaseModel):
+    query: str
+
+class RAGProperty(BaseModel):
+    id: int
+    agent_id: Optional[int] = None
+    title: str
+    property_type: str
+    listing_type: str
+    price: Decimal
+    currency: str
+    city: str
+    area: Optional[Decimal] = None
+    bedrooms: int
+    bathrooms: int
+    features: List[str]
+    description: str
+    latitude: Optional[Decimal] = None
+    longitude: Optional[Decimal] = None
+    google_maps_url: Optional[str] = None
+    agent_calendar_id: Optional[str] = None
+
+class RAGSearchResponse(BaseModel):
+    context: str
+    properties: List[RAGProperty]

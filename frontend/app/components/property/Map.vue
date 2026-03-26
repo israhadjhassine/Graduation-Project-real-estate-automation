@@ -37,6 +37,11 @@ const initMap = async () => {
 
   isReady.value = true
   updateMarkers(L)
+  
+  // Fix for Leaflet not knowing container size on early load
+  setTimeout(() => {
+    map.invalidateSize()
+  }, 400)
 }
 
 const updateMarkers = (L) => {
@@ -47,10 +52,15 @@ const updateMarkers = (L) => {
   markers = []
 
   props.properties.forEach(prop => {
-    // Note: In a real app, uses prop.latitude/longitude
-    // Simulating random points around Tunis for demo
-    const lat = 36.8 + (Math.random() - 0.5) * 0.2
-    const lng = 10.2 + (Math.random() - 0.5) * 0.2
+    // Use actual prop.latitude/longitude if they exist
+    let lat = prop.latitude ? parseFloat(prop.latitude) : null
+    let lng = prop.longitude ? parseFloat(prop.longitude) : null
+
+    // Fallback only if missing
+    if (!lat || !lng) {
+      lat = 36.8 + (Math.random() - 0.5) * 0.2
+      lng = 10.2 + (Math.random() - 0.5) * 0.2
+    }
     
     const icon = L.divIcon({
       className: 'custom-div-icon',
@@ -78,6 +88,9 @@ watch(() => props.properties, async () => {
   if (process.client) {
     const L = await import('leaflet')
     updateMarkers(L)
+    if (map) {
+      setTimeout(() => map.invalidateSize(), 100)
+    }
   }
 }, { deep: true })
 

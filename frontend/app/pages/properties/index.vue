@@ -194,7 +194,10 @@ const handleSearch = async () => {
     
     // Convert to query string
     const queryString = params.toString()
-    const endpoint = queryString ? `/search/semantic?${queryString}` : '/search/semantic'
+    
+    // If no semantic query and no filters, just get all properties
+    // Otherwise use the semantic search endpoint which now handles filters too
+    const endpoint = queryString ? `/search/semantic?${queryString}` : '/properties'
     
     const res = await api.get(endpoint)
     properties.value = res.data

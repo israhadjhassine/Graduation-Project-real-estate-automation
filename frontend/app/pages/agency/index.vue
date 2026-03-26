@@ -14,7 +14,7 @@
           </div>
         </div>
         
-        <button @click="showModal = true" class="btn-primary">
+        <button @click="openNewPropertyModal" class="btn-primary">
           <LucidePlus class="w-5 h-5" /> List New Property
         </button>
       </div>
@@ -86,7 +86,7 @@
                 <td class="px-6 py-4">
                   <div class="flex items-center gap-4">
                     <div class="w-12 h-12 rounded-xl overflow-hidden bg-primary-100 flex-shrink-0">
-                       <img v-if="prop.images?.length" :src="`http://localhost:8000${prop.images[0].image_url}`" class="w-full h-full object-cover" />
+                       <img v-if="prop.images?.length" :src="getPublicUrl(prop.images[0].image_url)" class="w-full h-full object-cover" />
                        <LucideImage v-else class="w-12 h-12 p-3 text-primary-200" />
                     </div>
                     <div>
@@ -109,10 +109,10 @@
                 </td>
                 <td class="px-6 py-4">
                    <div class="flex gap-2">
-                     <button class="p-2 hover:bg-primary-100 rounded-lg text-primary-400 transition-colors" title="Edit Property">
+                     <button @click="editProperty(prop)" class="p-2 hover:bg-primary-100 rounded-lg text-primary-400 transition-colors" title="Edit Property">
                        <LucideEdit class="w-4 h-4" />
                      </button>
-                     <button class="p-2 hover:bg-red-50 rounded-lg text-red-400 transition-colors" title="Delete Property">
+                     <button @click="deleteProperty(prop.id)" class="p-2 hover:bg-red-50 rounded-lg text-red-400 transition-colors" title="Delete Property">
                        <LucideTrash2 class="w-4 h-4" />
                      </button>
                    </div>
@@ -158,9 +158,17 @@
                 <td class="px-6 py-4 text-sm text-primary-600">{{ agent.email }}</td>
                 <td class="px-6 py-4 text-sm text-primary-600">{{ agent.phone_number || 'N/A' }}</td>
                 <td class="px-6 py-4">
-                  <span class="px-3 py-1 bg-primary-100 text-primary-700 text-[10px] font-bold rounded-lg uppercase">
-                    {{ properties.filter(p => p.agent_id === agent.id).length }} Listings
-                  </span>
+                  <div class="flex items-center gap-3">
+                    <span class="px-3 py-1 bg-primary-100 text-primary-700 text-[10px] font-bold rounded-lg uppercase">
+                      {{ properties.filter(p => p.agent_id === agent.id).length }} Listings
+                    </span>
+                    <button 
+                      @click="viewAgentAssignments(agent)"
+                      class="text-[10px] font-bold text-accent-600 hover:text-accent-700 underline underline-offset-4"
+                    >
+                      View All
+                    </button>
+                  </div>
                 </td>
               </tr>
               <tr v-if="!staff.length">
@@ -178,14 +186,44 @@
 
     <PropertyUploadModal 
       :show="showModal" 
-      @close="showModal = false" 
+      :edit-data="selectedProperty"
+      @close="closeModal" 
       @success="handleSuccess"
     />
+
+    <!-- Assignment Viewer Modal (Simple version) -->
+    <div v-if="showingAssignmentsFor" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-primary-950/40 backdrop-blur-sm">
+      <div class="bg-white rounded-[2.5rem] w-full max-w-lg p-8 shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+        <div class="flex justify-between items-center mb-6">
+          <div>
+            <h3 class="text-xl font-bold text-primary-950">Assignments: {{ showingAssignmentsFor.full_name }}</h3>
+            <p class="text-sm text-primary-400">{{ agentProperties.length }} active listings</p>
+          </div>
+          <button @click="showingAssignmentsFor = null" class="w-10 h-10 rounded-full hover:bg-primary-50 flex items-center justify-center">
+            <LucideX class="w-5 h-5 text-primary-400" />
+          </button>
+        </div>
+        <div class="overflow-y-auto space-y-3 custom-scrollbar pr-2">
+          <div v-for="p in agentProperties" :key="p.id" class="p-4 bg-primary-50 rounded-2xl flex items-center gap-4">
+            <img v-if="p.images?.length" :src="p.images[0].image_url" class="w-10 h-10 rounded-lg object-cover" />
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-bold text-primary-950 truncate">{{ p.title }}</p>
+              <p class="text-[10px] text-primary-400">{{ p.city }} • {{ formatPrice(p.price) }} {{ p.currency }}</p>
+            </div>
+            <span class="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md">{{ p.status }}</span>
+          </div>
+          <div v-if="!agentProperties.length" class="text-center py-10 text-primary-300 italic text-sm">
+            No properties assigned yet.
+          </div>
+        </div>
+      </div>
+    </div>
 
   </div>
 </template>
 
 <script setup>
+import { ref, computed, onMounted, watchEffect } from 'vue'
 import { 
   LucideBriefcase, LucideHome, LucideUsers, LucideEye,
   LucidePlus, LucideImage, LucideEdit, LucideTrash2,
@@ -193,17 +231,26 @@ import {
 } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
+import { useAssetUrl } from '~/composables/useAssetUrl'
+import { navigateTo } from '#app'
 
 definePageMeta({ layout: 'dashboard' })
 
 const auth = useAuthStore()
 const api = useApi()
+const { getPublicUrl } = useAssetUrl()
 const activeTab = ref('properties')
 const properties = ref([])
 const staff = ref([])
 const loading = ref(false)
-
 const showModal = ref(false)
+const selectedProperty = ref(null)
+const showingAssignmentsFor = ref(null)
+
+const agentProperties = computed(() => {
+  if (!showingAssignmentsFor.value) return []
+  return properties.value.filter(p => p.agent_id === showingAssignmentsFor.value.id)
+})
 
 const fetchData = async () => {
   loading.value = true
@@ -231,8 +278,39 @@ const fetchData = async () => {
 }
 
 const handleSuccess = () => {
-  showModal.value = false
+  closeModal()
   fetchData()
+}
+
+const editProperty = (prop) => {
+  selectedProperty.value = prop
+  showModal.value = true
+}
+
+const openNewPropertyModal = () => {
+  selectedProperty.value = null
+  showModal.value = true
+}
+
+const closeModal = () => {
+  showModal.value = false
+  selectedProperty.value = null
+}
+
+const deleteProperty = async (id) => {
+  if (!confirm("Are you sure you want to delete this property? This action cannot be undone.")) return
+  
+  try {
+    await api.delete(`/properties/${id}`)
+    fetchData()
+  } catch (e) {
+    console.error("Delete failed", e)
+    alert("Failed to delete property and its related records.")
+  }
+}
+
+const viewAgentAssignments = (agent) => {
+  showingAssignmentsFor.value = agent
 }
 
 const formatPrice = (price) => {

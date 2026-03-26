@@ -22,6 +22,28 @@ engine = create_engine(SQLALCHEMY_DATABASE_URL)
 # autoflush=False: Prevents sending changes to the DB until we are ready.
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+# Enable pgvector extension with retries to handle startup race conditions
+from sqlalchemy import text
+import time
+
+max_retries = 5
+retry_delay = 5
+
+for attempt in range(max_retries):
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+            conn.commit()
+            print("Successfully enabled pgvector extension.")
+            break
+    except Exception as e:
+        if attempt < max_retries - 1:
+            print(f"Database not ready (Attempt {attempt + 1}/{max_retries}). Retrying in {retry_delay}s...")
+            time.sleep(retry_delay)
+        else:
+            print("Failed to connect to database after maximum retries.")
+            raise e
+
 # Base class for our models
 # All our database tables (models) will inherit from this class.
 Base = declarative_base()

@@ -24,7 +24,6 @@ useCaseDiagram
         usecase "List & Manage Properties (Upload Photos)" as UC6
         usecase "Manage Agency & Staff" as UC7
         usecase "Schedule & Confirm Visits" as UC8
-        usecase "Inquiry Management (Respond to Leads)" as UC9
     }
 
     Visitor --> UC1
@@ -33,7 +32,7 @@ useCaseDiagram
     Visitor --> UC4A
 
     Agent --> UC8
-    Agent --> UC9
+    Agent --> UC8
 
     Manager --> UC6
     Manager --> UC7
@@ -44,7 +43,6 @@ useCaseDiagram
 
     AI --> UC2
     
-    Bot --> UC9
     Bot --> UC8
 ```
 
@@ -119,8 +117,4 @@ classDiagram
 2. **AI Action**: Gemini creates the embedding vector.
 3. **Storage**: Data and Images are saved.
 
-## 4. Workflow: Inquiry Management
-1. **Lead**: Visitor sends message/inquiry via Web/Bot.
-2. **Logic**: System identifies the `assigned_agent_id`.
-3. **Notify**: Agent receives notification.
-4. **Respond**: Agent marks as "responded".
+

@@ -1,0 +1,21 @@
+--- Properties ---
+ID: 1, Title: Ocean Breeze Mansion, Slug: ocean-breeze-mansion, Status: available
+  Images Count: 1
+    - Image ID: 1, URL: /static/seed-images/villa.png
+ID: 2, Title: Blue Horizon Penthouse, Slug: blue-horizon-penthouse, Status: available
+  Images Count: 1
+    - Image ID: 2, URL: /static/seed-images/apartment.png
+ID: 3, Title: Mediterranean Dream Estate, Slug: mediterranean-dream-estate, Status: available
+  Images Count: 1
+    - Image ID: 3, URL: /static/seed-images/house.png
+ID: 4, Title: Urban Oasis Lofts, Slug: urban-oasis-lofts, Status: available
+  Images Count: 1
+    - Image ID: 4, URL: /static/seed-images/apartment.png
+ID: 5, Title: maison moch noramal, Slug: maison-moch-noramal-1773625033331, Status: available
+  Images Count: 0
+
+--- All Images in DB ---
+ID: 1, PropID: 1, URL: /static/seed-images/villa.png
+ID: 2, PropID: 2, URL: /static/seed-images/apartment.png
+ID: 3, PropID: 3, URL: /static/seed-images/house.png
+ID: 4, PropID: 4, URL: /static/seed-images/apartment.png

@@ -1,10 +1,11 @@
 from sqlalchemy import (
     Column, Integer, String, Boolean, Text, Numeric, 
-    TIMESTAMP, ForeignKey, Table, Enum, BigInteger, func
+    TIMESTAMP, ForeignKey, Table, Enum, BigInteger, func, JSON
 )
 from sqlalchemy.orm import relationship
 from database import Base
 import datetime
+from pgvector.sqlalchemy import Vector
 
 # Association Table for Many-to-Many relationship between Properties and Features
 # This allows one property to have many features (Pool, Wifi) 
@@ -26,6 +27,7 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     role = Column(String(20), default="visitor") # visitor, agent, head_agent, admin
     is_active = Column(Boolean, default=True)
+    google_calendar_id = Column(String(255), nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     
     manager_id = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
@@ -81,11 +83,7 @@ class Property(Base):
     postal_code = Column(String(20))
     latitude = Column(Numeric(10, 8))
     longitude = Column(Numeric(11, 8))
-    
-    # SEO & Metadata
-    meta_title = Column(String(255))
-    meta_description = Column(Text)
-    
+
     # Analytics
     views_count = Column(Integer, default=0)
     favorites_count = Column(Integer, default=0)
@@ -96,8 +94,8 @@ class Property(Base):
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
-    # AI SEARCH: Store Gemini Embedding
-    # Removed temporarily to avoid pgvector requirement
+    # AI SEARCH: Store Ollama Embedding
+    description_vector = Column(Vector(768), nullable=True)
 
     # Relationships
     owner_id = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"))
@@ -127,34 +125,18 @@ class Feature(Base):
 
     properties = relationship("Property", secondary=property_features, back_populates="features")
 
-class Inquiry(Base):
-    __tablename__ = "inquiries"
-    
-    id = Column(BigInteger, primary_key=True, index=True)
-    property_id = Column(BigInteger, ForeignKey("properties.id", ondelete="SET NULL"), nullable=True)
-    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True) # If logged in
-    name = Column(String(150))
-    email = Column(String(255))
-    phone = Column(String(50))
-    subject = Column(String(200))
-    message = Column(Text, nullable=False)
-    status = Column(String(50), default="new") # new, replied, closed
-    source = Column(String(50), default="web") # web, telegram
-    created_at = Column(TIMESTAMP, server_default=func.now())
-    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
-
-    property = relationship("Property")
-    user = relationship("User")
 
 class Visit(Base):
     __tablename__ = "visits"
     
     id = Column(BigInteger, primary_key=True, index=True)
     property_id = Column(BigInteger, ForeignKey("properties.id", ondelete="CASCADE"))
-    client_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"))
+    client_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"),nullable=True) #am going to remove nullable after testing with n8n
     agent_id = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     visit_date = Column(TIMESTAMP, nullable=False)
     status = Column(String(50), default="scheduled") # scheduled, finished, cancelled
+    reminder_sent = Column(Boolean, default=False)
+    telegram_chat_id = Column(String(50), nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
@@ -170,3 +152,11 @@ class PropertyFavorite(Base):
     created_at = Column(TIMESTAMP, server_default=func.now())
 
     user = relationship("User", back_populates="favorites")
+
+class ChatHistory(Base):
+    __tablename__ = "n8n_chat_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(String(255), nullable=False, index=True)
+    message = Column(JSON, nullable=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())

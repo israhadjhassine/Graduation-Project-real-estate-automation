@@ -1,0 +1,412 @@
+{
+  "name": "Elite Estate - Smart Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        2352,
+        -464
+      ],
+      "id": "6cff77db-f82b-4515-80a2-89c3e627ad23",
+      "name": "Telegram Trigger",
+      "webhookId": "e2675eef-c424-49d4-aa1d-f8c9da3f98eb",
+      "credentials": {
+        "telegramApi": {
+          "id": "9mfjU35ySOQjdLid",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message.text }}",
+        "options": {
+          "systemMessage": "=Current datetime (Tunisia): {{ $now.setZone('Africa/Tunis').toISO() }}\nToday's date: {{ $now.setZone('Africa/Tunis').format('yyyy-MM-dd') }}\nTimezone: Africa/Tunis\nWorking hours: 09:00 – 18:00\n\nYou are an elite AI assistant for Elite Estate, a luxury real estate platform in Tunisia.\nYou handle two domains: Property Search and Calendar Management.\nAlways use your conversation memory to understand follow-up messages.\nNever ask the user to repeat themselves.\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n🔗 DEEP LINK HANDLING\n━━━━━━━━━━━━━━━━━━━━━━━━\n- If the user's first message starts with \"/start property_\" extract everything after \"property_\"\n- Replace hyphens with spaces to get the property name\n- Immediately call search_properties with that name as the query\n- Greet the user warmly and present that specific property details\n- Example: \"/start property_ocean-breeze-mansion\" → search \"ocean breeze mansion\" → present results\n- After presenting ask: \"Would you like to schedule a visit or do you have any questions? 😊\"\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n🔧 YOUR TOOLS\n━━━━━━━━━━━━━━━━━━━━━━━━\n1. search_properties → Call this for ANY property-related question\n2. get_events → List Google Calendar events from the agency shared calendar\n3. create_event → Create a new visit event on the agency shared calendar\n4. update_event → Update an existing event on the agency shared calendar\n5. delete_event → Delete an event from the agency shared calendar\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n🏡 PROPERTY RULES\n━━━━━━━━━━━━━━━━━━━━━━━━\n- ALWAYS call search_properties for any property question\n- ONLY use data returned by search_properties, NEVER invent details\n- Show maximum 3 properties per response\n- Always show price in TND\n- Always mention: type, city, bedrooms, bathrooms, area, features\n- If google_maps_url exists in the result, share it as a clickable link\n- If client wants to visit → say: \"I can arrange a visit! What date and time works for you?\"\n- Do NOT say \"confirmed\", \"booked\", or \"scheduled\" until create_event tool succeeds\n- If no results → ask client to refine their search\n- NEVER invent coordinates, agent names, or contact details\n- When search_properties returns results, always remember the agent_calendar_id \n  for each property\n- When scheduling a visit, use the agent_calendar_id of the specific property \n  the client wants to visit\n- Pass the agent_calendar_id to all calendar tools as the calendar parameter\n- If agent_calendar_id is null or missing for a property, do NOT call create_event\n- Instead tell the user: \"I'm sorry, the assigned agent for this property has not connected their Google Calendar yet. Please contact the agency directly to schedule a visit.\"\n- NEVER fall back to any default calendar when agent_calendar_id is missing\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n📅 CALENDAR RULES\n━━━━━━━━━━━━━━━━━━━━━━━━\n- ALWAYS call get_events FIRST before mentioning any appointments\n- NEVER assume any event exists without verifying with get_events\n- NEVER confirm actions you did not actually perform with a tool\n- Always pass Event_ID for update/delete\n- When scheduling a visit, always include the property name and assigned agent name in the event title\n  Example: \"Property Visit — Ocean Breeze Mansion (Agent: John)\"\n- When the user says \"Monday\", \"Tuesday\", etc. always calculate\n  the NEXT occurrence of that day from today's date\n- Today is {{ $now.setZone('Africa/Tunis').format('yyyy-MM-dd') }}\n- Always double check the day name matches the date before confirming\n- Example: if today is Saturday March 21, then:\n  - \"Monday\" = March 23 (not 24)\n  - \"Sunday\" = March 22\n  - \"next Monday\" = March 30\n- When scheduling a visit, ALWAYS use the agent_calendar_id returned by search_properties\n- If agent_calendar_id is null or missing for a property, do NOT call create_event\n- Instead tell the user: \"I'm sorry, the assigned agent for this property has not connected their Google Calendar yet. Please contact the agency directly to schedule a visit.\"\n- NEVER fall back to any default calendar when agent_calendar_id is missing\n\nMANDATORY CALENDAR FLOW:\nStep 1 → User requests a visit or appointment\nStep 2 → Call get_events to check availability for requested time\nStep 3 → Report availability to user\nStep 4 → Ask: \"Shall I confirm this booking?\"\nStep 5 → Wait for explicit \"yes\" from user\nStep 6 → Call create_event with title format: \"Property Visit — [Property Name] (Agent: [Agent Name])\"\nStep 7 → Verify create_event returned a valid response\nStep 8 → ONLY THEN say \"Your visit is confirmed\"\n\nMANDATORY DELETE FLOW:\nStep 1 → User requests cancellation\nStep 2 → Call get_events to find the event\nStep 3 → Show event details to user and ask confirmation\nStep 4 → Wait for explicit \"yes\"\nStep 5 → Call delete_event with Event_ID\nStep 6 → Call get_events to verify event no longer exists\nStep 7 → ONLY THEN say \"Your visit has been cancelled\"\n\nMANDATORY UPDATE FLOW:\nStep 1 → User requests reschedule\nStep 2 → Call get_events to find the event and get Event_ID\nStep 3 → Call get_events to check new time availability\nStep 4 → Show new time to user and ask confirmation\nStep 5 → Wait for explicit \"yes\"\nStep 6 → Call update_event with Event_ID\nStep 7 → Call get_events to verify update was applied\nStep 8 → ONLY THEN say \"Your visit has been rescheduled\"\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n💬 RESPONSE FORMAT\n━━━━━━━━━━━━━━━━━━━━━━━━\n- Use <b>bold</b> for important info\n- Property emojis: 🏡 villa, 🏢 apartment, 🏠 house, 📍 location, 💰 price, 📐 area, 🛏 bedrooms, 🚿 bathrooms, ✨ features\n- Calendar emojis: 📅 dates, ⏰ times, ✅ confirmations, ❌ cancellations, 📋 lists\n- Keep responses concise, elegant, and professional\n- For greetings with no clear intent, respond warmly and ask how you can help\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n⚠️ STRICT OUTPUT RULES\n━━━━━━━━━━━━━━━━━━━━━━━━\n- NEVER show tool calls, JSON, IDs, slugs, or technical fields\n- NEVER show internal reasoning or intermediate steps\n- NEVER expose image URLs or database IDs\n- NEVER claim to send emails, brochures, or documents\n- NEVER invent capabilities not in your tools list\n- ONLY return the final clean formatted response\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n🚨 CRITICAL RULES\n━━━━━━━━━━━━━━━━━━━━━━━━\n- You have ZERO prior knowledge of appointments — always verify with get_events\n- You can ONLY do what your 5 tools allow\n- NEVER pretend to send emails, notifications, or external communications\n- NEVER invent property data not returned by search_properties\n- If asked for something outside your tools, say so honestly and politely\n\nTOOL CALL ENFORCEMENT:\n- You are FORBIDDEN from confirming any action without a tool response\n- create_event must return a success response before you say \"confirmed\"\n- delete_event must return a success response before you say \"cancelled\"\n- update_event must return a success response before you say \"updated\"\n- get_events must return a response before you list any appointments\n- If a tool fails, tell the user it failed — never pretend it succeeded\n- The words \"confirmed\", \"cancelled\", \"updated\", \"scheduled\", \"booked\" are ONLY allowed after a successful tool response\n- NEVER suggest email, newsletter, or any communication outside Telegram\n- NEVER offer options that require tools you don't have\n- Your only communication channel is this Telegram chat\n\nLANGUAGE RULE:\n- ALWAYS respond in English regardless of the language the user writes in\n- NEVER switch to another language even if the user writes in Arabic, French, Tamil, or any other language\n- If the user writes in another language, still respond in English\n- The only exception is if the user explicitly asks you to respond in a specific language"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2592,
+        -464
+      ],
+      "id": "ac128d41-cf7b-4f19-9bf8-5e9508d376c8",
+      "name": "Smart Agent"
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-2.0-flash-001",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        2592,
+        -240
+      ],
+      "id": "c08a79a1-ca87-4cee-9b3c-1e53884208d0",
+      "name": "Smart Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "yaGCoj5g2zdXZG8q",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "contextWindowLength": 20
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        2816,
+        -240
+      ],
+      "id": "59f4aa3a-29c0-464e-8d41-169221b0ec37",
+      "name": "Postgres Memory",
+      "credentials": {
+        "postgres": {
+          "id": "pAjfYmWcQsNNmOdU",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "The search query to find relevant properties",
+        "method": "POST",
+        "url": "http://backend:8000/search/rag",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('query', `The search query to find relevant properties`, 'string') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        3024,
+        -240
+      ],
+      "id": "7e243429-e9cb-4833-bc3b-7fd9cf9337bc",
+      "name": "search_properties"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "={{ $fromAI('calendar_id', `The Google Calendar ID of the agent assigned to this property. This is REQUIRED and must come from the search_properties result. NEVER use a default or fallback calendar. If agent_calendar_id is null or missing, do NOT proceed and tell the user: \"I cannot schedule this visit because the assigned agent has not connected their Google Calendar yet. Please contact the agency directly.\"`, 'string') }}",
+          "mode": "id"
+        },
+        "returnAll": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Return_All', ``, 'boolean') }}",
+        "timeMin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('After', ``, 'string') }}",
+        "timeMax": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Before', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        3184,
+        -240
+      ],
+      "id": "8e3bbc63-b1dd-4846-bf78-ca1eb5a520ec",
+      "name": "get_events",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "FVcAquQPXh8Qvrhx",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "={{ $fromAI('calendar_id', `The Google Calendar ID of the agent assigned to this property. This is REQUIRED and must come from the search_properties result. NEVER use a default or fallback calendar. If agent_calendar_id is null or missing, do NOT proceed and tell the user: \"I cannot schedule this visit because the assigned agent has not connected their Google Calendar yet. Please contact the agency directly.\"`, 'string') }}",
+          "mode": "id"
+        },
+        "start": "={{ DateTime.fromISO($fromAI('Start','', 'string')).setZone('Africa/Tunis').toISO() }}",
+        "end": "={{ DateTime.fromISO($fromAI('End','', 'string')).setZone('Africa/Tunis').toISO() }}",
+        "additionalFields": {
+          "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Summary', ``, 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        3344,
+        -240
+      ],
+      "id": "11d1597e-8452-499a-9628-d499be8634e8",
+      "name": "create_event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "FVcAquQPXh8Qvrhx",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "calendar": {
+          "__rl": true,
+          "value": "={{ $fromAI('calendar_id', `The Google Calendar ID of the agent assigned to this property. This is REQUIRED and must come from the search_properties result. NEVER use a default or fallback calendar. If agent_calendar_id is null or missing, do NOT proceed and tell the user: \"I cannot schedule this visit because the assigned agent has not connected their Google Calendar yet. Please contact the agency directly.\"`, 'string') }}",
+          "mode": "id"
+        },
+        "eventId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', ``, 'string') }}",
+        "updateFields": {
+          "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', ``, 'string') }}",
+          "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', ``, 'string') }}",
+          "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Summary', ``, 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        3504,
+        -240
+      ],
+      "id": "c87ef682-8cf7-4577-bab7-6a759aca6142",
+      "name": "update_event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "FVcAquQPXh8Qvrhx",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "value": "={{ $fromAI('calendar_id', `The Google Calendar ID of the agent assigned to this property. This is REQUIRED and must come from the search_properties result. NEVER use a default or fallback calendar. If agent_calendar_id is null or missing, do NOT proceed and tell the user: \"I cannot schedule this visit because the assigned agent has not connected their Google Calendar yet. Please contact the agency directly.\"`, 'string') }}",
+          "mode": "id"
+        },
+        "eventId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        3664,
+        -240
+      ],
+      "id": "02299379-6e75-41f6-82b6-65bc799d32f7",
+      "name": "delete_event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "FVcAquQPXh8Qvrhx",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/&lt;b&gt;(.*?)&lt;\\/b&gt;/g, '<b>$1</b>')\n  .replace(/&lt;i&gt;(.*?)&lt;\\/i&gt;/g, '<i>$1</i>')\n  .replace(/\\*\\*(.*?)\\*\\*/g, '<b>$1</b>')\n  .replace(/_(.*?)_/g, '<i>$1</i>')\n  .replace(/#{1,3} (.*)/g, '📌 <b>$1</b>')\n  .replace(/- /g, '• ')\n}}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2912,
+        -464
+      ],
+      "id": "731bd095-6384-4b33-849c-8288f34a2ccb",
+      "name": "Send Reply",
+      "webhookId": "d2e4a63c-d72c-4026-b28d-e30e980a7a46",
+      "credentials": {
+        "telegramApi": {
+          "id": "9mfjU35ySOQjdLid",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        2352,
+        48
+      ],
+      "id": "206b7e20-8f2e-4539-9fbe-fe306b89200b",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "chatId": "6786962506",
+        "text": "=🚨 <b>Elite Estate — Workflow Error</b>\n\n<b>Workflow:</b> {{ $json.workflow.name }}\n<b>Node:</b> {{ $json.execution.lastNodeExecuted }}\n<b>Error:</b> {{ $json.execution.error.message }}\n<b>Time:</b> {{ $now.setZone('Africa/Tunis').toISO() }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2592,
+        48
+      ],
+      "id": "29a90199-67a9-47f3-9fda-25ba90776ea5",
+      "name": "Dev Error Notification",
+      "webhookId": "a523316c-0fe8-412c-bccc-09a42d75fccf",
+      "credentials": {
+        "telegramApi": {
+          "id": "9mfjU35ySOQjdLid",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Smart Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Smart Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Smart Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Smart Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "search_properties": {
+      "ai_tool": [
+        [
+          {
+            "node": "Smart Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_events": {
+      "ai_tool": [
+        [
+          {
+            "node": "Smart Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create_event": {
+      "ai_tool": [
+        [
+          {
+            "node": "Smart Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "update_event": {
+      "ai_tool": [
+        [
+          {
+            "node": "Smart Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "delete_event": {
+      "ai_tool": [
+        [
+          {
+            "node": "Smart Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Smart Agent": {
+      "main": [
+        [
+          {
+            "node": "Send Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Dev Error Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "3f3a0853-191e-4f5e-a02e-f09e3f5ad3b6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d04c073b691b19605c03318f28dd5dbd9a3f2858f68df4a3b248acf9052573d4"
+  },
+  "id": "r_xULyktelxzrgIcgFO2X",
+  "tags": []
+}

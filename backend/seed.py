@@ -9,18 +9,18 @@ from database import SessionLocal, engine
 import models
 import auth
 import ai_utils
+from utils import embeddings
 from datetime import datetime
 
 def seed_db():
     print("🚀 Starting Database Seeding...")
-    models.Base.metadata.drop_all(bind=engine)
-    models.Base.metadata.create_all(bind=engine)
+    # models.Base.metadata.drop_all(bind=engine)
+    # models.Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     
     try:
         # 1. Clear existing data
         db.query(models.Visit).delete()
-        db.query(models.Inquiry).delete()
         db.query(models.PropertyImage).delete()
         db.query(models.PropertyFavorite).delete()
         db.query(models.Feature).delete()
@@ -39,20 +39,15 @@ def seed_db():
         # Head Agents (Managers)
         head1 = models.User(email="h.kallel@elite.tn", full_name="Hedi Kallel", role="head_agent", hashed_password=auth.get_password_hash("managerpassword"))
         db.add(head1)
-        head2 = models.User(email="m.ayadi@elite.tn", full_name="Mona Ayadi", role="head_agent", hashed_password=auth.get_password_hash("managerpassword"))
-        db.add(head2)
         
         db.commit()
         db.refresh(head1)
-        db.refresh(head2)
 
-        # Sub-Agents
-        # Team Kallel
+        # Sub-Agents (All managed by Hedi Kallel)
         agent1 = models.User(email="a.trabelsi@elite.tn", full_name="Ahmed Trabelsi", role="agent", hashed_password=auth.get_password_hash("agentpassword"), manager_id=head1.id)
         agent2 = models.User(email="s.dridi@elite.tn", full_name="Sonia Dridi", role="agent", hashed_password=auth.get_password_hash("agentpassword"), manager_id=head1.id)
-        # Team Ayadi
-        agent3 = models.User(email="k.jelassi@elite.tn", full_name="Karim Jelassi", role="agent", hashed_password=auth.get_password_hash("agentpassword"), manager_id=head2.id)
-        agent4 = models.User(email="n.moussa@elite.tn", full_name="Nadine Moussa", role="agent", hashed_password=auth.get_password_hash("agentpassword"), manager_id=head2.id)
+        agent3 = models.User(email="k.jelassi@elite.tn", full_name="Karim Jelassi", role="agent", hashed_password=auth.get_password_hash("agentpassword"), manager_id=head1.id)
+        agent4 = models.User(email="n.moussa@elite.tn", full_name="Nadine Moussa", role="agent", hashed_password=auth.get_password_hash("agentpassword"), manager_id=head1.id)
         
         db.add_all([agent1, agent2, agent3, agent4])
         
@@ -91,7 +86,9 @@ def seed_db():
                 "image": "/static/seed-images/villa.png",
                 "agent_email": "a.trabelsi@elite.tn",
                 "owner_email": "h.kallel@elite.tn",
-                "features": ["Swimming Pool", "Sea View", "Smart Home", "Garage", "Garden"]
+                "features": ["Swimming Pool", "Sea View", "Smart Home", "Garage", "Garden"],
+                "latitude": 36.9156,
+                "longitude": 10.2915
             },
             {
                 "title": "Blue Horizon Penthouse",
@@ -108,7 +105,9 @@ def seed_db():
                 "image": "/static/seed-images/apartment.png",
                 "agent_email": "s.dridi@elite.tn",
                 "owner_email": "h.kallel@elite.tn",
-                "features": ["Sea View", "Elevator", "Gym", "Garage"]
+                "features": ["Sea View", "Elevator", "Gym", "Garage"],
+                "latitude": 36.8706,
+                "longitude": 10.3417
             },
             {
                 "title": "Mediterranean Dream Estate",
@@ -124,8 +123,10 @@ def seed_db():
                 "area": 1200,
                 "image": "/static/seed-images/house.png",
                 "agent_email": "k.jelassi@elite.tn",
-                "owner_email": "m.ayadi@elite.tn",
-                "features": ["Swimming Pool", "Garden", "Garage"]
+                "owner_email": "h.kallel@elite.tn",
+                "features": ["Swimming Pool", "Garden", "Garage"],
+                "latitude": 36.4000,
+                "longitude": 10.6167
             },
             {
                 "title": "Urban Oasis Lofts",
@@ -141,8 +142,10 @@ def seed_db():
                 "area": 110,
                 "image": "/static/seed-images/apartment.png",
                 "agent_email": "n.moussa@elite.tn",
-                "owner_email": "m.ayadi@elite.tn",
-                "features": ["Smart Home", "Gym", "High-speed Internet"]
+                "owner_email": "h.kallel@elite.tn",
+                "features": ["Smart Home", "Gym", "High-speed Internet"],
+                "latitude": 36.8359,
+                "longitude": 10.2367
             }
         ]
 
@@ -164,7 +167,10 @@ def seed_db():
                 area=p["area"],
                 agent_id=user_map[p["agent_email"]],
                 owner_id=user_map[p["owner_email"]],
-                published_at=datetime.utcnow()
+                published_at=datetime.utcnow(),
+                latitude=p.get("latitude"),
+                longitude=p.get("longitude"),
+                description_vector=embeddings.get_embedding(p["description"])
             )
             
             for f_name in p["features"]:
@@ -178,15 +184,7 @@ def seed_db():
 
         # 6. Create Sample Interactions
         print("💬 Creating Interactions...")
-        p1 = db.query(models.Property).first()
-        inquiry1 = models.Inquiry(
-            property_id=p1.id,
-            user_id=visitor.id,
-            message="I am very interested in this mansion. Can we discuss the pricing details?",
-            sentiment="positive"
-        )
-        db.add(inquiry1)
-
+        
         db.commit()
         print("✅ Seeding Completed Successfully!")
 

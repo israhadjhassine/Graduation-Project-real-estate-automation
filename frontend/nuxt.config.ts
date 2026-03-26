@@ -9,7 +9,8 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
     public: {
-      apiUrl: process.env.API_URL || 'http://localhost:8000'
+      apiUrl: process.env.API_URL || 'http://localhost:8000',
+      telegramBotName: process.env.NUXT_PUBLIC_TELEGRAM_BOT_NAME || 'Pfe_rea_bot'
     }
   },
   app: {

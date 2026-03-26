@@ -71,8 +71,7 @@ CREATE TABLE properties (
 	postal_code VARCHAR(20), 
 	latitude NUMERIC(10, 8), 
 	longitude NUMERIC(11, 8), 
-	meta_title VARCHAR(255), 
-	meta_description TEXT, 
+	longitude NUMERIC(11, 8), 
 	views_count INTEGER, 
 	favorites_count INTEGER, 
 	is_featured BOOLEAN, 
@@ -121,20 +120,7 @@ CREATE TABLE property_favorites (
 	FOREIGN KEY(property_id) REFERENCES properties (id) ON DELETE CASCADE
 );
 
-CREATE TABLE inquiries (
-    id BIGSERIAL PRIMARY KEY,
-    property_id BIGINT REFERENCES properties(id) ON DELETE SET NULL,
-    user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
-    name VARCHAR(150),
-    email VARCHAR(255),
-    phone VARCHAR(50),
-    subject VARCHAR(200),
-    message TEXT NOT NULL,
-    status VARCHAR(50) DEFAULT 'new',
-    source VARCHAR(50) DEFAULT 'web',
-    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now(),
-    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now()
-);
+
 
 CREATE TABLE visits (
     id BIGSERIAL PRIMARY KEY,
@@ -145,5 +131,12 @@ CREATE TABLE visits (
     status VARCHAR(50) DEFAULT 'scheduled',
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now(),
     updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS n8n_chat_history (
+    id SERIAL PRIMARY KEY,
+    session_id VARCHAR(255) NOT NULL,
+    message JSONB NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
 );
 
