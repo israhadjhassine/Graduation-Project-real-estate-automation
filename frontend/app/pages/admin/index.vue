@@ -33,7 +33,7 @@
               <LucideUsers class="w-6 h-6 text-purple-600" />
             </div>
           </div>
-          <p class="text-xs font-bold text-purple-400 uppercase tracking-widest">Managers</p>
+          <p class="text-xs font-bold text-purple-400 uppercase tracking-widest">Head Agents</p>
           <p class="text-3xl font-bold text-primary-950 mt-1">{{ headAgents.length }}</p>
         </div>
 
@@ -82,7 +82,8 @@
                 <th class="px-6 py-4 text-xs font-bold text-primary-600">Name</th>
                 <th class="px-6 py-4 text-xs font-bold text-primary-600">Email</th>
                 <th class="px-6 py-4 text-xs font-bold text-primary-600">Role</th>
-                <th class="px-6 py-4 text-xs font-bold text-primary-600 text-right">Actions</th>
+                <th class="px-6 py-4 text-xs font-bold text-primary-600">Status</th>
+                <th class="px-6 py-4 text-xs font-bold text-primary-600 text-right">Account Control</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-primary-100">
@@ -97,16 +98,27 @@
                     user.role === 'agent' ? 'bg-blue-100 text-blue-700' :
                     'bg-gray-100 text-gray-700'
                   ]">
-                    {{ user.role }}
+                    {{ user.role === 'head_agent' ? 'Head Agent' : user.role === 'agent' ? 'Sub-Agent' : user.role === 'admin' ? 'Admin' : user.role }}
+                  </span>
+                </td>
+                <td class="px-6 py-4">
+                  <span :class="[
+                    'px-3 py-1 text-[10px] font-bold rounded-lg uppercase',
+                    user.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                  ]">
+                    {{ user.is_active ? 'Active' : 'Disabled' }}
                   </span>
                 </td>
                 <td class="px-6 py-4 text-right">
                   <button 
                     v-if="user.id !== auth.user?.id"
-                    @click="deleteUser(user.id)" 
-                    class="p-2 hover:bg-red-50 rounded-lg text-red-400 transition-colors"
+                    @click="toggleUserStatus(user.id)" 
+                    :class="[
+                      'px-4 py-2 rounded-xl text-[10px] font-bold uppercase transition-all shadow-md',
+                      user.is_active ? 'bg-red-50 text-red-600 hover:bg-red-100 shadow-red-900/5' : 'bg-green-50 text-green-600 hover:bg-green-100 shadow-green-900/5'
+                    ]"
                   >
-                    <LucideTrash2 class="w-4 h-4" />
+                    {{ user.is_active ? 'Disable' : 'Enable' }}
                   </button>
                 </td>
               </tr>
@@ -123,21 +135,14 @@
 
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
            <div v-for="prop in properties" :key="prop.id" class="relative group">
-             <PropertyCard :property="prop" @click="editProperty(prop)" />
+             <PropertyCard :property="prop" />
              <div class="absolute inset-x-0 bottom-0 p-4 translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all flex gap-2">
-
-                <button 
-                  @click.stop="editProperty(prop)"
-                  class="flex-1 bg-white/90 backdrop-blur-md py-2 px-3 rounded-xl text-xs font-bold text-primary-950 hover:bg-white flex items-center justify-center gap-2 shadow-xl"
-                >
-                  <LucideEdit class="w-3.5 h-3.5" /> Edit Details
-                </button>
-                <button 
-                  @click.stop="deleteProperty(prop.id)"
-                  class="bg-red-500/90 backdrop-blur-md p-2 rounded-xl text-white hover:bg-red-500 shadow-xl"
-                >
-                  <LucideTrash2 class="w-3.5 h-3.5" />
-                </button>
+               <button 
+                 @click.stop="viewProperty(prop)"
+                 class="flex-1 bg-white/90 backdrop-blur-md py-2 px-3 rounded-xl text-xs font-bold text-primary-950 hover:bg-white flex items-center justify-center gap-2 shadow-xl"
+               >
+                 <LucideEye class="w-3.5 h-3.5" /> View Details
+               </button>
              </div>
            </div>
            <div v-if="!properties.length" class="col-span-full text-center py-12 text-primary-400">
@@ -174,15 +179,15 @@
           <div>
             <label class="block text-sm font-bold text-primary-950 mb-2">Role</label>
             <select v-model="userForm.role" required class="w-full bg-primary-50 border border-primary-200 rounded-xl px-4 py-3 outline-none focus:border-accent-500">
-              <option value="head_agent">Head Agent (Manager)</option>
+              <option value="head_agent">Head Agent</option>
               <option value="agent">Sub-Agent</option>
               <option value="admin">Administrator</option>
             </select>
           </div>
           <div v-if="userForm.role === 'agent'">
-            <label class="block text-sm font-bold text-primary-950 mb-2">Assign to Head Agent (Manager)</label>
+            <label class="block text-sm font-bold text-primary-950 mb-2">Assign to Head Agent</label>
             <select v-model="userForm.manager_id" required class="w-full bg-primary-50 border border-primary-200 rounded-xl px-4 py-3 outline-none focus:border-accent-500">
-              <option value="" disabled>Select a Manager...</option>
+              <option value="" disabled>Select a Head Agent...</option>
               <option v-for="manager in headAgents" :key="manager.id" :value="manager.id">{{ manager.full_name }}</option>
             </select>
           </div>
@@ -199,6 +204,7 @@
       v-if="showPropertyModal"
       :show="showPropertyModal" 
       :edit-data="selectedProperty"
+      :read-only="true"
       @close="closePropertyModal" 
       @success="handlePropertySuccess"
     />
@@ -209,8 +215,7 @@
 <script setup>
 import { 
   LucideShieldAlert, LucideUsers, LucideBuilding2, 
-  LucideHome, LucidePlus, LucideX, LucideTrash2,
-  LucideEdit
+  LucideHome, LucidePlus, LucideX, LucideEye
 } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/auth'
 import axios from 'axios'
@@ -284,36 +289,21 @@ const createUser = async () => {
     loading.value = false
   }
 }
-const deleteUser = async (userId) => {
-  if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) return
-  
+const toggleUserStatus = async (userId) => {
   try {
-    await axios.delete(`${getApiUrl()}/admin/users/${userId}`, {
+    await axios.patch(`${getApiUrl()}/admin/users/${userId}/toggle-status`, {}, {
       headers: { Authorization: `Bearer ${auth.token}` }
     })
     fetchData()
   } catch (e) {
-    console.error("Failed to delete user", e)
-    alert(e.response?.data?.detail || "Failed to delete user")
+    console.error("Failed to toggle user status", e)
+    alert(e.response?.data?.detail || "Failed to update account status")
   }
 }
 
-const editProperty = (property) => {
+const viewProperty = (property) => {
   selectedProperty.value = property
   showPropertyModal.value = true
-}
-
-const deleteProperty = async (propertyId) => {
-  if (!confirm("Delete this property?")) return
-  
-  try {
-    await axios.delete(`${getApiUrl()}/properties/${propertyId}`, {
-      headers: { Authorization: `Bearer ${auth.token}` }
-    })
-    fetchData()
-  } catch (e) {
-    console.error("Failed to delete property", e)
-  }
 }
 
 const closePropertyModal = () => {

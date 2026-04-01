@@ -8,8 +8,9 @@
 import { useAuthStore } from '~/stores/auth'
 const auth = useAuthStore()
 
-// Initialize auth on client side
-if (process.client) {
-  auth.init()
-}
+// Run auth init on client only, after DOM mount
+// This ensures auth.isInitialized is set before the navbar renders user info
+onMounted(async () => {
+  await auth.init()
+})
 </script>

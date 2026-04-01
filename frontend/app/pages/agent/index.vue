@@ -8,10 +8,13 @@
           <div class="w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-900 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/20 text-white">
             <LucideHeadset class="w-10 h-10" />
           </div>
-          <div>
-            <h1 class="text-3xl font-bold text-primary-950">Agent Workspace</h1>
-            <p class="text-primary-500 font-medium mt-1">Manage Client Inquiries & Visits</p>
-          </div>
+        <div class="flex items-center gap-4">
+           <LucideHeadset class="w-10 h-10 text-blue-600" />
+           <div>
+             <h1 class="text-2xl font-bold text-primary-950">Agent Workspace</h1>
+             <p class="text-xs text-primary-500">Manage inquiries, visits, and close deals.</p>
+           </div>
+        </div>
         </div>
       </div>
 
@@ -61,6 +64,12 @@
           :class="['px-6 py-3 rounded-full text-sm font-bold transition-all whitespace-nowrap', activeTab === 'visits' ? 'bg-primary-950 text-white shadow-md' : 'text-primary-600 hover:bg-primary-100']"
         >
           <LucideCalendar class="w-4 h-4 inline-block mr-2" /> Property Viewings
+        </button>
+        <button 
+          @click="activeTab = 'properties'" 
+          :class="['px-6 py-3 rounded-full text-sm font-bold transition-all whitespace-nowrap', activeTab === 'properties' ? 'bg-primary-950 text-white shadow-md' : 'text-primary-600 hover:bg-primary-100']"
+        >
+          <LucideHome class="w-4 h-4 inline-block mr-2" /> My Portfolio
         </button>
       </div>
 
@@ -123,7 +132,59 @@
         </div>
       </div>
 
-      <!-- Tab Content: Visits -->
+      <!-- Tab Content: Properties -->
+      <div v-show="activeTab === 'properties'">
+         <div class="card-premium p-0 overflow-hidden">
+          <table class="w-full text-left">
+            <thead>
+              <tr class="bg-primary-50">
+                <th class="px-6 py-4 text-xs font-bold text-primary-600">Property</th>
+                <th class="px-6 py-4 text-xs font-bold text-primary-600">Price</th>
+                <th class="px-6 py-4 text-xs font-bold text-primary-600">Status</th>
+                <th class="px-6 py-4 text-xs font-bold text-primary-600 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-primary-100">
+              <tr v-for="prop in myProperties" :key="prop.id" class="hover:bg-primary-50/50 transition-colors">
+                <td class="px-6 py-4">
+                   <p class="font-bold text-sm text-primary-950">{{ prop.title }}</p>
+                   <p class="text-[10px] text-primary-400">{{ prop.city }}</p>
+                </td>
+                <td class="px-6 py-4 text-sm font-bold text-primary-950">
+                   {{ prop.price }} {{ prop.currency }}
+                </td>
+                <td class="px-6 py-4">
+                   <span :class="[
+                     'px-2 py-1 text-[10px] font-bold rounded-lg uppercase',
+                     prop.status === 'sold' ? 'bg-purple-100 text-purple-700' : prop.status === 'pending_sold' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+                   ]">
+                      {{ prop.status }}
+                   </span>
+                </td>
+                <td class="px-6 py-4 text-right">
+                    <button 
+                      v-if="prop.status === 'available'"
+                      @click="markAsSold(prop.id)"
+                      class="px-4 py-2 bg-accent-600 hover:bg-accent-700 text-white rounded-xl text-[10px] font-bold uppercase transition-all shadow-lg shadow-accent-900/10"
+                    >
+                      Request Sale
+                    </button>
+                    <span v-else-if="prop.status === 'pending_sold'" class="px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-lg uppercase animate-pulse">
+                      Approval Pending
+                    </span>
+                    <span v-else class="text-[10px] font-bold text-primary-300 uppercase italic">Goal Reached</span>
+                </td>
+              </tr>
+              <tr v-if="!myProperties.length">
+                 <td colspan="4" class="py-12 text-center text-primary-500">
+                    <LucideHome class="w-12 h-12 text-primary-200 mx-auto mb-3" />
+                    <p>No listings assigned to you yet.</p>
+                 </td>
+              </tr>
+            </tbody>
+          </table>
+         </div>
+      </div>
       <div v-show="activeTab === 'visits'">
          <div class="card-premium p-0 overflow-hidden">
           <table class="w-full text-left">
@@ -198,6 +259,9 @@ const activeTab = ref('inquiries')
 
 const inquiries = ref([])
 const visits = ref([])
+const properties = ref([])
+
+const myProperties = computed(() => properties.value.filter(p => p.agent_id === auth.user?.id))
 
 // Computed properties for dashboard stats
 const pendingInquiries = computed(() => inquiries.value.filter(i => i.status === 'new'))
@@ -216,12 +280,14 @@ const getApiUrl = () => {
 
 const fetchData = async () => {
   try {
-    const [inqRes, visitsRes] = await Promise.all([
+    const [inqRes, visitsRes, propsRes] = await Promise.all([
       axios.get(`${getApiUrl()}/agent/inquiries`, { headers: { Authorization: `Bearer ${auth.token}` } }),
-      axios.get(`${getApiUrl()}/agent/visits`, { headers: { Authorization: `Bearer ${auth.token}` } })
+      axios.get(`${getApiUrl()}/agent/visits`, { headers: { Authorization: `Bearer ${auth.token}` } }),
+      axios.get(`${getApiUrl()}/properties`, { headers: { Authorization: `Bearer ${auth.token}` } })
     ])
     inquiries.value = inqRes.data
     visits.value = visitsRes.data
+    properties.value = propsRes.data
   } catch (e) {
     console.error("Agent dashboard fetch error:", e)
   }
@@ -238,14 +304,28 @@ const updateInquiryStatus = async (id, status) => {
   }
 }
 
-const updateVisitStatus = async (id, status) => {
+const markAsSold = async (id) => {
+  if (!confirm("Request sale approval? Your head agent will be notified and must approve before the property is marked as sold.")) return
   try {
-    await axios.put(`${getApiUrl()}/agent/visits/${id}/status?status=${status}`, null, {
+    await axios.patch(`${getApiUrl()}/properties/${id}/status`, { status: 'pending_sold' }, {
+      headers: { Authorization: `Bearer ${auth.token}` }
+    })
+    fetchData()
+    alert("Sale request sent! Your head agent will review and approve.")
+  } catch (e) {
+    console.error("Failed to request sale", e)
+    alert(e.response?.data?.detail || "Failed to submit sale request.")
+  }
+}
+
+const updateVisitStatus = async (visitId, newStatus) => {
+  try {
+    await axios.put(`${getApiUrl()}/agent/visits/${visitId}/status?status=${newStatus}`, null, {
       headers: { Authorization: `Bearer ${auth.token}` }
     })
     fetchData()
   } catch (e) {
-    console.error("Failed to update visit", e)
+    console.error("Failed to update visit status", e)
   }
 }
 

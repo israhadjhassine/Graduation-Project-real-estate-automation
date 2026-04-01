@@ -115,6 +115,32 @@
       </div>
     </div>
     
+    <!-- Auth Required Modal -->
+    <div v-if="showAuthModal" class="fixed inset-0 z-50 flex items-center justify-center p-6 bg-primary-950/40 backdrop-blur-sm transition-all" @click="showAuthModal = false">
+      <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl relative border border-primary-50" @click.stop>
+        <button @click="showAuthModal = false" class="absolute top-6 right-6 text-primary-400 hover:text-primary-950 transition-colors">
+          <LucideX class="w-6 h-6" />
+        </button>
+        
+        <div class="w-16 h-16 bg-accent-50 rounded-2xl flex items-center justify-center mb-6">
+          <LucideLock class="w-8 h-8 text-accent-600" />
+        </div>
+        
+        <h3 class="text-2xl font-bold text-primary-950 mb-3">Authentication Required</h3>
+        <p class="text-primary-600 mb-8 leading-relaxed">
+          For your security and a personalized experience, please sign in or create a client account to inquire about this exclusive property via Telegram.
+        </p>
+        
+        <div class="space-y-3">
+          <button @click="navigateTo('/login')" class="btn-primary w-full py-3.5 !rounded-xl">
+            Sign In to your Account
+          </button>
+          <button @click="navigateTo('/register')" class="w-full py-3.5 bg-primary-50 hover:bg-primary-100 text-primary-950 font-bold rounded-xl transition-colors border border-primary-200 text-sm">
+            Create an Elite Account
+          </button>
+        </div>
+      </div>
+    </div>
     
   </div>
   
@@ -131,7 +157,7 @@
 import { 
   LucideChevronLeft, LucideShare2, LucideHeart, 
   LucideMapPin, LucideBedDouble, LucideBath, LucideMaximize,
-  LucideImage, LucideSend
+  LucideImage, LucideSend, LucideLock, LucideX
 } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/auth'
 
@@ -140,6 +166,7 @@ const api = useApi()
 const auth = useAuthStore()
 const property = ref(null)
 const loading = ref(true)
+const showAuthModal = ref(false)
 
 const fetchProperty = async () => {
   loading.value = true
@@ -175,6 +202,11 @@ const config = useRuntimeConfig()
 const handleTelegramInquiry = () => {
   if (!property.value) return
   
+  if (!auth.isAuthenticated || !auth.user) {
+    showAuthModal.value = true
+    return
+  }
+
   // Construct the Telegram link with the property slug as context
   const botUsername = config.public.telegramBotName || 'Pfe_rea_bot'
   const slugContext = property.value.slug

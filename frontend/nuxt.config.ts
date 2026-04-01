@@ -4,8 +4,16 @@ export default defineNuxtConfig({
   },
   srcDir: 'app/',
   compatibilityDate: '2025-07-15',
-  devtools: { enabled: true },
+  devtools: { enabled: false },
   modules: ['@nuxtjs/tailwindcss', '@pinia/nuxt'],
+  vite: {
+    server: {
+      watch: {
+        usePolling: false,
+        ignored: ['**/.git/**', '**/node_modules/**']
+      }
+    }
+  },
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
     public: {

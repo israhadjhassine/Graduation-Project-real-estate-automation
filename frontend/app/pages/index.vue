@@ -47,7 +47,7 @@
       <div v-else class="text-center py-20 bg-white/50 rounded-3xl border-2 border-dashed border-primary-100">
         <LucideGhost class="w-12 h-12 text-primary-200 mx-auto mb-4" />
         <h3 class="text-xl font-bold text-primary-400">No properties found</h3>
-        <p class="text-primary-300">Try adjusting your semantic search for better results.</p>
+        <p class="text-primary-300">Try adjusting your search keywords for better results.</p>
       </div>
     </section>
   </div>

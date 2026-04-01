@@ -10,20 +10,20 @@
 
       <!-- Scrollable Filters -->
       <div class="flex-1 overflow-y-auto px-6 py-6 space-y-8 custom-scrollbar">
-        <!-- Semantic Search -->
+        <!-- Keyword Search -->
         <div class="space-y-3">
-          <label class="text-[10px] font-bold text-primary-400 uppercase tracking-widest">Semantic Search</label>
+          <label class="text-[10px] font-bold text-primary-400 uppercase tracking-widest">Search Keywords</label>
           <div class="relative group">
-            <LucideSparkles class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-accent-500" />
+            <LucideSearch class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
             <input 
               v-model="searchQuery" 
               @keyup.enter="handleSearch"
-              placeholder="e.g. Cozy villa near beach" 
+              placeholder="e.g. Garden, Sea view..." 
               class="w-full bg-primary-50/50 border border-primary-100 rounded-xl pl-10 pr-4 py-3 text-sm font-medium focus:border-accent-400 focus:bg-white focus:ring-4 focus:ring-accent-500/10 transition-all outline-none" 
             />
           </div>
           <button @click="handleSearch" class="w-full py-3 bg-primary-950 hover:bg-primary-900 text-white rounded-xl font-bold transition-all shadow-lg shadow-primary-900/20 text-sm flex items-center justify-center gap-2">
-            <LucideSearch class="w-4 h-4" /> Search
+            Apply Filters
           </button>
         </div>
 
@@ -40,6 +40,27 @@
              </select>
              <LucideChevronDown class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400 pointer-events-none z-10" />
           </div>
+        </div>
+
+        <!-- Features (And Logic) -->
+        <div class="space-y-4">
+          <label class="text-[10px] font-bold text-primary-400 uppercase tracking-widest">Features & Amenities</label>
+          <div v-if="availableFeatures.length" class="space-y-2">
+            <label v-for="feat in availableFeatures" :key="feat.id" class="flex items-center gap-3 group cursor-pointer">
+              <div class="relative flex items-center">
+                <input 
+                  type="checkbox" 
+                  :value="feat.id" 
+                  v-model="selectedFeatures" 
+                  @change="handleSearch"
+                  class="peer appearance-none w-5 h-5 border-2 border-primary-100 rounded-md checked:bg-accent-600 checked:border-accent-600 transition-all hover:border-primary-200 cursor-pointer"
+                />
+                <LucideCheck class="absolute inset-0 w-5 h-5 text-white scale-0 peer-checked:scale-75 transition-transform pointer-events-none" />
+              </div>
+              <span class="text-sm font-medium text-primary-600 group-hover:text-primary-950 transition-colors">{{ feat.name }}</span>
+            </label>
+          </div>
+          <div v-else class="text-xs text-primary-300 italic">No features found</div>
         </div>
 
         <!-- Property Type -->
@@ -121,10 +142,10 @@
               @click="navigateTo(`/properties/${prop.slug}`)"
             />
           </div>
-          <div v-else class="h-full flex flex-col items-center justify-center opacity-40">
-             <LucideGhost class="w-20 h-20 mb-6 text-primary-300" />
+          <div v-else class="h-full flex flex-col items-center justify-center opacity-40 text-center">
+             <LucideGhost class="w-20 h-20 mb-6 text-primary-300 mx-auto" />
              <p class="font-bold text-xl text-primary-950">No properties found</p>
-             <p class="text-primary-500 mt-2 text-sm">Adjust your filters to discover more.</p>
+             <p class="text-primary-500 mt-2 text-sm">Adjust your filters or keywords to discover more results.</p>
           </div>
         </div>
 
@@ -142,13 +163,14 @@
 <script setup>
 import { 
   LucideSearch, LucideLayoutGrid, LucideMap, 
-  LucideGhost, LucideSparkles, LucideMapPin, LucideChevronDown, LucideArrowUpDown
+  LucideGhost, LucideSparkles, LucideMapPin, LucideChevronDown, LucideArrowUpDown, LucideCheck
 } from 'lucide-vue-next'
 
 const api = useApi()
 const viewMode = ref('list')
 const loading = ref(false)
 const properties = ref([])
+const availableFeatures = ref([])
 
 // Filters state
 const searchQuery = ref('')
@@ -157,6 +179,7 @@ const propertyType = ref('All')
 const minPrice = ref('')
 const maxPrice = ref('')
 const sortPrice = ref('')
+const selectedFeatures = ref([])
 
 // Governorates
 const governorates = [
@@ -178,7 +201,17 @@ const resetFilters = () => {
   minPrice.value = ''
   maxPrice.value = ''
   sortPrice.value = ''
+  selectedFeatures.value = []
   handleSearch()
+}
+
+const fetchFeatures = async () => {
+  try {
+    const res = await api.get('/features')
+    availableFeatures.value = res.data
+  } catch (e) {
+    console.error("Failed to load features", e)
+  }
 }
 
 const handleSearch = async () => {
@@ -187,16 +220,17 @@ const handleSearch = async () => {
     const params = new URLSearchParams()
     if (searchQuery.value) params.append('query', searchQuery.value)
     if (location.value) params.append('location', location.value)
-    if (propertyType.value && propertyType.value !== 'All') params.append('property_type', propertyType.value)
+    if (propertyType.value && propertyType.value !== 'All') params.append('property_type', propertyType.value.toLowerCase())
     if (minPrice.value) params.append('min_price', minPrice.value)
     if (maxPrice.value) params.append('max_price', maxPrice.value)
     if (sortPrice.value) params.append('sort_price', sortPrice.value)
     
-    // Convert to query string
-    const queryString = params.toString()
+    // Append features
+    selectedFeatures.value.forEach(fid => {
+      params.append('feature_ids', fid)
+    })
     
-    // If no semantic query and no filters, just get all properties
-    // Otherwise use the semantic search endpoint which now handles filters too
+    const queryString = params.toString()
     const endpoint = queryString ? `/search/semantic?${queryString}` : '/properties'
     
     const res = await api.get(endpoint)
@@ -209,6 +243,7 @@ const handleSearch = async () => {
 }
 
 onMounted(() => {
+  fetchFeatures()
   handleSearch()
 })
 </script>

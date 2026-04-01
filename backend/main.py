@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session, joinedload
@@ -331,10 +331,12 @@ def get_agency_properties(
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
 ):
-    """Returns all properties for agency management. Head Agents only see their own listings."""
+    """Returns all properties for agency management. Head Agents only see their own listings (all statuses)."""
     query = db.query(models.Property).options(
         joinedload(models.Property.images),
-        joinedload(models.Property.features)
+        joinedload(models.Property.features),
+        joinedload(models.Property.owner),
+        joinedload(models.Property.agent)
     )
     
     if current_user.role == "admin":
@@ -342,9 +344,143 @@ def get_agency_properties(
         
     return query.filter(models.Property.owner_id == current_user.id).all()
 
+@app.patch("/agency/staff/{agent_id}/toggle-status")
+def toggle_sub_agent_status(
+    agent_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
+):
+    """Head Agent can enable/disable their own sub-agents."""
+    agent = db.query(models.User).filter(models.User.id == agent_id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    # Head agents can only toggle their own subordinates
+    if current_user.role == "head_agent" and agent.manager_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You can only manage your own sub-agents")
+    agent.is_active = not agent.is_active
+    db.commit()
+    return {"message": f"Agent {'enabled' if agent.is_active else 'disabled'}", "is_active": agent.is_active}
+
+@app.post("/agency/properties/{property_id}/approve-sale")
+def approve_property_sale(
+    property_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
+):
+    """Head Agent approves a sub-agent's sale request, marking the property as officially sold."""
+    prop = db.query(models.Property).filter(models.Property.id == property_id).first()
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found")
+    if current_user.role == "head_agent" and prop.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You can only approve sales for your own properties")
+    if prop.status != "pending_sold":
+        raise HTTPException(status_code=400, detail="Property is not pending a sale approval")
+    prop.status = "sold"
+    db.commit()
+    return {"message": "Sale approved. Property is now marked as sold."}
+
+@app.post("/agency/properties/{property_id}/reject-sale")
+def reject_property_sale(
+    property_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
+):
+    """Head Agent rejects a sub-agent's sale request, reverting property to available."""
+    prop = db.query(models.Property).filter(models.Property.id == property_id).first()
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found")
+    if current_user.role == "head_agent" and prop.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    prop.status = "available"
+    db.commit()
+    return {"message": "Sale rejected. Property reverted to available."}
+
 
 
 # --- Sub-Agent Operations ---
+
+@app.get("/agent/inquiries")
+def get_agent_inquiries(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["agent", "head_agent", "admin"]))
+):
+    """Returns visits/inquiries for the currently logged-in sub-agent, formatted as leads."""
+    if current_user.role == "admin":
+        visits = db.query(models.Visit).order_by(models.Visit.created_at.desc()).all()
+    elif current_user.role == "head_agent":
+        # Head agents see all visits on properties they own
+        visits = db.query(models.Visit).join(
+            models.Property, models.Visit.property_id == models.Property.id
+        ).filter(
+            models.Property.owner_id == current_user.id
+        ).order_by(models.Visit.created_at.desc()).all()
+    else:
+        visits = db.query(models.Visit).filter(
+            models.Visit.agent_id == current_user.id
+        ).order_by(models.Visit.created_at.desc()).all()
+
+    # Format as inquiry-like objects for the frontend
+    result = []
+    for v in visits:
+        prop = db.query(models.Property).filter(models.Property.id == v.property_id).first()
+        result.append({
+            "id": v.id,
+            "name": f"Client #{v.telegram_chat_id or v.client_id or 'Unknown'}",
+            "email": "",
+            "phone": v.telegram_chat_id or "",
+            "subject": f"Visit request: {prop.title if prop else 'Property'}",
+            "message": f"Scheduled for {v.visit_date.strftime('%Y-%m-%d %H:%M') if v.visit_date else 'TBD'}",
+            "status": "new" if v.status == "scheduled" else "replied" if v.status == "finished" else "closed",
+            "source": "telegram" if v.telegram_chat_id else "web",
+            "property_id": v.property_id,
+            "property_status": prop.status if prop else None,
+            "visit_id": v.id,
+            "visit_status": v.status
+        })
+    
+    # Also add pending_sold properties as alert notifications for head_agents
+    if current_user.role in ["head_agent", "admin"]:
+        pending_props = db.query(models.Property).filter(
+            models.Property.status == "pending_sold",
+            models.Property.owner_id == current_user.id if current_user.role == "head_agent" else True
+        ).all()
+        for p in pending_props:
+            agent = db.query(models.User).filter(models.User.id == p.agent_id).first() if p.agent_id else None
+            # Only add if not already in result
+            if not any(r["property_id"] == p.id for r in result):
+                result.insert(0, {
+                    "id": -p.id,  # negative id to differentiate
+                    "name": agent.full_name if agent else "Sub-Agent",
+                    "email": agent.email if agent else "",
+                    "phone": "",
+                    "subject": f"Sale Request: {p.title}",
+                    "message": f"Sub-Agent {agent.full_name if agent else 'unknown'} is requesting approval to mark this property as sold.",
+                    "status": "new",
+                    "source": "system",
+                    "property_id": p.id,
+                    "property_status": "pending_sold",
+                    "visit_id": None,
+                    "visit_status": None
+                })
+    
+    return result
+
+@app.put("/agent/inquiries/{inquiry_id}/status")
+def update_inquiry_status(
+    inquiry_id: int,
+    status: str,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["agent", "head_agent", "admin"]))
+):
+    """Update visit/inquiry status. Maps to visit status."""
+    vis = db.query(models.Visit).filter(models.Visit.id == inquiry_id).first()
+    if not vis:
+        raise HTTPException(status_code=404, detail="Inquiry not found")
+    # Map inquiry status back to visit status
+    status_map = {"new": "scheduled", "replied": "finished", "closed": "cancelled"}
+    vis.status = status_map.get(status, status)
+    db.commit()
+    return {"message": "Status updated"}
 
 @app.get("/agent/visits", response_model=List[schemas.VisitResponse])
 def get_agent_visits(
@@ -372,6 +508,26 @@ def update_visit_status(
     vis.status = status
     db.commit()
     return {"message": "Visit status updated"}
+
+@app.patch("/properties/{property_id}/status")
+def update_property_status(
+    property_id: int,
+    payload: dict,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["agent", "head_agent", "admin"]))
+):
+    """Allows agents to update property status (e.g., mark as sold/pending)."""
+    prop = db.query(models.Property).filter(models.Property.id == property_id).first()
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found")
+    
+    new_status = payload.get("status")
+    if new_status not in ["available", "sold", "pending_sold", "rented"]:
+        raise HTTPException(status_code=400, detail="Invalid status value")
+    
+    prop.status = new_status
+    db.commit()
+    return {"message": f"Property status updated to {new_status}"}
 
 @app.get("/properties", response_model=List[schemas.Property])
 def list_properties(db: Session = Depends(database.get_db)):
@@ -403,8 +559,8 @@ def get_all_users(
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.RoleChecker(["admin"]))
 ):
-    """Admin access to view all users."""
-    return db.query(models.User).all()
+    """Admin access to view all registered staff users (excludes visitors who self-registered)."""
+    return db.query(models.User).filter(models.User.role != "visitor").all()
 
 @app.post("/admin/users", response_model=schemas.User, status_code=status.HTTP_201_CREATED)
 def create_user_admin(
@@ -431,6 +587,44 @@ def create_user_admin(
     db.refresh(new_user)
     return new_user
 
+@app.patch("/admin/users/{user_id}/toggle-status")
+def toggle_user_status(
+    user_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["admin"]))
+):
+    """Admin endpoint to enable or disable a user account."""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="You cannot disable your own account")
+    user.is_active = not user.is_active
+    db.commit()
+    return {"message": f"User {'enabled' if user.is_active else 'disabled'} successfully", "is_active": user.is_active}
+
+# --- Features (Amenities) ---
+@app.get("/features", response_model=List[schemas.Feature])
+def list_features(db: Session = Depends(database.get_db)):
+    """Returns all available amenity/feature tags for property listings."""
+    return db.query(models.Feature).order_by(models.Feature.name).all()
+
+@app.post("/features", response_model=schemas.Feature, status_code=status.HTTP_201_CREATED)
+def create_feature(
+    feature: schemas.FeatureBase,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["admin"]))
+):
+    """Admin endpoint to create a new amenity/feature tag."""
+    existing = db.query(models.Feature).filter(models.Feature.name == feature.name).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Feature already exists")
+    new_feature = models.Feature(name=feature.name)
+    db.add(new_feature)
+    db.commit()
+    db.refresh(new_feature)
+    return new_feature
+
 
 
 # --- AI & Semantic Search Routes ---
@@ -444,22 +638,23 @@ def semantic_search(
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
     sort_price: Optional[str] = None,
+    feature_ids: Optional[List[int]] = Query(None),
     payload: Optional[schemas.SemanticSearchQuery] = None,
     db: Session = Depends(database.get_db)
 ):
     """
-    Performs vector-based semantic search OR filtered search.
-    Supports both POST (payload) and GET (query params) for frontend flexibility.
+    Performs keyword-based search AND filtered search by features.
     """
-    search_text = payload.query if payload else query
+    search_text = payload.query if (payload and payload.query) else query
+    selected_features = payload.feature_ids if (payload and payload.feature_ids) else feature_ids
     
-    # Base query with joined images/features
+    # Base query
     q = db.query(models.Property).options(
         joinedload(models.Property.images),
         joinedload(models.Property.features)
     ).filter(models.Property.status == 'available')
 
-    # Apply Filters
+    # 1. Apply Standard Filters
     if location:
         q = q.filter(models.Property.city.ilike(f"%{location}%"))
     if property_type and property_type.lower() != 'all':
@@ -469,19 +664,28 @@ def semantic_search(
     if max_price:
         q = q.filter(models.Property.price <= max_price)
 
-    # Apply Semantic Search if query exists
+    # 2. Keyword Search (Replace Semantic)
     if search_text:
-        query_vector = embeddings.get_query_embedding(search_text)
-        if query_vector:
-            q = q.order_by(models.Property.description_vector.cosine_distance(query_vector))
+        # Search in title OR description
+        q = q.filter(
+            (models.Property.title.ilike(f"%{search_text}%")) | 
+            (models.Property.description.ilike(f"%{search_text}%"))
+        )
     
-    # Apply Sorting
+    # 3. Filter by Features (Must have ALL selected features)
+    if selected_features:
+        for fid in selected_features:
+            q = q.filter(models.Property.features.any(models.Feature.id == fid))
+
+    # 4. Apply Sorting
     if sort_price == 'asc':
         q = q.order_by(models.Property.price.asc())
     elif sort_price == 'desc':
         q = q.order_by(models.Property.price.desc())
+    else:
+        q = q.order_by(models.Property.created_at.desc())
 
-    return q.limit(20).all()
+    return q.limit(40).all()
 
 @app.post("/search/rag", response_model=schemas.RAGSearchResponse)
 def rag_search(
@@ -489,18 +693,25 @@ def rag_search(
     db: Session = Depends(database.get_db)
 ):
     """
-    Returns a clean, context-formatted response for RAG systems.
+    Enhanced keyword search for RAG systems (replaces vector-based retrieval).
     """
-    query_vector = embeddings.get_query_embedding(payload.query)
-    if not query_vector:
-        raise HTTPException(status_code=500, detail="Failed to generate query embedding")
-        
-    results = db.query(models.Property).filter(
-        models.Property.status == 'available',
-        models.Property.description_vector.isnot(None)
-    ).order_by(
-        models.Property.description_vector.cosine_distance(query_vector)
-    ).limit(5).all()
+    search_text = payload.query
+    
+    q = db.query(models.Property).options(
+        joinedload(models.Property.features)
+    ).filter(models.Property.status == 'available')
+    
+    if search_text:
+        q = q.filter(
+            (models.Property.title.ilike(f"%{search_text}%")) | 
+            (models.Property.description.ilike(f"%{search_text}%"))
+        )
+    
+    if payload.feature_ids:
+        for fid in payload.feature_ids:
+            q = q.filter(models.Property.features.any(models.Feature.id == fid))
+            
+    results = q.limit(10).all()
     
     if not results:
         return {"context": "No properties found matching this search.", "properties": []}

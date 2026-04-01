@@ -162,7 +162,8 @@ class VisitCreate(BaseModel):
     google_calendar_event_id: Optional[str] = None
 
 class SemanticSearchQuery(BaseModel):
-    query: str
+    query: Optional[str] = None
+    feature_ids: Optional[List[int]] = None
 
 class RAGProperty(BaseModel):
     id: int

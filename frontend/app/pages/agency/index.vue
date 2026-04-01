@@ -14,7 +14,7 @@
           </div>
         </div>
         
-        <button @click="openNewPropertyModal" class="btn-primary">
+        <button @click="showModal = true" class="btn-primary">
           <LucidePlus class="w-5 h-5" /> List New Property
         </button>
       </div>
@@ -66,6 +66,19 @@
         >
           <LucideUsers class="w-4 h-4 inline-block mr-2" /> Sub-Agent Team
         </button>
+        <button 
+          @click="activeTab = 'sold'" 
+          :class="['px-6 py-3 rounded-full text-sm font-bold transition-all whitespace-nowrap', activeTab === 'sold' ? 'bg-primary-950 text-white shadow-md' : 'text-primary-600 hover:bg-primary-100']"
+        >
+          <LucideCheckCircle2 class="w-4 h-4 inline-block mr-2" /> Sold Properties
+        </button>
+        <button 
+          @click="activeTab = 'inquiries'" 
+          :class="['px-6 py-3 rounded-full text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2', activeTab === 'inquiries' ? 'bg-primary-950 text-white shadow-md' : 'text-primary-600 hover:bg-primary-100']"
+        >
+          <LucideMessageSquare class="w-4 h-4 inline-block" /> Inquiries & Notifications
+          <span v-if="pendingSales.length" class="bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">{{ pendingSales.length }}</span>
+        </button>
       </div>
 
       <!-- Tab Content: Properties -->
@@ -76,17 +89,18 @@
               <tr class="bg-primary-50">
                 <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Property</th>
                 <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Status</th>
+                <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Head Agent</th>
                 <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Assigned Agent</th>
                 <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Price</th>
                 <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Actions</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-primary-50">
-              <tr v-for="prop in properties" :key="prop.id" class="hover:bg-primary-50/30 transition-colors">
+              <tr v-for="prop in activeProperties" :key="prop.id" class="hover:bg-primary-50/30 transition-colors">
                 <td class="px-6 py-4">
                   <div class="flex items-center gap-4">
                     <div class="w-12 h-12 rounded-xl overflow-hidden bg-primary-100 flex-shrink-0">
-                       <img v-if="prop.images?.length" :src="getPublicUrl(prop.images[0].image_url)" class="w-full h-full object-cover" />
+                       <img v-if="prop.images?.length" :src="`http://localhost:8000${prop.images[0].image_url}`" class="w-full h-full object-cover" />
                        <LucideImage v-else class="w-12 h-12 p-3 text-primary-200" />
                     </div>
                     <div>
@@ -96,24 +110,47 @@
                   </div>
                 </td>
                 <td class="px-6 py-4">
-                  <span class="px-2 py-1 bg-green-100 text-green-700 text-[10px] font-bold rounded-lg uppercase">{{ prop.status }}</span>
+                  <span v-if="prop.status === 'sold'" class="px-2 py-1 bg-green-100 text-green-700 text-[10px] font-bold rounded-lg uppercase">Sold</span>
+                  <span v-else-if="prop.status === 'pending_sold'" class="px-2 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-lg uppercase">Pending Sale</span>
+                  <span v-else class="px-2 py-1 bg-blue-100 text-blue-700 text-[10px] font-bold rounded-lg uppercase">Available</span>
                 </td>
                 <td class="px-6 py-4">
-                  <select :value="prop.agent_id" @change="assignAgent(prop.id, $event.target.value)" class="bg-primary-50 text-primary-950 font-medium text-xs rounded-lg px-2 py-1.5 border border-primary-200 outline-none focus:border-accent-400">
+                  <div class="flex flex-col">
+                    <span class="text-sm font-medium text-primary-950 truncate max-w-[120px]" :title="prop.owner?.full_name">
+                      {{ prop.owner?.full_name || 'System' }}
+                    </span>
+                    <span v-if="prop.owner_id === auth.user?.id" class="text-[8px] text-accent-600 font-bold uppercase tracking-tighter">Your Listing</span>
+                  </div>
+                </td>
+                <td class="px-6 py-4">
+                  <select 
+                    v-if="auth.isAdmin || prop.owner_id === auth.user?.id"
+                    :value="prop.agent_id" 
+                    @change="assignAgent(prop.id, $event.target.value)" 
+                    class="bg-primary-50 text-primary-950 font-medium text-xs rounded-lg px-2 py-1.5 border border-primary-200 outline-none focus:border-accent-400 w-full"
+                  >
                     <option :value="null">Unassigned</option>
                     <option v-for="agent in staff" :key="agent.id" :value="agent.id">{{ agent.full_name }}</option>
                   </select>
+                  <span v-else class="text-xs text-primary-400 font-medium italic">
+                    {{ prop.agent?.full_name || 'Unassigned' }}
+                  </span>
                 </td>
                 <td class="px-6 py-4 font-bold text-primary-950 text-sm">
                   {{ formatPrice(prop.price) }} <span class="text-[10px]">{{ prop.currency }}</span>
                 </td>
                 <td class="px-6 py-4">
-                   <div class="flex gap-2">
-                     <button @click="editProperty(prop)" class="p-2 hover:bg-primary-100 rounded-lg text-primary-400 transition-colors" title="Edit Property">
-                       <LucideEdit class="w-4 h-4" />
-                     </button>
-                     <button @click="deleteProperty(prop.id)" class="p-2 hover:bg-red-50 rounded-lg text-red-400 transition-colors" title="Delete Property">
-                       <LucideTrash2 class="w-4 h-4" />
+                   <div class="flex gap-1">
+                     <template v-if="auth.isAdmin || prop.owner_id === auth.user?.id">
+                       <button @click="editProperty(prop)" class="p-2 hover:bg-primary-100 rounded-lg text-primary-400 transition-colors" title="Edit Property">
+                         <LucideEdit class="w-4 h-4" />
+                       </button>
+                       <button @click="deleteProperty(prop.id)" class="p-2 hover:bg-red-50 rounded-lg text-red-400 transition-colors" title="Delete Property">
+                         <LucideTrash2 class="w-4 h-4" />
+                       </button>
+                     </template>
+                     <button v-else @click="viewProperty(prop)" class="p-2 hover:bg-primary-100 rounded-lg text-primary-400 transition-colors" title="View Details">
+                       <LucideEye class="w-4 h-4" />
                      </button>
                    </div>
                 </td>
@@ -143,6 +180,8 @@
                 <th class="px-6 py-4 text-xs font-bold text-primary-600">Email Address</th>
                 <th class="px-6 py-4 text-xs font-bold text-primary-600">Phone Number</th>
                 <th class="px-6 py-4 text-xs font-bold text-primary-600">Assigned Properties</th>
+                <th class="px-6 py-4 text-xs font-bold text-primary-600">Status</th>
+                <th class="px-6 py-4 text-xs font-bold text-primary-600 text-right">Actions</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-primary-100">
@@ -158,17 +197,28 @@
                 <td class="px-6 py-4 text-sm text-primary-600">{{ agent.email }}</td>
                 <td class="px-6 py-4 text-sm text-primary-600">{{ agent.phone_number || 'N/A' }}</td>
                 <td class="px-6 py-4">
-                  <div class="flex items-center gap-3">
-                    <span class="px-3 py-1 bg-primary-100 text-primary-700 text-[10px] font-bold rounded-lg uppercase">
-                      {{ properties.filter(p => p.agent_id === agent.id).length }} Listings
-                    </span>
-                    <button 
-                      @click="viewAgentAssignments(agent)"
-                      class="text-[10px] font-bold text-accent-600 hover:text-accent-700 underline underline-offset-4"
-                    >
-                      View All
-                    </button>
-                  </div>
+                  <span class="px-3 py-1 bg-primary-100 text-primary-700 text-[10px] font-bold rounded-lg uppercase">
+                    {{ properties.filter(p => p.agent_id === agent.id).length }} Listings
+                  </span>
+                </td>
+                <td class="px-6 py-4">
+                  <span :class="[
+                    'px-2 py-1 text-[10px] font-bold rounded-lg uppercase',
+                    agent.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                  ]">
+                    {{ agent.is_active ? 'Active' : 'Disabled' }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <button 
+                    @click="toggleAgentStatus(agent.id)"
+                    :class="[
+                      'text-[10px] font-bold uppercase transition-colors',
+                      agent.is_active ? 'text-red-500 hover:text-red-700' : 'text-green-500 hover:text-green-700'
+                    ]"
+                  >
+                    {{ agent.is_active ? 'Deactivate' : 'Activate' }}
+                  </button>
                 </td>
               </tr>
               <tr v-if="!staff.length">
@@ -182,86 +232,169 @@
         </div>
       </div>
 
-    </div>
-
-    <PropertyUploadModal 
-      :show="showModal" 
-      :edit-data="selectedProperty"
-      @close="closeModal" 
-      @success="handleSuccess"
-    />
-
-    <!-- Assignment Viewer Modal (Simple version) -->
-    <div v-if="showingAssignmentsFor" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-primary-950/40 backdrop-blur-sm">
-      <div class="bg-white rounded-[2.5rem] w-full max-w-lg p-8 shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
-        <div class="flex justify-between items-center mb-6">
-          <div>
-            <h3 class="text-xl font-bold text-primary-950">Assignments: {{ showingAssignmentsFor.full_name }}</h3>
-            <p class="text-sm text-primary-400">{{ agentProperties.length }} active listings</p>
-          </div>
-          <button @click="showingAssignmentsFor = null" class="w-10 h-10 rounded-full hover:bg-primary-50 flex items-center justify-center">
-            <LucideX class="w-5 h-5 text-primary-400" />
-          </button>
+      <!-- Tab Content: Sold Properties -->
+      <div v-show="activeTab === 'sold'">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-bold text-primary-950">Sold Portfolio</h2>
         </div>
-        <div class="overflow-y-auto space-y-3 custom-scrollbar pr-2">
-          <div v-for="p in agentProperties" :key="p.id" class="p-4 bg-primary-50 rounded-2xl flex items-center gap-4">
-            <img v-if="p.images?.length" :src="p.images[0].image_url" class="w-10 h-10 rounded-lg object-cover" />
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-bold text-primary-950 truncate">{{ p.title }}</p>
-              <p class="text-[10px] text-primary-400">{{ p.city }} • {{ formatPrice(p.price) }} {{ p.currency }}</p>
+
+        <div class="card-premium p-0 overflow-hidden">
+          <table class="w-full text-left">
+            <thead>
+              <tr class="bg-primary-50">
+                <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Property</th>
+                <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Sold By</th>
+                <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Price</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-primary-50">
+              <tr v-for="prop in soldProperties" :key="prop.id" class="hover:bg-primary-50/30 transition-colors">
+                <td class="px-6 py-4">
+                   <p class="font-bold text-primary-950 text-sm">{{ prop.title }}</p>
+                </td>
+                <td class="px-6 py-4">
+                   <span class="text-xs font-medium text-primary-600">{{ staff.find(s => s.id === prop.agent_id)?.full_name || 'System' }}</span>
+                </td>
+                <td class="px-6 py-4 font-bold text-primary-950 text-sm">
+                  {{ formatPrice(prop.price) }} <span class="text-[10px]">{{ prop.currency }}</span>
+                </td>
+              </tr>
+              <tr v-if="!soldProperties.length">
+                <td colspan="3" class="px-6 py-12 text-center text-primary-500">
+                  <LucideCheckCircle2 class="w-12 h-12 mx-auto text-primary-200 mb-3" />
+                  <p>No properties have been marked as sold yet.</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab Content: Inquiries -->
+      <div v-show="activeTab === 'inquiries'">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-bold text-primary-950">Client Leads & System Alerts</h2>
+        </div>
+        <div class="grid md:grid-cols-2 gap-6">
+          <div v-for="inq in inquiries" :key="inq.id" class="card-premium">
+            <div class="flex items-center justify-between mb-4">
+              <span :class="['px-2 py-1 text-[10px] font-bold rounded-lg uppercase', inq.source === 'system' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700']">
+                {{ inq.source }}
+              </span>
+              <span class="text-[10px] text-primary-400 font-bold uppercase">{{ inq.status }}</span>
             </div>
-            <span class="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md">{{ p.status }}</span>
+            <p class="text-sm font-bold text-primary-950 mb-1">{{ inq.subject }}</p>
+            <p class="text-xs text-primary-600 mb-4 line-clamp-3">{{ inq.message }}</p>
+            <div class="flex items-center gap-3 pt-4 border-t border-primary-100">
+               <div class="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-[10px] font-bold">
+                 {{ inq.name.charAt(0) }}
+               </div>
+               <div>
+                 <p class="text-[10px] font-bold text-primary-950">{{ inq.name }}</p>
+                 <p class="text-[10px] text-primary-400">{{ inq.email }}</p>
+               </div>
+            </div>
+            
+            <!-- Approval Action for Pending Sales -->
+            <div v-if="inq.property_status === 'pending_sold' && inq.status !== 'replied'" class="mt-4 pt-4 border-t border-amber-100 space-y-2">
+               <p class="text-[10px] font-bold text-amber-700 uppercase tracking-widest">⏳ Sale Approval Required</p>
+               <div class="flex gap-2">
+                 <button 
+                   @click="approveSale(inq)" 
+                   class="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-[10px] font-bold uppercase transition-all shadow-lg shadow-green-900/10"
+                 >
+                   ✓ Approve Sale
+                 </button>
+                 <button 
+                   @click="rejectSale(inq)" 
+                   class="flex-1 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl text-[10px] font-bold uppercase transition-all"
+                 >
+                   ✗ Reject
+                 </button>
+               </div>
+            </div>
           </div>
-          <div v-if="!agentProperties.length" class="text-center py-10 text-primary-300 italic text-sm">
-            No properties assigned yet.
+          <div v-if="!inquiries.length" class="col-span-full py-12 text-center text-primary-400">
+             No inquiries or notifications found.
           </div>
         </div>
       </div>
     </div>
 
+    <PropertyUploadModal 
+      :show="showModal" 
+      :edit-data="selectedProperty"
+      :read-only="isReadOnly"
+      @close="handleClose" 
+      @success="handleSuccess"
+    />
+
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watchEffect } from 'vue'
 import { 
   LucideBriefcase, LucideHome, LucideUsers, LucideEye,
   LucidePlus, LucideImage, LucideEdit, LucideTrash2,
-  LucideUserPlus, LucideX
+  LucideUserPlus, LucideX, LucideCheckCircle2,
+  LucideMessageSquare
 } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
-import { useAssetUrl } from '~/composables/useAssetUrl'
-import { navigateTo } from '#app'
 
 definePageMeta({ layout: 'dashboard' })
 
 const auth = useAuthStore()
 const api = useApi()
-const { getPublicUrl } = useAssetUrl()
 const activeTab = ref('properties')
 const properties = ref([])
 const staff = ref([])
+const inquiries = ref([])
 const loading = ref(false)
+
+const soldProperties = computed(() => properties.value.filter(p => p.status === 'sold'))
+const activeProperties = computed(() => properties.value.filter(p => p.status !== 'sold' && p.status !== 'pending_sold'))
+const pendingSales = computed(() => properties.value.filter(p => p.status === 'pending_sold'))
+
 const showModal = ref(false)
 const selectedProperty = ref(null)
-const showingAssignmentsFor = ref(null)
+const isReadOnly = ref(false)
 
-const agentProperties = computed(() => {
-  if (!showingAssignmentsFor.value) return []
-  return properties.value.filter(p => p.agent_id === showingAssignmentsFor.value.id)
-})
+const editProperty = (prop) => {
+  isReadOnly.value = false
+  selectedProperty.value = prop
+  showModal.value = true
+}
+
+const viewProperty = (prop) => {
+  isReadOnly.value = true
+  selectedProperty.value = prop
+  showModal.value = true
+}
+
+const deleteProperty = async (propertyId) => {
+  if (confirm('Are you sure you want to permanently delete this property listing?')) {
+    try {
+      await api.delete(`/properties/${propertyId}`)
+      fetchData()
+    } catch (e) {
+      console.error("Failed to delete property", e)
+    }
+  }
+}
 
 const fetchData = async () => {
   loading.value = true
   try {
-    const [propsRes, staffRes] = await Promise.all([
+    const [propsRes, staffRes, inqRes] = await Promise.all([
       api.get('/agency/properties'),
-      api.get('/agency/staff')
+      api.get('/agency/staff'),
+      api.get('/agent/inquiries')
     ])
     
     properties.value = propsRes.data
     staff.value = staffRes.data
+    inquiries.value = inqRes.data
     
     console.log("Agency Dashboard Sync Success:", {
       me: auth.user?.email,
@@ -278,39 +411,15 @@ const fetchData = async () => {
 }
 
 const handleSuccess = () => {
-  closeModal()
+  showModal.value = false
+  selectedProperty.value = null
   fetchData()
 }
 
-const editProperty = (prop) => {
-  selectedProperty.value = prop
-  showModal.value = true
-}
-
-const openNewPropertyModal = () => {
-  selectedProperty.value = null
-  showModal.value = true
-}
-
-const closeModal = () => {
+const handleClose = () => {
   showModal.value = false
   selectedProperty.value = null
-}
-
-const deleteProperty = async (id) => {
-  if (!confirm("Are you sure you want to delete this property? This action cannot be undone.")) return
-  
-  try {
-    await api.delete(`/properties/${id}`)
-    fetchData()
-  } catch (e) {
-    console.error("Delete failed", e)
-    alert("Failed to delete property and its related records.")
-  }
-}
-
-const viewAgentAssignments = (agent) => {
-  showingAssignmentsFor.value = agent
+  isReadOnly.value = false
 }
 
 const formatPrice = (price) => {
@@ -324,6 +433,40 @@ const assignAgent = async (propertyId, newAgentId) => {
     fetchData()
   } catch (e) {
     console.error("Failed to assign agent", e)
+  }
+}
+
+const toggleAgentStatus = async (agentId) => {
+  try {
+    await api.patch(`/agency/staff/${agentId}/toggle-status`, {})
+    fetchData()
+  } catch (e) {
+    console.error("Failed to toggle agent status", e)
+    alert(e.response?.data?.detail || 'Failed to update status')
+  }
+}
+
+const approveSale = async (inq) => {
+  if (confirm(`Approve the sale of this property? It will be marked as sold and removed from public listings.`)) {
+    try {
+      await api.post(`/agency/properties/${inq.property_id}/approve-sale`)
+      fetchData()
+    } catch (e) {
+      console.error("Failed to approve sale", e)
+      alert(e.response?.data?.detail || "Error approving sale.")
+    }
+  }
+}
+
+const rejectSale = async (inq) => {
+  if (confirm(`Reject this sale request? The property will return to Available status.`)) {
+    try {
+      await api.post(`/agency/properties/${inq.property_id}/reject-sale`)
+      fetchData()
+    } catch (e) {
+      console.error("Failed to reject sale", e)
+      alert(e.response?.data?.detail || "Error rejecting sale.")
+    }
   }
 }
 

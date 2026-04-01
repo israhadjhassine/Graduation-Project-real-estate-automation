@@ -12,6 +12,12 @@ services:
       - "5432:5432"
     volumes:
       - ./pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     networks:
       - real_estate_network
 
@@ -25,7 +31,9 @@ services:
       #      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
       #      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
       - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
-      - N8N_COOKIE_SAMESITE=lax
+      - N8N_COOKIE_SAMESITE=none
+      - N8N_SECURE_COOKIE=true
+      - N8N_PROXY_HOPS=1
       #      - DB_TYPE=postgresdb
       #      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
       #      - DB_POSTGRESDB_HOST=postgres
@@ -36,8 +44,11 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - WEBHOOK_URL=${WEBHOOK_URL}
       - N8N_WEBHOOK_URL=${WEBHOOK_URL}
-      - N8N_EDITOR_BASE_URL=${WEBHOOK_URL}
+      - N8N_EDITOR_BASE_URL=${N8N_EDITOR_BASE_URL}
       - N8N_PROTOCOL=https
+      - N8N_HOST=embryologically-shrewd-may.ngrok-free.dev
+      - N8N_PORT=5678
+      - NODE_FUNCTION_ALLOW_EXTERNAL=*
       - GOOGLE_CLIENT_ID=${N8N_GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${N8N_GOOGLE_CLIENT_SECRET}
       - GOOGLE_REDIRECT_URI=${N8N_GOOGLE_REDIRECT_URI}
@@ -67,7 +78,8 @@ services:
     volumes:
       - ./backend:/app
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - real_estate_network
 
@@ -95,6 +107,8 @@ services:
       NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
     command:
       - "http"
+      - "--domain=embryologically-shrewd-may.ngrok-free.dev"
+      - "--host-header=rewrite"
       - "n8n_automation:5678"
     ports:
       - "4040:4040"
