@@ -1,15 +1,5 @@
 -- Database Schema Generated from SQLAlchemy Models
 
-CREATE TABLE agencies (
-	id BIGSERIAL NOT NULL, 
-	name VARCHAR(255) NOT NULL, 
-	license_number VARCHAR(100), 
-	created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now(), 
-	PRIMARY KEY (id), 
-	UNIQUE (license_number)
-);
-
-CREATE INDEX ix_agencies_id ON agencies (id);
 
 CREATE TABLE features (
 	id BIGSERIAL NOT NULL, 
@@ -29,9 +19,7 @@ CREATE TABLE users (
 	role VARCHAR(20), 
 	is_active BOOLEAN, 
 	created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now(), 
-	agency_id BIGINT, 
-	PRIMARY KEY (id), 
-	FOREIGN KEY(agency_id) REFERENCES agencies (id) ON DELETE SET NULL
+	PRIMARY KEY (id)
 );
 
 CREATE INDEX ix_users_id ON users (id);
@@ -71,20 +59,20 @@ CREATE TABLE properties (
 	postal_code VARCHAR(20), 
 	latitude NUMERIC(10, 8), 
 	longitude NUMERIC(11, 8), 
-	longitude NUMERIC(11, 8), 
 	views_count INTEGER, 
-	favorites_count INTEGER, 
 	is_featured BOOLEAN, 
 	published_at TIMESTAMP WITHOUT TIME ZONE, 
+	rent_start_date TIMESTAMP WITHOUT TIME ZONE, 
+	rent_end_date TIMESTAMP WITHOUT TIME ZONE, 
 	created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now(), 
 	updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now(), 
 	owner_id BIGINT, 
 	agent_id BIGINT, 
-	agency_id BIGINT, 
+	buyer_id BIGINT, 
 	PRIMARY KEY (id), 
 	FOREIGN KEY(owner_id) REFERENCES users (id) ON DELETE SET NULL, 
-	FOREIGN KEY(agent_id) REFERENCES users (id) ON DELETE SET NULL, 
-	FOREIGN KEY(agency_id) REFERENCES agencies (id) ON DELETE CASCADE
+	FOREIGN KEY(agent_id) REFERENCES users (id) ON DELETE SET NULL,
+	FOREIGN KEY(buyer_id) REFERENCES users (id) ON DELETE SET NULL
 );
 
 CREATE UNIQUE INDEX ix_properties_slug ON properties (slug);
@@ -111,15 +99,6 @@ CREATE TABLE property_images (
 
 CREATE INDEX ix_property_images_id ON property_images (id);
 
-CREATE TABLE property_favorites (
-	user_id BIGINT NOT NULL, 
-	property_id BIGINT NOT NULL, 
-	created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now(), 
-	PRIMARY KEY (user_id, property_id), 
-	FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE, 
-	FOREIGN KEY(property_id) REFERENCES properties (id) ON DELETE CASCADE
-);
-
 
 
 CREATE TABLE visits (
@@ -133,10 +112,4 @@ CREATE TABLE visits (
     updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS n8n_chat_history (
-    id SERIAL PRIMARY KEY,
-    session_id VARCHAR(255) NOT NULL,
-    message JSONB NOT NULL,
-    created_at TIMESTAMP DEFAULT NOW()
-);
 

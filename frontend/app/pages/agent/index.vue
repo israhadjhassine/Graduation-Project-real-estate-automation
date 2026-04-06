@@ -162,14 +162,23 @@
                    </span>
                 </td>
                 <td class="px-6 py-4 text-right">
-                    <button 
-                      v-if="prop.status === 'available'"
-                      @click="markAsSold(prop.id)"
-                      class="px-4 py-2 bg-accent-600 hover:bg-accent-700 text-white rounded-xl text-[10px] font-bold uppercase transition-all shadow-lg shadow-accent-900/10"
-                    >
-                      Request Sale
-                    </button>
-                    <span v-else-if="prop.status === 'pending_sold'" class="px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-lg uppercase animate-pulse">
+                    <template v-if="prop.status === 'available'">
+                      <button 
+                        v-if="prop.listing_type === 'sale'"
+                        @click="openSaleModal(prop.id)"
+                        class="px-4 py-2 bg-accent-600 hover:bg-accent-700 text-white rounded-xl text-[10px] font-bold uppercase transition-all shadow-lg shadow-accent-900/10 mb-1 inline-block"
+                      >
+                        Request Sale
+                      </button>
+                      <button 
+                        v-if="prop.listing_type === 'rent'"
+                        @click="openRentModal(prop.id)"
+                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[10px] font-bold uppercase transition-all shadow-lg shadow-blue-900/10 mb-1 inline-block"
+                      >
+                        Request Rent
+                      </button>
+                    </template>
+                    <span v-else-if="prop.status === 'pending_sold' || prop.status === 'pending_rent'" class="px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-lg uppercase animate-pulse">
                       Approval Pending
                     </span>
                     <span v-else class="text-[10px] font-bold text-primary-300 uppercase italic">Goal Reached</span>
@@ -240,6 +249,68 @@
       </div>
 
     </div>
+
+    <!-- Sale Request Modal -->
+    <div v-if="showSaleModal" class="fixed inset-0 z-50 flex items-center justify-center p-6 bg-primary-950/40 backdrop-blur-sm transition-all" @click="showSaleModal = false">
+      <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl relative border border-primary-50" @click.stop>
+        <button @click="showSaleModal = false" class="absolute top-6 right-6 text-primary-400 hover:text-primary-950 transition-colors">
+          <LucideX class="w-6 h-6" />
+        </button>
+        <h3 class="text-2xl font-bold text-primary-950 mb-3">Request Sale Approval</h3>
+        <p class="text-primary-600 mb-6 leading-relaxed">Select the registered client who purchased this property.</p>
+        
+        <div class="space-y-4 mb-8">
+          <div>
+            <label class="block text-sm font-bold text-primary-950 mb-2">Registered Client (Buyer)</label>
+            <select v-model="selectedClientId" class="w-full bg-primary-50 p-3 rounded-xl border border-primary-200 outline-none focus:border-accent-500">
+              <option value="" disabled>Select a client...</option>
+              <option v-for="client in clients" :key="client.id" :value="client.id">
+                {{ client.email }}
+              </option>
+            </select>
+          </div>
+        </div>
+        
+        <button @click="submitSaleRequest" class="w-full py-3.5 bg-accent-600 hover:bg-accent-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-accent-600/30">
+          Submit Request
+        </button>
+      </div>
+    </div>
+
+    <!-- Rent Request Modal -->
+    <div v-if="showRentModal" class="fixed inset-0 z-50 flex items-center justify-center p-6 bg-primary-950/40 backdrop-blur-sm transition-all" @click="showRentModal = false">
+      <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl relative border border-primary-50" @click.stop>
+        <button @click="showRentModal = false" class="absolute top-6 right-6 text-primary-400 hover:text-primary-950 transition-colors">
+          <LucideX class="w-6 h-6" />
+        </button>
+        <h3 class="text-2xl font-bold text-primary-950 mb-3">Request Rent Approval</h3>
+        <p class="text-primary-600 mb-6 leading-relaxed">Select the rental duration for this property.</p>
+        
+        <div class="space-y-4 mb-8">
+          <div>
+            <label class="block text-sm font-bold text-primary-950 mb-2">Registered Client (Tenant)</label>
+            <select v-model="selectedClientId" class="w-full bg-primary-50 p-3 rounded-xl border border-primary-200 outline-none focus:border-accent-500">
+              <option value="" disabled>Select a client...</option>
+              <option v-for="client in clients" :key="client.id" :value="client.id">
+                {{ client.email }}
+              </option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-primary-950 mb-2">Start Date</label>
+            <input type="date" v-model="rentStartDate" class="w-full bg-primary-50 p-3 rounded-xl border border-primary-200 outline-none focus:border-accent-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-primary-950 mb-2">End Date</label>
+            <input type="date" v-model="rentEndDate" class="w-full bg-primary-50 p-3 rounded-xl border border-primary-200 outline-none focus:border-accent-500" />
+          </div>
+        </div>
+        
+        <button @click="submitRentRequest" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-blue-600/30">
+          Submit Request
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -247,7 +318,7 @@
 import { 
   LucideHeadset, LucideMessageSquare, LucideCalendar, 
   LucideCheckCircle2, LucideSend, LucideGlobe, LucideInbox,
-  LucideCalendarOff
+  LucideCalendarOff, LucideX
 } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/auth'
 import axios from 'axios'
@@ -260,6 +331,7 @@ const activeTab = ref('inquiries')
 const inquiries = ref([])
 const visits = ref([])
 const properties = ref([])
+const clients = ref([])
 
 const myProperties = computed(() => properties.value.filter(p => p.agent_id === auth.user?.id))
 
@@ -280,14 +352,16 @@ const getApiUrl = () => {
 
 const fetchData = async () => {
   try {
-    const [inqRes, visitsRes, propsRes] = await Promise.all([
+    const [inqRes, visitsRes, propsRes, clientsRes] = await Promise.all([
       axios.get(`${getApiUrl()}/agent/inquiries`, { headers: { Authorization: `Bearer ${auth.token}` } }),
       axios.get(`${getApiUrl()}/agent/visits`, { headers: { Authorization: `Bearer ${auth.token}` } }),
-      axios.get(`${getApiUrl()}/properties`, { headers: { Authorization: `Bearer ${auth.token}` } })
+      axios.get(`${getApiUrl()}/properties`, { headers: { Authorization: `Bearer ${auth.token}` } }),
+      axios.get(`${getApiUrl()}/agency/clients`, { headers: { Authorization: `Bearer ${auth.token}` } })
     ])
     inquiries.value = inqRes.data
     visits.value = visitsRes.data
     properties.value = propsRes.data
+    clients.value = clientsRes.data
   } catch (e) {
     console.error("Agent dashboard fetch error:", e)
   }
@@ -304,17 +378,76 @@ const updateInquiryStatus = async (id, status) => {
   }
 }
 
-const markAsSold = async (id) => {
-  if (!confirm("Request sale approval? Your head agent will be notified and must approve before the property is marked as sold.")) return
+const showSaleModal = ref(false)
+const selectedSalePropertyId = ref(null)
+const selectedClientId = ref('')
+
+const openSaleModal = (id) => {
+  selectedSalePropertyId.value = id
+  selectedClientId.value = ''
+  showSaleModal.value = true
+}
+
+const submitSaleRequest = async () => {
+  if (!selectedClientId.value) {
+    alert("Please select a registered client.")
+    return
+  }
   try {
-    await axios.patch(`${getApiUrl()}/properties/${id}/status`, { status: 'pending_sold' }, {
+    await axios.patch(`${getApiUrl()}/properties/${selectedSalePropertyId.value}/status`, { 
+      status: 'pending_sold',
+      buyer_id: selectedClientId.value 
+    }, {
       headers: { Authorization: `Bearer ${auth.token}` }
     })
     fetchData()
+    showSaleModal.value = false
     alert("Sale request sent! Your head agent will review and approve.")
   } catch (e) {
     console.error("Failed to request sale", e)
     alert(e.response?.data?.detail || "Failed to submit sale request.")
+  }
+}
+
+const showRentModal = ref(false)
+const selectedRentPropertyId = ref(null)
+const rentStartDate = ref('')
+const rentEndDate = ref('')
+
+const openRentModal = (id) => {
+  selectedRentPropertyId.value = id
+  rentStartDate.value = ''
+  rentEndDate.value = ''
+  selectedClientId.value = ''
+  showRentModal.value = true
+}
+
+const submitRentRequest = async () => {
+  if (!selectedClientId.value) {
+    alert("Please select a registered client.")
+    return
+  }
+  if (!rentStartDate.value || !rentEndDate.value) {
+    alert("Please select both start and end dates.")
+    return
+  }
+  
+  try {
+    await axios.patch(`${getApiUrl()}/properties/${selectedRentPropertyId.value}/status`, { 
+      status: 'pending_rent',
+      rent_start_date: new Date(rentStartDate.value).toISOString(),
+      rent_end_date: new Date(rentEndDate.value).toISOString(),
+      buyer_id: selectedClientId.value
+    }, {
+      headers: { Authorization: `Bearer ${auth.token}` }
+    })
+    
+    showRentModal.value = false
+    fetchData()
+    alert("Rent request sent! Your head agent will review and approve.")
+  } catch (e) {
+    console.error("Failed to request rent", e)
+    alert(e.response?.data?.detail || "Failed to submit rent request.")
   }
 }
 

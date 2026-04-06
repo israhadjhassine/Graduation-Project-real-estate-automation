@@ -26,7 +26,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 from sqlalchemy import text
 import time
 
-max_retries = 5
+max_retries = 15
 retry_delay = 5
 
 for attempt in range(max_retries):

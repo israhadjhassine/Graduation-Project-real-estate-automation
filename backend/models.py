@@ -34,8 +34,6 @@ class User(Base):
     manager = relationship("User", remote_side=[id], backref="team_members")
     owned_properties = relationship("Property", back_populates="owner", foreign_keys="Property.owner_id")
     assigned_properties = relationship("Property", back_populates="agent", foreign_keys="Property.agent_id")
-    favorites = relationship("PropertyFavorite", back_populates="user")
-
 class Property(Base):
     __tablename__ = "properties"
 
@@ -86,11 +84,12 @@ class Property(Base):
 
     # Analytics
     views_count = Column(Integer, default=0)
-    favorites_count = Column(Integer, default=0)
     
     # System Fields
     is_featured = Column(Boolean, default=False)
     published_at = Column(TIMESTAMP)
+    rent_start_date = Column(TIMESTAMP, nullable=True)
+    rent_end_date = Column(TIMESTAMP, nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
@@ -100,9 +99,11 @@ class Property(Base):
     # Relationships
     owner_id = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"))
     agent_id = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"))
+    buyer_id = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"))
 
     owner = relationship("User", back_populates="owned_properties", foreign_keys=[owner_id])
     agent = relationship("User", back_populates="assigned_properties", foreign_keys=[agent_id])
+    buyer = relationship("User", foreign_keys=[buyer_id])
     images = relationship("PropertyImage", back_populates="property", cascade="all, delete-orphan")
     features = relationship("Feature", secondary=property_features, back_populates="properties")
 
@@ -144,19 +145,4 @@ class Visit(Base):
     client = relationship("User", foreign_keys=[client_id])
     agent = relationship("User", foreign_keys=[agent_id])
 
-class PropertyFavorite(Base):
-    __tablename__ = "property_favorites"
 
-    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
-    property_id = Column(BigInteger, ForeignKey("properties.id", ondelete="CASCADE"), primary_key=True)
-    created_at = Column(TIMESTAMP, server_default=func.now())
-
-    user = relationship("User", back_populates="favorites")
-
-class ChatHistory(Base):
-    __tablename__ = "n8n_chat_history"
-
-    id = Column(Integer, primary_key=True, index=True)
-    session_id = Column(String(255), nullable=False, index=True)
-    message = Column(JSON, nullable=False)
-    created_at = Column(TIMESTAMP, server_default=func.now())

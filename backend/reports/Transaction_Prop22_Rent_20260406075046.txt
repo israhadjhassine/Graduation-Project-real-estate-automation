@@ -1,0 +1,18 @@
+=== RENT TRANSACTION REPORT ===
+Date: 2026-04-06 07:50:46
+
+[PROPERTY DETAILS]
+ID: 22
+Title: house2
+Location: Mahdia, Tunisia
+Price: 20000.00 TND
+Rent Duration: 2026-04-14 to 2026-04-24
+
+[STAFF DETAILS]
+Head Agent: head a (headagent@gmail.com)
+Sub Agent: sub (sub@gmail.com)
+
+[CLIENT/BUYER DETAILS]
+Name: isra
+Email: isra@gmail.com
+Phone: 98852755

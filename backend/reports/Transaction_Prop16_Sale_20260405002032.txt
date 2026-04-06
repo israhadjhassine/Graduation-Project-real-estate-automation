@@ -1,0 +1,17 @@
+=== SALE TRANSACTION REPORT ===
+Date: 2026-04-05 00:20:32
+
+[PROPERTY DETAILS]
+ID: 16
+Title: dar
+Location: Tunis, Tunisia
+Price: 2000.00 TND
+
+[STAFF DETAILS]
+Head Agent: head a (headagent@gmail.com)
+Sub Agent: sub (sub@gmail.com)
+
+[CLIENT/BUYER DETAILS]
+Name: isra
+Email: isra@gmail.com
+Phone: N/A

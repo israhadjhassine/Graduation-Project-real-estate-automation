@@ -17,6 +17,7 @@ import shutil
 from uuid import uuid4
 from fastapi import UploadFile, File
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from imagekitio import ImageKit
 import base64
 
@@ -361,6 +362,35 @@ def toggle_sub_agent_status(
     db.commit()
     return {"message": f"Agent {'enabled' if agent.is_active else 'disabled'}", "is_active": agent.is_active}
 
+def generate_transaction_report(db, prop, tx_type):
+    os.makedirs("reports", exist_ok=True)
+    filename = f"reports/Transaction_Prop{prop.id}_{tx_type}_{datetime.now().strftime('%Y%m%d%H%M%S')}.txt"
+    agent = db.query(models.User).get(prop.agent_id) if prop.agent_id else None
+    owner = db.query(models.User).get(prop.owner_id) if prop.owner_id else None
+    buyer = db.query(models.User).get(prop.buyer_id) if prop.buyer_id else None
+    
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(f"=== {tx_type.upper()} TRANSACTION REPORT ===\n")
+        f.write(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+        f.write("[PROPERTY DETAILS]\n")
+        f.write(f"ID: {prop.id}\n")
+        f.write(f"Title: {prop.title}\n")
+        f.write(f"Location: {prop.city}, {prop.country}\n")
+        f.write(f"Price: {prop.price} {prop.currency}\n")
+        if tx_type == "Rent" and prop.rent_start_date:
+            f.write(f"Rent Duration: {prop.rent_start_date.strftime('%Y-%m-%d')} to {prop.rent_end_date.strftime('%Y-%m-%d')}\n")
+        f.write("\n")
+        f.write("[STAFF DETAILS]\n")
+        f.write(f"Head Agent: {owner.full_name if owner else 'None'} ({owner.email if owner else 'N/A'})\n")
+        f.write(f"Sub Agent: {agent.full_name if agent else 'None'} ({agent.email if agent else 'N/A'})\n\n")
+        f.write("[CLIENT/BUYER DETAILS]\n")
+        if buyer:
+            f.write(f"Name: {buyer.full_name}\n")
+            f.write(f"Email: {buyer.email}\n")
+            f.write(f"Phone: {buyer.phone_number or 'N/A'}\n")
+        else:
+            f.write("No client specified in this transaction.\n")
+
 @app.post("/agency/properties/{property_id}/approve-sale")
 def approve_property_sale(
     property_id: int,
@@ -376,6 +406,7 @@ def approve_property_sale(
     if prop.status != "pending_sold":
         raise HTTPException(status_code=400, detail="Property is not pending a sale approval")
     prop.status = "sold"
+    generate_transaction_report(db, prop, "Sale")
     db.commit()
     return {"message": "Sale approved. Property is now marked as sold."}
 
@@ -395,7 +426,51 @@ def reject_property_sale(
     db.commit()
     return {"message": "Sale rejected. Property reverted to available."}
 
+@app.post("/agency/properties/{property_id}/approve-rent")
+def approve_property_rent(
+    property_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
+):
+    """Head Agent approves a sub-agent's rent request, marking the property as rented."""
+    prop = db.query(models.Property).filter(models.Property.id == property_id).first()
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found")
+    if current_user.role == "head_agent" and prop.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You can only approve rents for your own properties")
+    if prop.status != "pending_rent":
+        raise HTTPException(status_code=400, detail="Property is not pending a rent approval")
+    prop.status = "rented"
+    generate_transaction_report(db, prop, "Rent")
+    db.commit()
+    return {"message": "Rent approved. Property is now marked as rented."}
 
+@app.post("/agency/properties/{property_id}/reject-rent")
+def reject_property_rent(
+    property_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
+):
+    """Head Agent rejects a sub-agent's rent request, reverting property to available."""
+    prop = db.query(models.Property).filter(models.Property.id == property_id).first()
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found")
+    if current_user.role == "head_agent" and prop.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    prop.status = "available"
+    prop.rent_start_date = None
+    prop.rent_end_date = None
+    db.commit()
+    return {"message": "Rent rejected. Property reverted to available."}
+
+
+@app.get("/agency/clients", response_model=List[schemas.User])
+def get_clients(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["agent", "head_agent", "admin"]))
+):
+    """Returns all registered clients to select from."""
+    return db.query(models.User).filter(models.User.role == "client").all()
 
 # --- Sub-Agent Operations ---
 
@@ -438,27 +513,37 @@ def get_agent_inquiries(
             "visit_status": v.status
         })
     
-    # Also add pending_sold properties as alert notifications for head_agents
+    # Also add pending_sold/pending_rent properties as alert notifications for head_agents
     if current_user.role in ["head_agent", "admin"]:
         pending_props = db.query(models.Property).filter(
-            models.Property.status == "pending_sold",
+            models.Property.status.in_(["pending_sold", "pending_rent"]),
             models.Property.owner_id == current_user.id if current_user.role == "head_agent" else True
         ).all()
         for p in pending_props:
             agent = db.query(models.User).filter(models.User.id == p.agent_id).first() if p.agent_id else None
+            buyer = db.query(models.User).filter(models.User.id == p.buyer_id).first() if p.buyer_id else None
             # Only add if not already in result
             if not any(r["property_id"] == p.id for r in result):
+                req_type = "Sale" if p.status == "pending_sold" else "Rent"
+                status_display = "sold" if p.status == "pending_sold" else "rented"
+                
+                msg = f"Sub-Agent {agent.full_name if agent else 'unknown'} is requesting approval to mark this property as {status_display}."
+                if buyer:
+                    msg += f" Client Email: {buyer.email}."
+                if p.status == "pending_rent" and p.rent_start_date and p.rent_end_date:
+                    msg += f" Duration: {p.rent_start_date.strftime('%b %d, %Y')} to {p.rent_end_date.strftime('%b %d, %Y')}."
+                
                 result.insert(0, {
                     "id": -p.id,  # negative id to differentiate
                     "name": agent.full_name if agent else "Sub-Agent",
                     "email": agent.email if agent else "",
                     "phone": "",
-                    "subject": f"Sale Request: {p.title}",
-                    "message": f"Sub-Agent {agent.full_name if agent else 'unknown'} is requesting approval to mark this property as sold.",
+                    "subject": f"{req_type} Request: {p.title}",
+                    "message": msg,
                     "status": "new",
                     "source": "system",
                     "property_id": p.id,
-                    "property_status": "pending_sold",
+                    "property_status": p.status,
                     "visit_id": None,
                     "visit_status": None
                 })
@@ -522,10 +607,20 @@ def update_property_status(
         raise HTTPException(status_code=404, detail="Property not found")
     
     new_status = payload.get("status")
-    if new_status not in ["available", "sold", "pending_sold", "rented"]:
+    if new_status not in ["available", "sold", "pending_sold", "rented", "pending_rent"]:
         raise HTTPException(status_code=400, detail="Invalid status value")
     
     prop.status = new_status
+    if new_status == "pending_rent":
+        if "rent_start_date" in payload and payload["rent_start_date"]:
+            prop.rent_start_date = datetime.fromisoformat(payload["rent_start_date"].replace("Z", "+00:00"))
+        if "rent_end_date" in payload and payload["rent_end_date"]:
+            prop.rent_end_date = datetime.fromisoformat(payload["rent_end_date"].replace("Z", "+00:00"))
+            
+    if new_status in ["pending_sold", "pending_rent"]:
+        if "buyer_id" in payload and payload["buyer_id"]:
+            prop.buyer_id = payload["buyer_id"]
+            
     db.commit()
     return {"message": f"Property status updated to {new_status}"}
 
@@ -537,6 +632,21 @@ def list_properties(db: Session = Depends(database.get_db)):
         joinedload(models.Property.features)
     ).filter(models.Property.status == "available").all()
 # --- Admin View ---
+
+@app.get("/admin/reports")
+def list_reports(current_user: models.User = Depends(auth.RoleChecker(["admin"]))):
+    """Returns a list of available transaction reports."""
+    if not os.path.exists("reports"):
+        return []
+    return [{"name": f} for f in os.listdir("reports") if f.endswith(".txt")]
+
+@app.get("/admin/reports/{filename}")
+def download_report(filename: str, current_user: models.User = Depends(auth.RoleChecker(["admin"]))):
+    """Downloads a specific transaction report."""
+    file_path = os.path.join("reports", filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Report not found")
+    return FileResponse(file_path, filename=filename)
 @app.get("/admin/properties", response_model=List[schemas.Property])
 def admin_view_all_properties(
     db: Session = Depends(database.get_db),

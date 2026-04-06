@@ -121,8 +121,11 @@ class Property(PropertyBase):
     status: str
     is_featured: Optional[bool] = None
     created_at: datetime
+    rent_start_date: Optional[datetime] = None
+    rent_end_date: Optional[datetime] = None
     owner_id: int
     agent_id: Optional[int] = None
+    buyer_id: Optional[int] = None
     images: List[PropertyImage] = []
     features: List[Feature] = []
 

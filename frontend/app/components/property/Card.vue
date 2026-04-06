@@ -6,11 +6,20 @@
         :alt="property.title"
         class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
       />
-      <div class="absolute top-4 left-4 flex gap-2">
+      <div class="absolute top-4 left-4 flex gap-2 flex-wrap">
         <span class="px-3 py-1 bg-white/90 backdrop-blur-sm text-primary-900 text-[10px] font-bold uppercase tracking-widest rounded-full shadow-sm">
           {{ property.property_type }}
         </span>
-        <span class="px-3 py-1 bg-accent-500 text-white text-[10px] font-bold uppercase tracking-widest rounded-full shadow-sm">
+        <span v-if="property.status === 'sold'" class="px-3 py-1 bg-green-500 text-white text-[10px] font-bold uppercase tracking-widest rounded-full shadow-sm">
+          Sold
+        </span>
+        <span v-else-if="property.status === 'rented'" class="px-3 py-1 bg-purple-500 text-white text-[10px] font-bold uppercase tracking-widest rounded-full shadow-sm">
+          Rented
+        </span>
+        <span v-else-if="property.status === 'pending_sold' || property.status === 'pending_rent'" class="px-3 py-1 bg-amber-500 text-white text-[10px] font-bold uppercase tracking-widest rounded-full shadow-sm">
+          Pending
+        </span>
+        <span v-else class="px-3 py-1 bg-accent-500 text-white text-[10px] font-bold uppercase tracking-widest rounded-full shadow-sm">
           For {{ property.listing_type }}
         </span>
       </div>

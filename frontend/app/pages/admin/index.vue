@@ -62,6 +62,12 @@
         >
           <LucideHome class="w-4 h-4 inline-block mr-2" /> All Properties
         </button>
+        <button 
+          @click="activeTab = 'reports'" 
+          :class="['px-6 py-3 rounded-full text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2', activeTab === 'reports' ? 'bg-primary-950 text-white shadow-md' : 'text-primary-600 hover:bg-primary-100']"
+        >
+          <LucideFileText class="w-4 h-4 inline-block" /> Transaction Reports
+        </button>
       </div>
 
 
@@ -151,6 +157,44 @@
         </div>
       </div>
 
+      <!-- Tab Content: Reports -->
+      <div v-show="activeTab === 'reports'">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-bold text-primary-950">System Transaction Reports</h2>
+        </div>
+
+        <div class="card-premium p-0 overflow-hidden">
+          <table class="w-full text-left">
+            <thead>
+              <tr class="bg-primary-50">
+                <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Report File</th>
+                <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-primary-50">
+              <tr v-for="report in reports" :key="report.name" class="hover:bg-primary-50/30 transition-colors">
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-3">
+                    <LucideFileText class="w-5 h-5 text-primary-400" />
+                    <span class="font-bold text-primary-950 text-sm">{{ report.name }}</span>
+                  </div>
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <button @click="downloadReport(report.name)" class="px-4 py-2 bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-xl text-[10px] font-bold uppercase transition-all inline-flex items-center gap-2">
+                    <LucideDownload class="w-3 h-3" /> Download
+                  </button>
+                </td>
+              </tr>
+              <tr v-if="!reports.length">
+                <td colspan="2" class="py-12 text-center text-primary-400">
+                  No transaction reports found. Reports are generated upon transaction approval.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
 
 
@@ -215,7 +259,8 @@
 <script setup>
 import { 
   LucideShieldAlert, LucideUsers, LucideBuilding2, 
-  LucideHome, LucidePlus, LucideX, LucideEye
+  LucideHome, LucidePlus, LucideX, LucideEye,
+  LucideFileText, LucideDownload
 } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/auth'
 import axios from 'axios'
@@ -228,6 +273,7 @@ const loading = ref(false)
 
 const users = ref([])
 const properties = ref([])
+const reports = ref([])
 const headAgents = computed(() => users.value.filter(u => u.role === 'head_agent'))
 
 const showUserModal = ref(false)
@@ -253,14 +299,35 @@ const getApiUrl = () => {
 
 const fetchData = async () => {
   try {
-    const [usersRes, propsRes] = await Promise.all([
+    const [usersRes, propsRes, reportsRes] = await Promise.all([
       axios.get(`${getApiUrl()}/admin/users`, { headers: { Authorization: `Bearer ${auth.token}` } }),
-      axios.get(`${getApiUrl()}/admin/properties`, { headers: { Authorization: `Bearer ${auth.token}` } })
+      axios.get(`${getApiUrl()}/admin/properties`, { headers: { Authorization: `Bearer ${auth.token}` } }),
+      axios.get(`${getApiUrl()}/admin/reports`, { headers: { Authorization: `Bearer ${auth.token}` } })
     ])
     users.value = usersRes.data
     properties.value = propsRes.data
+    reports.value = reportsRes.data
   } catch (e) {
     console.error("Failed to load admin data", e)
+  }
+}
+
+const downloadReport = async (filename) => {
+  try {
+    const res = await fetch(`${getApiUrl()}/admin/reports/${filename}`, {
+      headers: { Authorization: `Bearer ${auth.token}` }
+    })
+    if (!res.ok) throw new Error("Failed to download")
+    const blob = await res.blob()
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+  } catch (e) {
+    console.error("Failed to download report", e)
+    alert("Could not download report.")
   }
 }
 

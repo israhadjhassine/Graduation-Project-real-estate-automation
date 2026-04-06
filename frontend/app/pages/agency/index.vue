@@ -73,11 +73,24 @@
           <LucideCheckCircle2 class="w-4 h-4 inline-block mr-2" /> Sold Properties
         </button>
         <button 
+          @click="activeTab = 'rented'" 
+          :class="['px-6 py-3 rounded-full text-sm font-bold transition-all whitespace-nowrap', activeTab === 'rented' ? 'bg-primary-950 text-white shadow-md' : 'text-primary-600 hover:bg-primary-100']"
+        >
+          <LucideHome class="w-4 h-4 inline-block mr-2" /> Rented Properties
+        </button>
+        <button 
           @click="activeTab = 'inquiries'" 
           :class="['px-6 py-3 rounded-full text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2', activeTab === 'inquiries' ? 'bg-primary-950 text-white shadow-md' : 'text-primary-600 hover:bg-primary-100']"
         >
           <LucideMessageSquare class="w-4 h-4 inline-block" /> Inquiries & Notifications
           <span v-if="pendingSales.length" class="bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">{{ pendingSales.length }}</span>
+        </button>
+        <button 
+          v-if="auth.isAdmin"
+          @click="activeTab = 'reports'" 
+          :class="['px-6 py-3 rounded-full text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2', activeTab === 'reports' ? 'bg-primary-950 text-white shadow-md' : 'text-primary-600 hover:bg-primary-100']"
+        >
+          <LucideFileText class="w-4 h-4 inline-block" /> Transaction Reports
         </button>
       </div>
 
@@ -112,7 +125,13 @@
                 <td class="px-6 py-4">
                   <span v-if="prop.status === 'sold'" class="px-2 py-1 bg-green-100 text-green-700 text-[10px] font-bold rounded-lg uppercase">Sold</span>
                   <span v-else-if="prop.status === 'pending_sold'" class="px-2 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-lg uppercase">Pending Sale</span>
+                  <span v-else-if="prop.status === 'rented'" class="px-2 py-1 bg-purple-100 text-purple-700 text-[10px] font-bold rounded-lg uppercase block mb-1 w-max">Currently Rented</span>
+                  <span v-else-if="prop.status === 'pending_rent'" class="px-2 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-lg uppercase block mb-1 w-max">Pending Rent</span>
                   <span v-else class="px-2 py-1 bg-blue-100 text-blue-700 text-[10px] font-bold rounded-lg uppercase">Available</span>
+                  
+                  <div v-if="prop.status === 'rented' && prop.rent_end_date" class="text-[9px] text-primary-500 font-medium mt-1">
+                    Available again from: <br/><span class="font-bold text-primary-700">{{ new Date(prop.rent_end_date).toLocaleDateString() }}</span>
+                  </div>
                 </td>
                 <td class="px-6 py-4">
                   <div class="flex flex-col">
@@ -244,6 +263,7 @@
               <tr class="bg-primary-50">
                 <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Property</th>
                 <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Sold By</th>
+                <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Client Email</th>
                 <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Price</th>
               </tr>
             </thead>
@@ -255,6 +275,9 @@
                 <td class="px-6 py-4">
                    <span class="text-xs font-medium text-primary-600">{{ staff.find(s => s.id === prop.agent_id)?.full_name || 'System' }}</span>
                 </td>
+                <td class="px-6 py-4">
+                   <span class="text-xs font-medium text-primary-600">{{ clients.find(c => c.id === prop.buyer_id)?.email || 'Unknown' }}</span>
+                </td>
                 <td class="px-6 py-4 font-bold text-primary-950 text-sm">
                   {{ formatPrice(prop.price) }} <span class="text-[10px]">{{ prop.currency }}</span>
                 </td>
@@ -263,6 +286,48 @@
                 <td colspan="3" class="px-6 py-12 text-center text-primary-500">
                   <LucideCheckCircle2 class="w-12 h-12 mx-auto text-primary-200 mb-3" />
                   <p>No properties have been marked as sold yet.</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab Content: Rented Properties -->
+      <div v-show="activeTab === 'rented'">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-bold text-primary-950">Rented Portfolio</h2>
+        </div>
+
+        <div class="card-premium p-0 overflow-hidden">
+          <table class="w-full text-left">
+            <thead>
+              <tr class="bg-primary-50">
+                <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Property</th>
+                <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Agent</th>
+                <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Client Email</th>
+                <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Rent Duration</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-primary-50">
+              <tr v-for="prop in rentedProperties" :key="prop.id" class="hover:bg-primary-50/30 transition-colors">
+                <td class="px-6 py-4">
+                   <p class="font-bold text-primary-950 text-sm">{{ prop.title }}</p>
+                </td>
+                <td class="px-6 py-4">
+                   <span class="text-xs font-medium text-primary-600">{{ staff.find(s => s.id === prop.agent_id)?.full_name || 'System' }}</span>
+                </td>
+                <td class="px-6 py-4">
+                   <span class="text-xs font-medium text-primary-600">{{ clients.find(c => c.id === prop.buyer_id)?.email || 'Unknown' }}</span>
+                </td>
+                <td class="px-6 py-4 text-xs font-bold text-primary-950">
+                  {{ new Date(prop.rent_start_date).toLocaleDateString() }} to {{ new Date(prop.rent_end_date).toLocaleDateString() }}
+                </td>
+              </tr>
+              <tr v-if="!rentedProperties.length">
+                <td colspan="3" class="px-6 py-12 text-center text-primary-500">
+                  <LucideHome class="w-12 h-12 mx-auto text-primary-200 mb-3" />
+                  <p>No properties have been marked as rented yet.</p>
                 </td>
               </tr>
             </tbody>
@@ -313,10 +378,63 @@
                  </button>
                </div>
             </div>
+
+            <!-- Approval Action for Pending Rents -->
+            <div v-if="inq.property_status === 'pending_rent' && inq.status !== 'replied'" class="mt-4 pt-4 border-t border-blue-100 space-y-2">
+               <p class="text-[10px] font-bold text-blue-700 uppercase tracking-widest">⏳ Rent Approval Required</p>
+               <div class="flex gap-2">
+                 <button 
+                   @click="approveRent(inq)" 
+                   class="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[10px] font-bold uppercase transition-all shadow-lg shadow-blue-900/10"
+                 >
+                   ✓ Approve Rent
+                 </button>
+                 <button 
+                   @click="rejectRent(inq)" 
+                   class="flex-1 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl text-[10px] font-bold uppercase transition-all"
+                 >
+                   ✗ Reject
+                 </button>
+               </div>
+            </div>
           </div>
           <div v-if="!inquiries.length" class="col-span-full py-12 text-center text-primary-400">
              No inquiries or notifications found.
           </div>
+        </div>
+      </div>
+
+      <!-- Tab Content: Reports -->
+      <div v-show="activeTab === 'reports' && auth.isAdmin">
+        <div class="card-premium p-0 overflow-hidden">
+          <table class="w-full text-left">
+            <thead>
+              <tr class="bg-primary-50">
+                <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Report File</th>
+                <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-primary-50">
+              <tr v-for="report in reports" :key="report.name" class="hover:bg-primary-50/30 transition-colors">
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-3">
+                    <LucideFileText class="w-5 h-5 text-primary-400" />
+                    <span class="font-bold text-primary-950 text-sm">{{ report.name }}</span>
+                  </div>
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <button @click="downloadReport(report.name)" class="px-4 py-2 bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-xl text-[10px] font-bold uppercase transition-all inline-flex items-center gap-2">
+                    <LucideDownload class="w-3 h-3" /> Download
+                  </button>
+                </td>
+              </tr>
+              <tr v-if="!reports.length">
+                <td colspan="2" class="py-12 text-center text-primary-400">
+                  No transaction reports found. Reports are generated upon transaction approval.
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -337,7 +455,7 @@ import {
   LucideBriefcase, LucideHome, LucideUsers, LucideEye,
   LucidePlus, LucideImage, LucideEdit, LucideTrash2,
   LucideUserPlus, LucideX, LucideCheckCircle2,
-  LucideMessageSquare
+  LucideMessageSquare, LucideFileText, LucideDownload
 } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
@@ -350,11 +468,14 @@ const activeTab = ref('properties')
 const properties = ref([])
 const staff = ref([])
 const inquiries = ref([])
+const reports = ref([])
+const clients = ref([])
 const loading = ref(false)
 
 const soldProperties = computed(() => properties.value.filter(p => p.status === 'sold'))
-const activeProperties = computed(() => properties.value.filter(p => p.status !== 'sold' && p.status !== 'pending_sold'))
-const pendingSales = computed(() => properties.value.filter(p => p.status === 'pending_sold'))
+const rentedProperties = computed(() => properties.value.filter(p => p.status === 'rented'))
+const activeProperties = computed(() => properties.value.filter(p => !['sold', 'pending_sold'].includes(p.status)))
+const pendingSales = computed(() => properties.value.filter(p => ['pending_sold', 'pending_rent'].includes(p.status)))
 
 const showModal = ref(false)
 const selectedProperty = ref(null)
@@ -386,15 +507,26 @@ const deleteProperty = async (propertyId) => {
 const fetchData = async () => {
   loading.value = true
   try {
-    const [propsRes, staffRes, inqRes] = await Promise.all([
+    const [propsRes, staffRes, inqRes, clientsRes] = await Promise.all([
       api.get('/agency/properties'),
       api.get('/agency/staff'),
-      api.get('/agent/inquiries')
+      api.get('/agent/inquiries'),
+      api.get('/agency/clients')
     ])
     
     properties.value = propsRes.data
     staff.value = staffRes.data
     inquiries.value = inqRes.data
+    clients.value = clientsRes.data
+    
+    if (auth.isAdmin) {
+      try {
+        const reportsRes = await api.get('/admin/reports')
+        reports.value = reportsRes.data
+      } catch (e) {
+        console.error("Failed to fetch reports", e)
+      }
+    }
     
     console.log("Agency Dashboard Sync Success:", {
       me: auth.user?.email,
@@ -467,6 +599,54 @@ const rejectSale = async (inq) => {
       console.error("Failed to reject sale", e)
       alert(e.response?.data?.detail || "Error rejecting sale.")
     }
+  }
+}
+
+const approveRent = async (inq) => {
+  if (confirm(`Approve the rent of this property?`)) {
+    try {
+      await api.post(`/agency/properties/${inq.property_id}/approve-rent`)
+      fetchData()
+    } catch (e) {
+      console.error("Failed to approve rent", e)
+      alert(e.response?.data?.detail || "Error approving rent.")
+    }
+  }
+}
+
+const rejectRent = async (inq) => {
+  if (confirm(`Reject this rent request? The property will return to Available status.`)) {
+    try {
+      await api.post(`/agency/properties/${inq.property_id}/reject-rent`)
+      fetchData()
+    } catch (e) {
+      console.error("Failed to reject rent", e)
+      alert(e.response?.data?.detail || "Error rejecting rent.")
+    }
+  }
+}
+
+const downloadReport = async (filename) => {
+  try {
+    const config = useRuntimeConfig()
+    let apiUrl = config.public.apiUrl
+    if (process.client && apiUrl.includes('backend')) {
+      apiUrl = 'http://localhost:8000'
+    }
+    const res = await fetch(`${apiUrl}/admin/reports/${filename}`, {
+      headers: { Authorization: `Bearer ${auth.token}` }
+    })
+    if (!res.ok) throw new Error("Failed to download")
+    const blob = await res.blob()
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+  } catch (e) {
+    console.error("Failed to download report", e)
+    alert("Could not download report.")
   }
 }
 
