@@ -11,8 +11,8 @@
       "type": "n8n-nodes-base.telegramTrigger",
       "typeVersion": 1.2,
       "position": [
-        2352,
-        -464
+        1600,
+        -320
       ],
       "id": "6cff77db-f82b-4515-80a2-89c3e627ad23",
       "name": "Telegram Trigger",
@@ -35,8 +35,8 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
       "position": [
-        2592,
-        -464
+        1840,
+        -320
       ],
       "id": "ac128d41-cf7b-4f19-9bf8-5e9508d376c8",
       "name": "Smart Agent"
@@ -49,8 +49,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
       "typeVersion": 1,
       "position": [
-        2560,
-        -240
+        1808,
+        -96
       ],
       "id": "c08a79a1-ca87-4cee-9b3c-1e53884208d0",
       "name": "Smart Model",
@@ -70,8 +70,8 @@
       "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
       "typeVersion": 1.3,
       "position": [
-        2704,
-        -240
+        1952,
+        -96
       ],
       "id": "59f4aa3a-29c0-464e-8d41-169221b0ec37",
       "name": "Postgres Memory",
@@ -101,8 +101,8 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.2,
       "position": [
-        3024,
-        -240
+        2272,
+        -96
       ],
       "id": "7e243429-e9cb-4833-bc3b-7fd9cf9337bc",
       "name": "search_properties"
@@ -123,8 +123,8 @@
       "type": "n8n-nodes-base.googleCalendarTool",
       "typeVersion": 1.3,
       "position": [
-        3184,
-        -240
+        2432,
+        -96
       ],
       "id": "8e3bbc63-b1dd-4846-bf78-ca1eb5a520ec",
       "name": "get_events",
@@ -151,8 +151,8 @@
       "type": "n8n-nodes-base.googleCalendarTool",
       "typeVersion": 1.3,
       "position": [
-        3344,
-        -240
+        2592,
+        -96
       ],
       "id": "11d1597e-8452-499a-9628-d499be8634e8",
       "name": "create_event",
@@ -181,8 +181,8 @@
       "type": "n8n-nodes-base.googleCalendarTool",
       "typeVersion": 1.3,
       "position": [
-        3504,
-        -240
+        2752,
+        -96
       ],
       "id": "c87ef682-8cf7-4577-bab7-6a759aca6142",
       "name": "update_event",
@@ -207,8 +207,8 @@
       "type": "n8n-nodes-base.googleCalendarTool",
       "typeVersion": 1.3,
       "position": [
-        3664,
-        -240
+        2912,
+        -96
       ],
       "id": "02299379-6e75-41f6-82b6-65bc799d32f7",
       "name": "delete_event",
@@ -231,8 +231,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        2912,
-        -464
+        2160,
+        -320
       ],
       "id": "731bd095-6384-4b33-849c-8288f34a2ccb",
       "name": "Send Reply",
@@ -249,8 +249,8 @@
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1,
       "position": [
-        2336,
-        -96
+        1584,
+        48
       ],
       "id": "206b7e20-8f2e-4539-9fbe-fe306b89200b",
       "name": "Error Trigger"
@@ -267,8 +267,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        2576,
-        -96
+        1824,
+        48
       ],
       "id": "29a90199-67a9-47f3-9fda-25ba90776ea5",
       "name": "Dev Error Notification",
@@ -286,7 +286,7 @@
           "interval": [
             {
               "field": "minutes",
-              "minutesInterval": 10
+              "minutesInterval": 3
             }
           ]
         }
@@ -294,8 +294,8 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        2336,
-        432
+        1584,
+        576
       ],
       "id": "0d38901b-b2cb-4d57-8606-37f5ed3d8c66",
       "name": "Schedule Trigger"
@@ -308,8 +308,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2576,
-        432
+        1824,
+        576
       ],
       "id": "455a3c4c-52e8-4b94-9f41-cd7c51d6094c",
       "name": "Get Upcoming Visits"
@@ -341,8 +341,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        2752,
-        432
+        2000,
+        576
       ],
       "id": "29178a4a-71bb-4874-9221-953fc6ff9340",
       "name": "Any Visits Found?"
@@ -355,8 +355,8 @@
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
       "position": [
-        2944,
-        320
+        2192,
+        464
       ],
       "id": "2d3ab6e5-fa81-4dd4-951c-3ece81a642d0",
       "name": "Split Visits"
@@ -369,8 +369,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3184,
-        320
+        2432,
+        464
       ],
       "id": "92ca87b0-9fc4-4c70-9b03-fb3cbcfe3e1e",
       "name": "Get Agent Details"
@@ -387,8 +387,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        3360,
-        320
+        2608,
+        464
       ],
       "id": "8a89d183-6373-44db-bf80-b354f6294f80",
       "name": "Notify Client Telegram",
@@ -410,8 +410,8 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        3536,
-        320
+        2784,
+        464
       ],
       "id": "d6cccf0a-2bbc-481f-8df4-9665f689fb21",
       "name": "Notify Agent Email",
@@ -432,8 +432,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3728,
-        320
+        2976,
+        464
       ],
       "id": "750c633b-60b8-4215-bb67-ce1e72948f4d",
       "name": "Mark Reminder Sent"
@@ -450,8 +450,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        2336,
-        624
+        1584,
+        768
       ],
       "id": "2d01b247-a448-4a22-b981-6587cd0cd570",
       "name": "Error Notification",
@@ -493,8 +493,8 @@
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.4,
       "position": [
-        2848,
-        -240
+        2096,
+        -96
       ],
       "id": "555df90b-5a9b-4f06-b849-1fde8485ddd1",
       "name": "book_visit"
@@ -508,8 +508,8 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        2240,
-        240
+        1488,
+        384
       ],
       "id": "0e62fdc8-0efa-4d98-a959-d61c979a543c",
       "name": "Sticky Note"
@@ -523,8 +523,8 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        2272,
-        -592
+        1520,
+        -448
       ],
       "id": "f93790ed-0000-4acf-bba4-fe58f4244008",
       "name": "Sticky Note1"
@@ -739,7 +739,7 @@
     "timeSavedMode": "fixed",
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "231fa04c-106f-4721-b97e-5a885bf20443",
+  "versionId": "f901219e-5076-4127-9e1c-d66830f29e90",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "d04c073b691b19605c03318f28dd5dbd9a3f2858f68df4a3b248acf9052573d4"

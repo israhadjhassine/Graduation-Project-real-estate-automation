@@ -171,6 +171,7 @@ class SemanticSearchQuery(BaseModel):
 class RAGProperty(BaseModel):
     id: int
     agent_id: Optional[int] = None
+    agent_name: Optional[str] = None 
     title: str
     property_type: str
     listing_type: str

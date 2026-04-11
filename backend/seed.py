@@ -44,7 +44,7 @@ def seed_db():
         db.refresh(head1)
 
         # Sub-Agents (All managed by Hedi Kallel)
-        agent1 = models.User(email="a.trabelsi@elite.tn", full_name="Ahmed Trabelsi", role="agent", hashed_password=auth.get_password_hash("agentpassword"), manager_id=head1.id)
+        agent1 = models.User(email="killer.chebbi@gmail.com", full_name="Ahmed Trabelsi", role="agent", hashed_password=auth.get_password_hash("agentpassword"), manager_id=head1.id)
         agent2 = models.User(email="s.dridi@elite.tn", full_name="Sonia Dridi", role="agent", hashed_password=auth.get_password_hash("agentpassword"), manager_id=head1.id)
         agent3 = models.User(email="k.jelassi@elite.tn", full_name="Karim Jelassi", role="agent", hashed_password=auth.get_password_hash("agentpassword"), manager_id=head1.id)
         agent4 = models.User(email="n.moussa@elite.tn", full_name="Nadine Moussa", role="agent", hashed_password=auth.get_password_hash("agentpassword"), manager_id=head1.id)
@@ -84,7 +84,7 @@ def seed_db():
                 "bathrooms": 5,
                 "area": 850,
                 "image": "/static/seed-images/villa.png",
-                "agent_email": "a.trabelsi@elite.tn",
+                "agent_email": "killer.chebbi@gmail.com",
                 "owner_email": "h.kallel@elite.tn",
                 "features": ["Swimming Pool", "Sea View", "Smart Home", "Garage", "Garden"],
                 "latitude": 36.9156,

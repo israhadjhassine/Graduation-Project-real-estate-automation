@@ -52,8 +52,11 @@ services:
       - GOOGLE_CLIENT_ID=${N8N_GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${N8N_GOOGLE_CLIENT_SECRET}
       - GOOGLE_REDIRECT_URI=${N8N_GOOGLE_REDIRECT_URI}
+      - TZ=Africa/Tunis
     volumes:
       - ${N8N_USER_DATA_PATH:-./data/n8n}:/home/node/.n8n
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
     depends_on:
       - postgres
     networks:
@@ -73,10 +76,13 @@ services:
       - IMAGEKIT_PUBLIC_KEY=${IMAGEKIT_PUBLIC_KEY}
       - IMAGEKIT_PRIVATE_KEY=${IMAGEKIT_PRIVATE_KEY}
       - IMAGEKIT_URL_ENDPOINT=${IMAGEKIT_URL_ENDPOINT}
+      - TZ=Africa/Tunis
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
     depends_on:
       postgres:
         condition: service_healthy

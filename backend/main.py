@@ -126,6 +126,7 @@ def get_agent_calendar(agent_id: int, db: Session = Depends(database.get_db)):
     return {
         "agent_id": agent.id,
         "full_name": agent.full_name,
+        "email": agent.email,  # <--- ADD THIS LINE
         "google_calendar_id": agent.google_calendar_id
     }
 
@@ -151,11 +152,15 @@ def book_visit(
     db: Session = Depends(database.get_db)
 ):
     """Called by n8n after a Google Calendar event is successfully created."""
+    
+    # FIX: Explicitly convert the incoming time to UTC before saving
+    visit_date_utc = payload.visit_date.astimezone(timezone.utc)
+    
     new_visit = models.Visit(
         property_id=payload.property_id,
         client_id=None,
         agent_id=payload.agent_id,
-        visit_date=payload.visit_date,
+        visit_date=visit_date_utc, # Save the UTC version
         telegram_chat_id=payload.client_telegram_id,
         status="scheduled",
         reminder_sent=False
@@ -170,9 +175,14 @@ def get_upcoming_visits(
     db: Session = Depends(database.get_db)
 ):
     """Returns visits scheduled within the next window that haven't been notified yet."""
-    now = datetime.now(timezone.utc)
-    window_start = now + timedelta(minutes=40)
-    window_end = now + timedelta(minutes=50)
+    # Use Naive UTC to match TIMESTAMP columns in PostgreSQL
+    now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+    
+    window_start = now_naive
+    window_end = now_naive + timedelta(minutes=60)
+    
+    print(f"🔍 DEBUG: Current Time (Naive UTC): {now_naive}")
+    print(f"🔍 DEBUG: Window: {window_start} to {window_end}")
     
     visits = db.query(models.Visit).filter(
         models.Visit.status == 'scheduled',
@@ -181,6 +191,17 @@ def get_upcoming_visits(
         models.Visit.visit_date <= window_end
     ).all()
     
+    # Detailed Debugging
+    if not visits:
+        all_scheduled = db.query(models.Visit).filter(models.Visit.status == 'scheduled', models.Visit.reminder_sent == False).order_by(models.Visit.visit_date.asc()).all()
+        print(f"⚠️ DEBUG: No visits in window. Found {len(all_scheduled)} total scheduled/pending-reminder visits:")
+        for v in all_scheduled:
+            print(f"  - Visit ID {v.id}: {v.visit_date} (Naive: {v.visit_date.tzinfo is None})")
+    else:
+        print(f"✅ DEBUG: Found {len(visits)} visits in window.")
+        for v in visits:
+            print(f"  - Match: Visit ID {v.id} at {v.visit_date}")
+            
     return visits
 
 @app.put("/visits/{visit_id}/reminder-sent")
@@ -837,9 +858,11 @@ def rag_search(
             
         # Create RAGProperty object
         features_list = [f.name for f in prop.features]
+        agent_name = prop.agent.full_name if prop.agent else "Not Assigned"
         rag_prop = schemas.RAGProperty(
             id=prop.id,
             agent_id=prop.agent_id,
+            agent_name = agent_name,
             title=prop.title,
             property_type=prop.property_type,
             listing_type=prop.listing_type,
@@ -858,16 +881,19 @@ def rag_search(
         )
         rag_properties.append(rag_prop)
         
+
         # Build context string
         context_parts.append(
-            f"Property {i+1}: {prop.title}\n"
+            f"Property ID: {prop.id}\n"
+            f"Title: {prop.title}\n"
             f"Type: {prop.property_type.capitalize()} for {prop.listing_type.capitalize()}\n"
             f"Price: {prop.price:,.0f} {prop.currency}\n"
             f"Location: {prop.city}, {prop.country}\n"
             f"Area: {prop.area}m²\n"
             f"Bedrooms: {prop.bedrooms} | Bathrooms: {prop.bathrooms}\n"
             f"Features: {', '.join(features_list)}\n"
-            f"Description: {prop.description}"
+            f"Description: {prop.description}\n"
+            f"Assigned Agent: {agent_name} (ID: {prop.agent_id})"
         )
         
     return {
