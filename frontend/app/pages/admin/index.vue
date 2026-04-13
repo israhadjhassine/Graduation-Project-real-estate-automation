@@ -175,7 +175,7 @@
               <tr v-for="report in reports" :key="report.name" class="hover:bg-primary-50/30 transition-colors">
                 <td class="px-6 py-4">
                   <div class="flex items-center gap-3">
-                    <LucideFileText class="w-5 h-5 text-primary-400" />
+                    <LucideFileDown class="w-5 h-5 text-red-500" />
                     <span class="font-bold text-primary-950 text-sm">{{ report.name }}</span>
                   </div>
                 </td>

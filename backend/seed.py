@@ -31,8 +31,6 @@ def seed_db():
         # 2. Create Users
         print("👥 Creating Users...")
         # Admins
-        admin1 = models.User(email="admin@elite.tn", full_name="Sami Ben Ali", role="admin", hashed_password=auth.get_password_hash("adminpassword"))
-        db.add(admin1)
         user_isra = models.User(email="israhadjhassine@gmail.com", full_name="Isra Hadj Hassine", role="admin", hashed_password=auth.get_password_hash("123"))
         db.add(user_isra)
         
