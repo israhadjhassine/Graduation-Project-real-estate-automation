@@ -89,6 +89,13 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    # Check if account is active
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="This account has been deactivated. Please contact your manager.",
+        )
+    
     # Generate the JWT token
     access_token = auth.create_access_token(data={"sub": user.email, "role": user.role, "user_id": user.id})
     return {"access_token": access_token, "token_type": "bearer"}
@@ -371,6 +378,7 @@ def get_agency_properties(
 @app.patch("/agency/staff/{agent_id}/toggle-status")
 def toggle_sub_agent_status(
     agent_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
 ):
@@ -381,8 +389,20 @@ def toggle_sub_agent_status(
     # Head agents can only toggle their own subordinates
     if current_user.role == "head_agent" and agent.manager_id != current_user.id:
         raise HTTPException(status_code=403, detail="You can only manage your own sub-agents")
+    
     agent.is_active = not agent.is_active
     db.commit()
+
+    # Send status update email
+    if agent.email:
+        background_tasks.add_task(
+            email_utils.send_account_status_email,
+            user_email=agent.email,
+            user_name=agent.full_name,
+            is_active=agent.is_active,
+            manager_name=current_user.full_name
+        )
+
     return {"message": f"Agent {'enabled' if agent.is_active else 'disabled'}", "is_active": agent.is_active}
 
 def generate_transaction_report(db, prop, tx_type):
@@ -678,16 +698,21 @@ def update_inquiry_status(
     db.commit()
     return {"message": "Status updated"}
 
-@app.get("/agent/visits", response_model=List[schemas.VisitResponse])
+@app.get("/agent/visits", response_model=List[schemas.VisitDetailResponse])
 def get_agent_visits(
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.RoleChecker(["agent", "head_agent", "admin"]))
 ):
     """Fetches visits scheduled for this agent or agency properties."""
+    query = db.query(models.Visit).options(
+        joinedload(models.Visit.property),
+        joinedload(models.Visit.client)
+    )
+    
     if current_user.role == "admin":
-        return db.query(models.Visit).all()
+        return query.all()
         
-    return db.query(models.Visit).filter(models.Visit.agent_id == current_user.id).order_by(models.Visit.visit_date.asc()).all()
+    return query.filter(models.Visit.agent_id == current_user.id).order_by(models.Visit.visit_date.asc()).all()
 
 @app.put("/agent/visits/{visit_id}/status")
 def update_visit_status(
@@ -838,6 +863,7 @@ def create_user_admin(
 @app.patch("/admin/users/{user_id}/toggle-status")
 def toggle_user_status(
     user_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.RoleChecker(["admin"]))
 ):
@@ -847,8 +873,20 @@ def toggle_user_status(
         raise HTTPException(status_code=404, detail="User not found")
     if user.id == current_user.id:
         raise HTTPException(status_code=400, detail="You cannot disable your own account")
+    
     user.is_active = not user.is_active
     db.commit()
+
+    # Send status update email
+    if user.email:
+        background_tasks.add_task(
+            email_utils.send_account_status_email,
+            user_email=user.email,
+            user_name=user.full_name,
+            is_active=user.is_active,
+            manager_name=current_user.full_name
+        )
+
     return {"message": f"User {'enabled' if user.is_active else 'disabled'} successfully", "is_active": user.is_active}
 
 # --- Features (Amenities) ---

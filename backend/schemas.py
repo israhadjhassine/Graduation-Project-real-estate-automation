@@ -132,6 +132,18 @@ class Property(PropertyBase):
     class Config:
         from_attributes = True
 
+class PropertyMinimal(BaseModel):
+    id: int
+    title: str
+    city: str
+    price: Decimal
+    currency: str
+    status: str
+    listing_type: ListingType
+
+    class Config:
+        from_attributes = True
+
 # --- AI Inquiries ---
 class PropertyQuestion(BaseModel):
     question: str
@@ -155,6 +167,10 @@ class VisitResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+class VisitDetailResponse(VisitResponse):
+    property: Optional[PropertyMinimal] = None
+    client: Optional[User] = None
 
 class VisitCreate(BaseModel):
     property_id: int

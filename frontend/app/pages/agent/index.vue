@@ -12,7 +12,7 @@
            <LucideHeadset class="w-10 h-10 text-blue-600" />
            <div>
              <h1 class="text-2xl font-bold text-primary-950">Agent Workspace</h1>
-             <p class="text-xs text-primary-500">Manage inquiries, visits, and close deals.</p>
+             <p class="text-xs text-primary-500">Manage property visits and track your portfolio.</p>
            </div>
         </div>
         </div>
@@ -22,12 +22,12 @@
       <div class="grid md:grid-cols-3 gap-6 mb-8">
         <div class="card-premium">
           <div class="flex items-center justify-between mb-4">
-            <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center">
-              <LucideMessageSquare class="w-6 h-6 text-primary-600" />
+            <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+              <LucideHome class="w-6 h-6 text-blue-600" />
             </div>
           </div>
-          <p class="text-xs font-bold text-primary-400 uppercase tracking-widest">New Leads</p>
-          <p class="text-3xl font-bold text-primary-950 mt-1">{{ pendingInquiries.length }}</p>
+           <p class="text-xs font-bold text-primary-400 uppercase tracking-widest">My Listings</p>
+           <p class="text-3xl font-bold text-primary-950 mt-1">{{ myProperties.length }}</p>
         </div>
 
         <div class="card-premium">
@@ -46,25 +46,19 @@
               <LucideCheckCircle2 class="w-6 h-6 text-green-600" />
             </div>
           </div>
-          <p class="text-xs font-bold text-primary-400 uppercase tracking-widest">Resolved Inquiries</p>
-          <p class="text-3xl font-bold text-primary-950 mt-1">{{ resolvedInquiries.length }}</p>
+           <p class="text-xs font-bold text-primary-400 uppercase tracking-widest">Completed Visits</p>
+           <p class="text-3xl font-bold text-primary-950 mt-1">{{ finishedVisits.length }}</p>
         </div>
       </div>
 
       <!-- Navigation Tabs -->
       <div class="flex gap-4 border-b border-primary-100 mb-8 overflow-x-auto pb-2">
-        <button 
-          @click="activeTab = 'inquiries'" 
-          :class="['px-6 py-3 rounded-full text-sm font-bold transition-all whitespace-nowrap', activeTab === 'inquiries' ? 'bg-primary-950 text-white shadow-md' : 'text-primary-600 hover:bg-primary-100']"
-        >
-          <LucideMessageSquare class="w-4 h-4 inline-block mr-2" /> Web & Telegram Leads
-        </button>
-        <button 
-          @click="activeTab = 'visits'" 
-          :class="['px-6 py-3 rounded-full text-sm font-bold transition-all whitespace-nowrap', activeTab === 'visits' ? 'bg-primary-950 text-white shadow-md' : 'text-primary-600 hover:bg-primary-100']"
-        >
-          <LucideCalendar class="w-4 h-4 inline-block mr-2" /> Property Viewings
-        </button>
+         <button 
+           @click="activeTab = 'visits'" 
+           :class="['px-6 py-3 rounded-full text-sm font-bold transition-all whitespace-nowrap', activeTab === 'visits' ? 'bg-primary-950 text-white shadow-md' : 'text-primary-600 hover:bg-primary-100']"
+         >
+           <LucideCalendar class="w-4 h-4 inline-block mr-2" /> Property Visits
+         </button>
         <button 
           @click="activeTab = 'properties'" 
           :class="['px-6 py-3 rounded-full text-sm font-bold transition-all whitespace-nowrap', activeTab === 'properties' ? 'bg-primary-950 text-white shadow-md' : 'text-primary-600 hover:bg-primary-100']"
@@ -73,64 +67,6 @@
         </button>
       </div>
 
-      <!-- Tab Content: Inquiries -->
-      <div v-show="activeTab === 'inquiries'">
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div v-for="inq in inquiries" :key="inq.id" class="card-premium flex flex-col h-full group relative overflow-hidden">
-            <!-- Source Badge -->
-            <div class="absolute top-0 right-0 p-4">
-               <LucideSend v-if="inq.source === 'telegram'" class="w-5 h-5 text-blue-500" />
-               <LucideGlobe v-else class="w-5 h-5 text-primary-400" />
-            </div>
-
-            <div class="flex items-center gap-4 mb-4">
-              <div class="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center font-bold text-primary-950">
-                {{ inq.name.charAt(0) }}
-              </div>
-              <div>
-                <p class="font-bold text-primary-950">{{ inq.name }}</p>
-                <a :href="`mailto:${inq.email}`" class="text-xs text-primary-500 hover:text-accent-500 transition-colors">{{ inq.email }}</a>
-                <p v-if="inq.phone" class="text-xs text-primary-500">{{ inq.phone }}</p>
-              </div>
-            </div>
-
-            <div class="flex-grow">
-              <h3 class="font-bold text-sm text-primary-950 mb-2">{{ inq.subject }}</h3>
-              <p class="text-sm text-primary-600 mb-4 bg-primary-50 p-4 rounded-xl border border-primary-100">{{ inq.message }}</p>
-            </div>
-
-            <div class="pt-4 border-t border-primary-100 mt-4 flex items-center justify-between">
-               <span :class="[
-                  'px-3 py-1 text-[10px] font-bold uppercase rounded-lg',
-                  inq.status === 'new' ? 'bg-red-100 text-red-600' : 
-                  inq.status === 'replied' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'
-               ]">
-                 {{ inq.status }}
-               </span>
-
-               <button 
-                 v-if="inq.status === 'new'" 
-                 @click="updateInquiryStatus(inq.id, 'replied')"
-                 class="px-4 py-2 bg-primary-950 hover:bg-primary-900 text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-primary-900/20"
-               >
-                 Mark as Replied
-               </button>
-               <button 
-                 v-else 
-                 @click="updateInquiryStatus(inq.id, 'closed')"
-                 class="text-xs font-bold text-primary-400 hover:text-red-500 transition-colors"
-               >
-                 Archive
-               </button>
-            </div>
-          </div>
-          
-          <div v-if="!inquiries.length" class="col-span-full py-20 text-center bg-white rounded-3xl border-2 border-dashed border-primary-100">
-             <LucideInbox class="w-12 h-12 text-primary-200 mx-auto mb-4" />
-             <p class="text-primary-400 font-medium">No inquiries received yet.</p>
-          </div>
-        </div>
-      </div>
 
       <!-- Tab Content: Properties -->
       <div v-show="activeTab === 'properties'">
@@ -145,9 +81,9 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-primary-100">
-              <tr v-for="prop in myProperties" :key="prop.id" class="hover:bg-primary-50/50 transition-colors">
+              <tr v-for="prop in myProperties" :key="prop.id" @click="viewProperty(prop)" class="hover:bg-primary-50/50 transition-colors cursor-pointer group">
                 <td class="px-6 py-4">
-                   <p class="font-bold text-sm text-primary-950">{{ prop.title }}</p>
+                   <p class="font-bold text-sm text-primary-950 group-hover:text-accent-600 transition-colors">{{ prop.title }}</p>
                    <p class="text-[10px] text-primary-400">{{ prop.city }}</p>
                 </td>
                 <td class="px-6 py-4 text-sm font-bold text-primary-950">
@@ -161,7 +97,7 @@
                       {{ prop.status }}
                    </span>
                 </td>
-                <td class="px-6 py-4 text-right">
+                <td class="px-6 py-4 text-right" @click.stop>
                     <template v-if="prop.status === 'available'">
                       <button 
                         v-if="prop.listing_type === 'sale'"
@@ -214,8 +150,14 @@
                       {{ new Date(visit.visit_date).toLocaleString() }}
                    </div>
                 </td>
-                <td class="px-6 py-4 text-sm text-primary-600">Registered Client</td>
-                <td class="px-6 py-4 text-sm text-primary-600">Assigned Listing</td>
+                <td class="px-6 py-4 text-sm text-primary-600">
+                   <p class="font-bold text-primary-950">{{ visit.client?.full_name || 'Visitor' }}</p>
+                   <p class="text-[10px] text-primary-400">{{ visit.client?.email || visit.telegram_chat_id || 'No contact' }}</p>
+                </td>
+                <td class="px-6 py-4 text-sm text-primary-600">
+                   <p class="font-bold text-primary-950">{{ visit.property?.title || 'Unknown Property' }}</p>
+                   <p class="text-[10px] text-primary-400">{{ visit.property?.city || '' }}</p>
+                </td>
                 <td class="px-6 py-4">
                    <span :class="[
                      'px-3 py-1 text-[10px] font-bold rounded-lg uppercase',
@@ -311,13 +253,20 @@
         </button>
       </div>
     </div>
+    
+    <PropertyUploadModal 
+      :show="showDetailsModal" 
+      :edit-data="selectedProperty"
+      :read-only="isReadOnly"
+      @close="handleClose" 
+    />
   </div>
 </template>
 
 <script setup>
 import { 
-  LucideHeadset, LucideMessageSquare, LucideCalendar, 
-  LucideCheckCircle2, LucideSend, LucideGlobe, LucideInbox,
+  LucideHeadset, LucideCalendar, 
+  LucideCheckCircle2, LucideHome,
   LucideCalendarOff, LucideX
 } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/auth'
@@ -326,9 +275,8 @@ import axios from 'axios'
 definePageMeta({ layout: 'dashboard' })
 
 const auth = useAuthStore()
-const activeTab = ref('inquiries')
+const activeTab = ref('visits')
 
-const inquiries = ref([])
 const visits = ref([])
 const properties = ref([])
 const clients = ref([])
@@ -336,9 +284,24 @@ const clients = ref([])
 const myProperties = computed(() => properties.value.filter(p => p.agent_id === auth.user?.id))
 
 // Computed properties for dashboard stats
-const pendingInquiries = computed(() => inquiries.value.filter(i => i.status === 'new'))
-const resolvedInquiries = computed(() => inquiries.value.filter(i => i.status === 'replied' || i.status === 'closed'))
 const upcomingVisits = computed(() => visits.value.filter(v => v.status === 'scheduled'))
+const finishedVisits = computed(() => visits.value.filter(v => v.status === 'finished'))
+
+const showDetailsModal = ref(false)
+const selectedProperty = ref(null)
+const isReadOnly = ref(false)
+
+const viewProperty = (prop) => {
+  isReadOnly.value = true
+  selectedProperty.value = prop
+  showDetailsModal.value = true
+}
+
+const handleClose = () => {
+  showDetailsModal.value = false
+  selectedProperty.value = null
+  isReadOnly.value = false
+}
 
 // Config
 const config = useRuntimeConfig()
@@ -352,13 +315,11 @@ const getApiUrl = () => {
 
 const fetchData = async () => {
   try {
-    const [inqRes, visitsRes, propsRes, clientsRes] = await Promise.all([
-      axios.get(`${getApiUrl()}/agent/inquiries`, { headers: { Authorization: `Bearer ${auth.token}` } }),
+    const [visitsRes, propsRes, clientsRes] = await Promise.all([
       axios.get(`${getApiUrl()}/agent/visits`, { headers: { Authorization: `Bearer ${auth.token}` } }),
       axios.get(`${getApiUrl()}/properties`, { headers: { Authorization: `Bearer ${auth.token}` } }),
       axios.get(`${getApiUrl()}/agency/clients`, { headers: { Authorization: `Bearer ${auth.token}` } })
     ])
-    inquiries.value = inqRes.data
     visits.value = visitsRes.data
     properties.value = propsRes.data
     clients.value = clientsRes.data
@@ -367,16 +328,6 @@ const fetchData = async () => {
   }
 }
 
-const updateInquiryStatus = async (id, status) => {
-  try {
-    await axios.put(`${getApiUrl()}/agent/inquiries/${id}/status?status=${status}`, null, {
-      headers: { Authorization: `Bearer ${auth.token}` }
-    })
-    fetchData()
-  } catch (e) {
-    console.error("Failed to update inquiry", e)
-  }
-}
 
 const showSaleModal = ref(false)
 const selectedSalePropertyId = ref(null)

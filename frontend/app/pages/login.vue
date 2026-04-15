@@ -89,7 +89,11 @@ const handleLogin = async () => {
     }
     
   } catch (e) {
-    error.value = 'Invalid email or password. Please try again.'
+    if (e.response?.data?.detail) {
+      error.value = e.response.data.detail
+    } else {
+      error.value = 'Invalid email or password. Please try again.'
+    }
   } finally {
     loading.value = false
   }

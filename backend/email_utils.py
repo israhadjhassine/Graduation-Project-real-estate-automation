@@ -242,3 +242,89 @@ def send_admin_report_email(
     except Exception as e:
         print(f"[EMAIL ERROR] Failed to send Admin report email: {e}", flush=True)
         traceback.print_exc()
+
+def send_account_status_email(
+    user_email: str,
+    user_name: str,
+    is_active: bool,
+    manager_name: str
+):
+    """Sends an email to a user notifying them that their account has been activated or deactivated."""
+    smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+    smtp_port = int(os.getenv("SMTP_PORT", 587))
+    smtp_user = os.getenv("SMTP_USER", "")
+    smtp_password = os.getenv("SMTP_PASSWORD", "")
+    email_from = os.getenv("EMAIL_FROM", smtp_user)
+
+    status_text = "ACTIVATED" if is_active else "DEACTIVATED"
+    status_color = "#16a34a" if is_active else "#dc2626"
+    action_description = "You now have full access to your dashboard." if is_active else "Your access to the platform has been temporarily restricted."
+
+    try:
+        subject = f"🔔 Account Status Update: Your account has been {status_text}"
+        
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <body style="margin:0;padding:0;background:#f3f4f6;font-family:'Segoe UI',sans-serif;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 20px;">
+            <tr><td align="center">
+              <table width="580" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+                <tr>
+                  <td style="background:linear-gradient(135deg,#1e293b,#334155);padding:32px 40px;">
+                    <p style="margin:0;color:#94a3b8;font-size:12px;letter-spacing:2px;text-transform:uppercase;">Security Notification</p>
+                    <h1 style="margin:8px 0 0;color:#ffffff;font-size:22px;font-weight:700;">Account {status_text.capitalize()}</h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:36px 40px;">
+                    <p style="margin:0 0 20px;color:#374151;font-size:15px;">
+                      Hi <strong>{user_name}</strong>,
+                    </p>
+                    <p style="margin:0 0 24px;color:#374151;font-size:15px;line-height:1.6;">
+                      Your account status on the <strong>Elite Estate Platform</strong> has been updated by <strong>{manager_name}</strong>.
+                    </p>
+                    <div style="background:#f8fafc;border-radius:12px;padding:24px;text-align:center;border:1px solid #e5e7eb;margin-bottom:24px;">
+                      <span style="color:{status_color};font-size:18px;font-weight:800;letter-spacing:1px;">{status_text}</span>
+                      <p style="margin:12px 0 0;color:#6b7280;font-size:14px;">{action_description}</p>
+                    </div>
+                    <p style="margin:0;color:#6b7280;font-size:13px;">
+                      If you believe this is an error, please contact your agency manager directly.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="background:#f8fafc;padding:20px 40px;border-top:1px solid #e5e7eb;">
+                    <p style="margin:0;color:#9ca3af;font-size:12px;">Elite Estate Management System</p>
+                  </td>
+                </tr>
+              </table>
+            </td></tr>
+          </table>
+        </body>
+        </html>
+        """
+
+        msg = MIMEMultipart()
+        msg["Subject"] = subject
+        msg["From"] = email_from
+        msg["To"] = user_email
+        msg.attach(MIMEText(html, "html"))
+
+        try:
+            with smtplib.SMTP(smtp_server, smtp_port, timeout=10) as server:
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+                server.login(smtp_user, smtp_password)
+                server.sendmail(smtp_user, user_email, msg.as_string())
+        except Exception:
+            with smtplib.SMTP_SSL(smtp_server, 465, timeout=10) as server:
+                server.ehlo()
+                server.login(smtp_user, smtp_password)
+                server.sendmail(smtp_user, user_email, msg.as_string())
+
+        print(f"[EMAIL] ✅ Account {status_text} email sent to {user_email}", flush=True)
+
+    except Exception as e:
+        print(f"[EMAIL ERROR] Failed to send account status email: {e}", flush=True)

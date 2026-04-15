@@ -6,8 +6,12 @@
       <!-- Header -->
       <div class="p-8 border-b border-primary-50 flex items-center justify-between bg-primary-50/30">
         <div>
-          <h2 class="text-3xl font-bold text-primary-950">{{ isEdit ? 'Edit Property Details' : 'List New Property' }}</h2>
-          <p class="text-primary-400 text-sm">{{ isEdit ? 'Update the information for this listing' : 'Fill in the details for your exclusive listing' }}</p>
+          <h2 class="text-3xl font-bold text-primary-950">
+            {{ readOnly ? 'Property Details' : (isEdit ? 'Edit Property Details' : 'List New Property') }}
+          </h2>
+          <p class="text-primary-400 text-sm">
+            {{ readOnly ? 'Viewing full property information' : (isEdit ? 'Update the information for this listing' : 'Fill in the details for your exclusive listing') }}
+          </p>
         </div>
         <button @click="$emit('close')" class="w-12 h-12 rounded-full hover:bg-white transition-colors flex items-center justify-center">
           <LucideX class="w-6 h-6 text-primary-400" />

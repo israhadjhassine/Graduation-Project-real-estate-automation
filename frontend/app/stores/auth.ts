@@ -73,7 +73,6 @@ export const useAuthStore = defineStore('auth', {
                     await this.fetchUser()
                 }
             } catch (error) {
-                console.error('Login failed', error)
                 throw error
             }
         },

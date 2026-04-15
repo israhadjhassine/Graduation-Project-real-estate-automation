@@ -29,14 +29,12 @@
         <div>
           <h4 class="font-bold mb-6 text-white uppercase tracking-widest text-xs">Connect</h4>
           <ul class="space-y-4 text-primary-400 text-sm">
-            <li class="flex items-center gap-2 font-mono italic">@elite.estate.luxury</li>
-            <li class="flex items-center gap-2">contact@elite.tn</li>
           </ul>
         </div>
       </div>
       <div class="max-w-7xl mx-auto mt-16 pt-8 border-t border-white/10 flex justify-between items-center text-[10px] text-white/30 uppercase tracking-[0.2em] font-bold">
         <span>&copy; 2026 Elite Estate Automation. All Rights Reserved.</span>
-        <span>Powered by Gemini AI</span>
+
       </div>
     </footer>
   </div>

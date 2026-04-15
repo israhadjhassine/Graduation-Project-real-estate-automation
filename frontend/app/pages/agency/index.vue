@@ -109,7 +109,7 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-primary-50">
-              <tr v-for="prop in activeProperties" :key="prop.id" class="hover:bg-primary-50/30 transition-colors">
+              <tr v-for="prop in activeProperties" :key="prop.id" @click="viewProperty(prop)" class="hover:bg-primary-50/50 transition-colors cursor-pointer group">
                 <td class="px-6 py-4">
                   <div class="flex items-center gap-4">
                     <div class="w-12 h-12 rounded-xl overflow-hidden bg-primary-100 flex-shrink-0">
@@ -117,8 +117,10 @@
                        <LucideImage v-else class="w-12 h-12 p-3 text-primary-200" />
                     </div>
                     <div>
-                      <p class="font-bold text-primary-950 text-sm max-w-xs truncate">{{ prop.title }}</p>
+                    <div>
+                      <p class="font-bold text-primary-950 text-sm max-w-xs truncate group-hover:text-accent-600 transition-colors">{{ prop.title }}</p>
                       <p class="text-[10px] text-primary-400">{{ prop.city }}, {{ prop.country }}</p>
+                    </div>
                     </div>
                   </div>
                 </td>
@@ -145,7 +147,8 @@
                   <select 
                     v-if="auth.isAdmin || prop.owner_id === auth.user?.id"
                     :value="prop.agent_id" 
-                    @change="assignAgent(prop.id, $event.target.value)" 
+                    @change.stop="assignAgent(prop.id, $event.target.value)" 
+                    @click.stop
                     class="bg-primary-50 text-primary-950 font-medium text-xs rounded-lg px-2 py-1.5 border border-primary-200 outline-none focus:border-accent-400 w-full"
                   >
                     <option :value="null">Unassigned</option>
@@ -159,19 +162,19 @@
                   {{ formatPrice(prop.price) }} <span class="text-[10px]">{{ prop.currency }}</span>
                 </td>
                 <td class="px-6 py-4">
-                   <div class="flex gap-1">
-                     <template v-if="auth.isAdmin || prop.owner_id === auth.user?.id">
-                       <button @click="editProperty(prop)" class="p-2 hover:bg-primary-100 rounded-lg text-primary-400 transition-colors" title="Edit Property">
-                         <LucideEdit class="w-4 h-4" />
-                       </button>
-                       <button @click="deleteProperty(prop.id)" class="p-2 hover:bg-red-50 rounded-lg text-red-400 transition-colors" title="Delete Property">
-                         <LucideTrash2 class="w-4 h-4" />
-                       </button>
-                     </template>
-                     <button v-else @click="viewProperty(prop)" class="p-2 hover:bg-primary-100 rounded-lg text-primary-400 transition-colors" title="View Details">
-                       <LucideEye class="w-4 h-4" />
-                     </button>
-                   </div>
+                    <div class="flex gap-1" @click.stop>
+                      <template v-if="auth.isAdmin || prop.owner_id === auth.user?.id">
+                        <button @click="editProperty(prop)" class="p-2 hover:bg-primary-100 rounded-lg text-primary-400 transition-colors" title="Edit Property">
+                          <LucideEdit class="w-4 h-4" />
+                        </button>
+                        <button @click="deleteProperty(prop.id)" class="p-2 hover:bg-red-50 rounded-lg text-red-400 transition-colors" title="Delete Property">
+                          <LucideTrash2 class="w-4 h-4" />
+                        </button>
+                      </template>
+                      <button v-else @click="viewProperty(prop)" class="p-2 hover:bg-primary-100 rounded-lg text-primary-400 transition-colors" title="View Details">
+                        <LucideEye class="w-4 h-4" />
+                      </button>
+                    </div>
                 </td>
               </tr>
               <tr v-if="!properties.length">
@@ -268,9 +271,9 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-primary-50">
-              <tr v-for="prop in soldProperties" :key="prop.id" class="hover:bg-primary-50/30 transition-colors">
+              <tr v-for="prop in soldProperties" @click="viewProperty(prop)" :key="prop.id" class="hover:bg-primary-50/50 transition-colors cursor-pointer group">
                 <td class="px-6 py-4">
-                   <p class="font-bold text-primary-950 text-sm">{{ prop.title }}</p>
+                   <p class="font-bold text-primary-950 text-sm group-hover:text-accent-600 transition-colors">{{ prop.title }}</p>
                 </td>
                 <td class="px-6 py-4">
                    <span class="text-xs font-medium text-primary-600">{{ staff.find(s => s.id === prop.agent_id)?.full_name || 'System' }}</span>
@@ -310,9 +313,9 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-primary-50">
-              <tr v-for="prop in rentedProperties" :key="prop.id" class="hover:bg-primary-50/30 transition-colors">
+              <tr v-for="prop in rentedProperties" @click="viewProperty(prop)" :key="prop.id" class="hover:bg-primary-50/50 transition-colors cursor-pointer group">
                 <td class="px-6 py-4">
-                   <p class="font-bold text-primary-950 text-sm">{{ prop.title }}</p>
+                   <p class="font-bold text-primary-950 text-sm group-hover:text-accent-600 transition-colors">{{ prop.title }}</p>
                 </td>
                 <td class="px-6 py-4">
                    <span class="text-xs font-medium text-primary-600">{{ staff.find(s => s.id === prop.agent_id)?.full_name || 'System' }}</span>

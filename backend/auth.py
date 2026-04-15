@@ -75,6 +75,14 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     user = db.query(models.User).filter(models.User.email == token_data.email).first()
     if user is None:
         raise credentials_exception
+    
+    # Check if account is active
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is deactivated. Please contact your manager.",
+        )
+        
     return user
 
 class RoleChecker:
