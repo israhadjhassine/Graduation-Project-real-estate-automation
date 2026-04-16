@@ -22,7 +22,6 @@ def seed_db():
         # 1. Clear existing data
         db.query(models.Visit).delete()
         db.query(models.PropertyImage).delete()
-        db.query(models.PropertyFavorite).delete()
         db.query(models.Feature).delete()
         db.query(models.Property).delete()
         db.query(models.User).delete()
