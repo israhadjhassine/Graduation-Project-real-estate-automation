@@ -8,8 +8,7 @@ from sqlalchemy.orm import Session
 from database import SessionLocal, engine
 import models
 import auth
-import ai_utils
-from utils import embeddings
+from services import ai
 from datetime import datetime
 
 def seed_db():
@@ -165,9 +164,7 @@ def seed_db():
                 agent_id=user_map[p["agent_email"]],
                 owner_id=user_map[p["owner_email"]],
                 published_at=datetime.utcnow(),
-                latitude=p.get("latitude"),
-                longitude=p.get("longitude"),
-                description_vector=embeddings.get_embedding(p["description"])
+                description_vector=ai.get_embedding(p["description"])
             )
             
             for f_name in p["features"]:

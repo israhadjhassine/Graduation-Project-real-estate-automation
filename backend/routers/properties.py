@@ -4,7 +4,6 @@ from datetime import datetime
 from typing import List, Optional
 import models, schemas, database, auth
 from services import ai, storage, email
-from utils import embeddings
 
 router = APIRouter(
     tags=["Properties"]
@@ -38,8 +37,7 @@ def create_property(
     if property_in.feature_ids:
         features = db.query(models.Feature).filter(models.Feature.id.in_(property_in.feature_ids)).all()
         new_property.features = features
-    
-    new_property.description_vector = embeddings.get_embedding(new_property.description)
+    new_property.description_vector = ai.get_embedding(new_property.description)
     
     db.add(new_property)
     db.commit()
@@ -78,11 +76,8 @@ def update_property(
     update_data = property_in.dict(exclude_unset=True, exclude={"feature_ids"})
     description_changed = "description" in update_data and update_data["description"] != prop.description
     
-    for key, value in update_data.items():
-        setattr(prop, key, value)
-        
     if description_changed:
-        prop.description_vector = embeddings.get_embedding(prop.description)
+        prop.description_vector = ai.get_embedding(prop.description)
         
     if property_in.feature_ids is not None:
         features = db.query(models.Feature).filter(models.Feature.id.in_(property_in.feature_ids)).all()
