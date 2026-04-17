@@ -34,6 +34,7 @@ class User(Base):
     manager = relationship("User", remote_side=[id], backref="team_members")
     owned_properties = relationship("Property", back_populates="owner", foreign_keys="Property.owner_id")
     assigned_properties = relationship("Property", back_populates="agent", foreign_keys="Property.agent_id")
+
 class Property(Base):
     __tablename__ = "properties"
 

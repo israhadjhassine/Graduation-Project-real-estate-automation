@@ -1,0 +1,328 @@
+{
+  "name": "Elite Estate - Meeting Reminder Service",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Meeting Reminder Service\n\n**Updates:**\n- Trigger set to 1 minute.\n- Backend window set to 60 mins.\n- Fixed Loop with Split In Batches.\n- Cleaned up variable references ($json).\n- Applied 'Look Back' fix for Telegram ID.",
+        "height": 608,
+        "width": 1680
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1936,
+        -304
+      ],
+      "id": "ed42f20b-feb8-4ab4-9314-00e2f9db698c",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        2016,
+        -96
+      ],
+      "id": "e3011cf9-98f2-4235-8415-a88d23439dcc",
+      "name": "Schedule Trigger1"
+    },
+    {
+      "parameters": {
+        "url": "http://backend:8000/visits/upcoming",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2192,
+        -96
+      ],
+      "id": "17c086b7-2aa2-4cb4-a045-81d993c7f0bd",
+      "name": "Get Upcoming Visits1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "object",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "id": "0d2c4e39-c027-4827-a264-42095310e0e8"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2352,
+        -96
+      ],
+      "id": "cbb86d63-a3aa-498f-950d-8bfe8bc4baac",
+      "name": "Any Visits Found?1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the input from the previous node\nconst inputData = items[0].json;\n\nlet visits = [];\n\n// Check if the data is an array (List of visits)\nif (Array.isArray(inputData)) {\n  // It's a list: [{id: 32}, {id: 33}]\n  visits = inputData;\n} else {\n  // It's a single object (n8n auto-split it): {id: 32}\n  visits = [inputData];\n}\n\n// Return the data in the format n8n expects\nreturn visits.map(visit => ({ json: visit }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2576,
+        -112
+      ],
+      "id": "3b94e6c5-9649-41a8-8af7-08c0795debe9",
+      "name": "Code in JavaScript1",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "url": "=http://backend:8000/agents/{{ $json.agent_id }}/calendar",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2800,
+        -96
+      ],
+      "id": "2f8a5fb1-0191-4fa3-818b-1baf0bc33220",
+      "name": "Get Agent Details1"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Code in JavaScript1').item.json.telegram_chat_id }}",
+        "text": "=⏰ <b>Visit Reminder — Elite Estate</b>\n\nThis is a friendly reminder that your property visit is in <b>45 minutes</b>!\n\n📋 <b>Visit Details:</b>\n📅 Date: {{ DateTime.fromISO($('Code in JavaScript1').item.json.visit_date, { zone: 'utc' }).setZone('Africa/Tunis').toFormat('cccc, MMMM d, yyyy') }}\n⏰ Time: {{ DateTime.fromISO($('Code in JavaScript1').item.json.visit_date, { zone: 'utc' }).setZone('Africa/Tunis').toFormat('hh:mm a') }}\n\nPlease make sure to be on time. See you soon! 🏡✨",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2992,
+        -96
+      ],
+      "id": "bcb9d2a9-3d98-4518-9a6e-7148f4648ecc",
+      "name": "Notify Client Telegram1",
+      "webhookId": "95bb0bec-d975-49d6-b7e6-350dfa716abe",
+      "credentials": {
+        "telegramApi": {
+          "id": "9mfjU35ySOQjdLid",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Get Agent Details1').item.json.email }}",
+        "subject": "=⏰ Visit Reminder — {{DateTime.fromISO($('Code in JavaScript1').item.json.visit_date, { zone: 'utc' }).setZone('Africa/Tunis').toFormat('hh:mm a') }} Today",
+        "message": "=<html>\n<body style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;\">\n  <div style=\"background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 30px; border-radius: 12px; color: white; text-align: center;\">\n    <h1 style=\"margin: 0; font-size: 24px;\"> Elite Estate</h1>\n    <p style=\"margin: 5px 0 0; opacity: 0.8;\">Visit Reminder</p>\n  </div>\n  <div style=\"background: white; padding: 30px; border-radius: 12px; margin-top: 15px;\">\n    <h2 style=\"color: #1a1a2e;\"> You have a visit in 45 minutes</h2>\n    <p style=\"color: #666;\">Please prepare to welcome your client.</p>\n    <div style=\"background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #gold;\">\n      <p><strong> Date:</strong> {{ DateTime.fromISO($('Code in JavaScript1').item.json.visit_date, { zone: 'utc' }).setZone('Africa/Tunis').toFormat('cccc, MMMM d, yyyy') }}</p>\n      <p><strong> Time:</strong> {{ DateTime.fromISO($('Code in JavaScript1').item.json.visit_date, { zone: 'utc' }).setZone('Africa/Tunis').toFormat('hh:mm a') }}</p>\n      <p><strong> Agent:</strong> {{ $('Get Agent Details1').item.json.full_name }}</p>\n    </div>\n    <p style=\"color: #999; font-size: 12px; margin-top: 20px;\">Elite Estate — Luxury Real Estate Platform</p>\n  </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        3184,
+        -96
+      ],
+      "id": "f1c2e353-72fb-4314-bd75-633a15ea1e6e",
+      "name": "Notify Agent Email1",
+      "webhookId": "2e8394f5-cd4e-417a-87f1-a8dfa9f82e36",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Unvc63DSTY5DynQI",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://backend:8000/visits/{{ $('Code in JavaScript1').item.json.id }}/reminder-sent",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3376,
+        -96
+      ],
+      "id": "08cce957-7ac8-422f-9b12-e5d273a654be",
+      "name": "Mark Reminder Sent1"
+    },
+    {
+      "parameters": {
+        "chatId": "6786962506",
+        "text": "=🚨 <b>Reminder Service Error</b>\n\n<b>Workflow:</b> {{ $json.workflow.name }}\n<b>Node:</b> {{ $json.execution.lastNodeExecuted }}\n<b>Error:</b> {{ $json.execution.error.message }}\n<b>Time:</b> {{ $now.setZone('Africa/Tunis').toISO() }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2016,
+        96
+      ],
+      "id": "ca3fcce2-22fb-4678-9fd1-b4d6a9eeffed",
+      "name": "Error Notification1",
+      "webhookId": "0fc340d5-91e0-491c-9c92-bffdf9f54ca4",
+      "credentials": {
+        "telegramApi": {
+          "id": "9mfjU35ySOQjdLid",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "6786962506",
+        "text": "ℹ️ <b>Reminder Service Debug</b>\n\nChecked for upcoming visits but found <b>none</b> in the time window.\n\n<b>Backend Response:</b>\n{{ JSON.stringify($json) }}\n\n<b>Current Time:</b> {{ $now.setZone('Africa/Tunis').toISO() }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2592,
+        144
+      ],
+      "id": "7980ba44-7f7e-4788-ba95-92865ce1baf2",
+      "name": "Debug: No Visits Found1",
+      "webhookId": "0fc340d5-91e0-491c-9c92-bffdf9f54ca4",
+      "credentials": {
+        "telegramApi": {
+          "id": "9mfjU35ySOQjdLid",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Get Upcoming Visits1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Upcoming Visits1": {
+      "main": [
+        [
+          {
+            "node": "Any Visits Found?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Any Visits Found?1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Debug: No Visits Found1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Get Agent Details1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Agent Details1": {
+      "main": [
+        [
+          {
+            "node": "Notify Client Telegram1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Client Telegram1": {
+      "main": [
+        [
+          {
+            "node": "Notify Agent Email1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Agent Email1": {
+      "main": [
+        [
+          {
+            "node": "Mark Reminder Sent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "031a63fa-0e47-47b8-97c3-c4ad49f594d8",
+  "meta": {
+    "instanceId": "d04c073b691b19605c03318f28dd5dbd9a3f2858f68df4a3b248acf9052573d4"
+  },
+  "id": "aM4RRUfUAeQynTfOQ1Pvv",
+  "tags": []
+}

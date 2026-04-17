@@ -1,0 +1,17 @@
+=== SALE TRANSACTION REPORT ===
+Date: 2026-04-17 20:34:06
+
+[PROPERTY DETAILS]
+ID: 14
+Title: Ocean Breeze Mansion
+Location: Gammarth, Tunisia
+Price: 3500000.00 TND
+
+[STAFF DETAILS]
+Head Agent: Hedi Kallel (h.kallel@elite.tn)
+Sub Agent: Ahmed Trabelsi (killer.chebbi@gmail.com)
+
+[CLIENT/BUYER DETAILS]
+Name: skibidi
+Email: client@gmail.com
+Phone: N/A

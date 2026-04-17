@@ -1,0 +1,358 @@
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks, UploadFile, File
+from sqlalchemy.orm import Session, joinedload
+from datetime import datetime
+from typing import List, Optional
+import models, schemas, database, auth
+from services import ai, storage, email
+from utils import embeddings
+
+router = APIRouter(
+    tags=["Properties"]
+)
+
+@router.get("/properties", response_model=List[schemas.Property])
+def list_properties(db: Session = Depends(database.get_db)):
+    """Publicly lists all available properties with images and features."""
+    return db.query(models.Property).options(
+        joinedload(models.Property.images),
+        joinedload(models.Property.features)
+    ).filter(models.Property.status == "available").all()
+
+@router.post("/properties", response_model=schemas.Property, status_code=status.HTTP_201_CREATED)
+def create_property(
+    property_in: schemas.PropertyCreate, 
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
+):
+    """Allows Head Agents to list a new property related to their agency."""
+    db_property = db.query(models.Property).filter(models.Property.slug == property_in.slug).first()
+    if db_property:
+        raise HTTPException(status_code=400, detail="Slug already exists")
+    
+    new_property = models.Property(
+        **property_in.dict(exclude={"feature_ids", "agent_id", "owner_id"}),
+        owner_id=property_in.owner_id or current_user.id,
+        agent_id=property_in.agent_id
+    )
+    
+    if property_in.feature_ids:
+        features = db.query(models.Feature).filter(models.Feature.id.in_(property_in.feature_ids)).all()
+        new_property.features = features
+    
+    new_property.description_vector = embeddings.get_embedding(new_property.description)
+    
+    db.add(new_property)
+    db.commit()
+    db.refresh(new_property)
+    return new_property
+
+@router.get("/properties/{property_id}", response_model=schemas.Property)
+def get_property_detail(property_id: int, db: Session = Depends(database.get_db)):
+    """Returns full details for a single property."""
+    prop = db.query(models.Property).options(
+        joinedload(models.Property.images),
+        joinedload(models.Property.features),
+        joinedload(models.Property.owner),
+        joinedload(models.Property.agent)
+    ).filter(models.Property.id == property_id).first()
+    
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found")
+    return prop
+
+@router.put("/properties/{property_id}", response_model=schemas.Property)
+def update_property(
+    property_id: int,
+    property_in: schemas.PropertyUpdate,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["admin", "head_agent"]))
+):
+    """Updates property details. Only owners or admins can perform this."""
+    prop = db.query(models.Property).filter(models.Property.id == property_id).first()
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found")
+        
+    if current_user.role != "admin" and prop.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to edit this property")
+        
+    update_data = property_in.dict(exclude_unset=True, exclude={"feature_ids"})
+    description_changed = "description" in update_data and update_data["description"] != prop.description
+    
+    for key, value in update_data.items():
+        setattr(prop, key, value)
+        
+    if description_changed:
+        prop.description_vector = embeddings.get_embedding(prop.description)
+        
+    if property_in.feature_ids is not None:
+        features = db.query(models.Feature).filter(models.Feature.id.in_(property_in.feature_ids)).all()
+        prop.features = features
+        
+    db.commit()
+    db.refresh(prop)
+    return prop
+
+@router.delete("/properties/{property_id}")
+def delete_property(
+    property_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
+):
+    """Deletes a property listing. Only owner or admin can perform this."""
+    prop = db.query(models.Property).filter(models.Property.id == property_id).first()
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found")
+        
+    if current_user.role != "admin" and prop.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this property")
+        
+    db.delete(prop)
+    db.commit()
+    return {"message": "Property deleted successfully"}
+
+@router.put("/properties/{property_id}/assign")
+def assign_property_to_agent(
+    property_id: int,
+    payload: dict,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
+):
+    """Allows Head Agents or Admins to assign a property to a Sub-Agent."""
+    prop = db.query(models.Property).filter(models.Property.id == property_id).first()
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found")
+        
+    if current_user.role != "admin" and prop.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to assign this property")
+        
+    prop.agent_id = payload.get("agent_id")
+    db.commit()
+    return {"message": "Agent assigned successfully"}
+
+@router.patch("/properties/{property_id}/status")
+def update_property_status(
+    property_id: int,
+    payload: dict,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["agent", "head_agent", "admin"]))
+):
+    """Allows agents to update property status (e.g., mark as sold/pending)."""
+    prop = db.query(models.Property).filter(models.Property.id == property_id).first()
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found")
+    
+    new_status = payload.get("status")
+    if new_status not in ["available", "sold", "pending_sold", "rented", "pending_rent"]:
+        raise HTTPException(status_code=400, detail="Invalid status value")
+    
+    prop.status = new_status
+    if new_status == "pending_rent":
+        if "rent_start_date" in payload and payload["rent_start_date"]:
+            prop.rent_start_date = datetime.fromisoformat(payload["rent_start_date"].replace("Z", "+00:00"))
+        if "rent_end_date" in payload and payload["rent_end_date"]:
+            prop.rent_end_date = datetime.fromisoformat(payload["rent_end_date"].replace("Z", "+00:00"))
+            
+    if new_status in ["pending_sold", "pending_rent"]:
+        if "buyer_id" in payload and payload["buyer_id"]:
+            prop.buyer_id = payload["buyer_id"]
+            
+    db.commit()
+    return {"message": f"Property status updated to {new_status}"}
+
+@router.post("/properties/{property_id}/upload-image")
+async def upload_property_image(
+    property_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
+):
+    """Uploads a single image for a specific property (Original URL)."""
+    prop = db.query(models.Property).filter(models.Property.id == property_id).first()
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found")
+    
+    image_url = await storage.upload_to_imagekit(file, file.filename)
+    if not image_url:
+        raise HTTPException(status_code=500, detail="Image upload failed")
+        
+    is_primary = (len(prop.images) == 0)
+    db_image = models.PropertyImage(
+        property_id=property_id,
+        image_url=image_url,
+        is_primary=is_primary
+    )
+    db.add(db_image)
+    db.commit()
+    db.refresh(db_image)
+    return db_image
+
+@router.get("/properties/{property_id}/map")
+def get_property_map(property_id: int, db: Session = Depends(database.get_db)):
+    """Returns Google Maps coordinates for a property."""
+    prop = db.query(models.Property).filter(models.Property.id == property_id).first()
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found")
+    if not prop.latitude or not prop.longitude:
+        raise HTTPException(status_code=404, detail="No coordinates available")
+    
+    return {
+        "latitude": float(prop.latitude),
+        "longitude": float(prop.longitude),
+        "google_maps_url": f"https://maps.google.com/?q={prop.latitude},{prop.longitude}"
+    }
+
+@router.post("/properties/{property_id}/ask", response_model=schemas.AIResponse)
+def ask_ai_about_property(
+    property_id: int, 
+    payload: schemas.PropertyQuestion,
+    db: Session = Depends(database.get_db)
+):
+    """Entry point for the RAG-powered Property Assistant."""
+    prop = db.query(models.Property).filter(models.Property.id == property_id).first()
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found")
+    
+    features_list = [f.name for f in prop.features]
+    context = f"""
+    Title: {prop.title}
+    Type: {prop.property_type} ({prop.listing_type})
+    Price: {prop.price} {prop.currency}
+    Description: {prop.description}
+    Amenities: {", ".join(features_list)}
+    Location: {prop.city}, {prop.country}
+    Structure: {prop.bedrooms} beds, {prop.bathrooms} baths
+    """
+    
+    answer = ai.ask_property_assistant(payload.question, context)
+    return {"answer": answer, "source_confidence": 0.95}
+
+@router.api_route("/search/semantic", methods=["GET", "POST"], response_model=List[schemas.Property])
+def semantic_search(
+    query: Optional[str] = None,
+    location: Optional[str] = None,
+    property_type: Optional[str] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    sort_price: Optional[str] = None,
+    feature_ids: Optional[List[int]] = Query(None),
+    payload: Optional[schemas.SemanticSearchQuery] = None,
+    db: Session = Depends(database.get_db)
+):
+    """Matches original keyword-based 'semantic' search exactly."""
+    search_text = payload.query if (payload and payload.query) else query
+    selected_features = payload.feature_ids if (payload and payload.feature_ids) else feature_ids
+    
+    q = db.query(models.Property).options(
+        joinedload(models.Property.images),
+        joinedload(models.Property.features)
+    ).filter(models.Property.status == 'available')
+
+    if location:
+        q = q.filter(models.Property.city.ilike(f"%{location}%"))
+    if property_type and property_type.lower() != 'all':
+        q = q.filter(models.Property.property_type == property_type.lower())
+    if min_price:
+        q = q.filter(models.Property.price >= min_price)
+    if max_price:
+        q = q.filter(models.Property.price <= max_price)
+    if search_text:
+        q = q.filter(
+            (models.Property.title.ilike(f"%{search_text}%")) | 
+            (models.Property.description.ilike(f"%{search_text}%"))
+        )
+    if selected_features:
+        for fid in selected_features:
+            q = q.filter(models.Property.features.any(models.Feature.id == fid))
+
+    if sort_price == 'asc':
+        q = q.order_by(models.Property.price.asc())
+    elif sort_price == 'desc':
+        q = q.order_by(models.Property.price.desc())
+    else:
+        q = q.order_by(models.Property.created_at.desc())
+
+    return q.limit(40).all()
+
+@router.post("/search/rag", response_model=schemas.RAGSearchResponse)
+def rag_search(
+    payload: schemas.SemanticSearchQuery,
+    db: Session = Depends(database.get_db)
+):
+    """RAG context preparation endpoint."""
+    search_text = payload.query
+    q = db.query(models.Property).options(joinedload(models.Property.features)).filter(models.Property.status == 'available')
+    
+    if search_text:
+        q = q.filter((models.Property.title.ilike(f"%{search_text}%")) | (models.Property.description.ilike(f"%{search_text}%")))
+    if payload.feature_ids:
+        for fid in payload.feature_ids:
+            q = q.filter(models.Property.features.any(models.Feature.id == fid))
+            
+    results = q.limit(10).all()
+    if not results:
+        return {"context": "No properties found matching this search.", "properties": []}
+        
+    rag_properties = []
+    context_parts = []
+    for prop in results:
+        maps_url = f"https://maps.google.com/?q={prop.latitude},{prop.longitude}" if prop.latitude and prop.longitude else None
+        features_list = [f.name for f in prop.features]
+        agent_name = prop.agent.full_name if prop.agent else "Not Assigned"
+        rag_prop = schemas.RAGProperty(
+            id=prop.id, agent_id=prop.agent_id, agent_name=agent_name, title=prop.title,
+            property_type=prop.property_type, listing_type=prop.listing_type, price=prop.price,
+            currency=prop.currency, city=prop.city, area=prop.area, bedrooms=prop.bedrooms,
+            bathrooms=prop.bathrooms, features=features_list, description=prop.description,
+            latitude=prop.latitude, longitude=prop.longitude, google_maps_url=maps_url,
+            agent_calendar_id=prop.agent.google_calendar_id if prop.agent else None
+        )
+        rag_properties.append(rag_prop)
+        context_parts.append(
+            f"Property ID: {prop.id}\nTitle: {prop.title}\nType: {prop.property_type} for {prop.listing_type}\n"
+            f"Price: {prop.price:,.0f} {prop.currency}\nLocation: {prop.city}, {prop.country}"
+        )
+        
+    return {"context": "\n\n".join(context_parts), "properties": rag_properties}
+
+@router.get("/agency/properties", response_model=List[schemas.Property])
+def get_agency_properties(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
+):
+    """Returns all properties for agency management."""
+    query = db.query(models.Property).options(
+        joinedload(models.Property.images), joinedload(models.Property.features),
+        joinedload(models.Property.owner), joinedload(models.Property.agent)
+    )
+    if current_user.role == "admin":
+        return query.all()
+    return query.filter(models.Property.owner_id == current_user.id).all()
+
+@router.get("/admin/properties", response_model=List[schemas.Property])
+def admin_all_properties(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["admin"]))
+):
+    """Administrator access to view every property on the platform."""
+    return db.query(models.Property).all()
+
+@router.get("/features", response_model=List[schemas.Feature])
+def list_features(db: Session = Depends(database.get_db)):
+    """Returns all available amenity/feature tags."""
+    return db.query(models.Feature).order_by(models.Feature.name).all()
+
+@router.post("/features", response_model=schemas.Feature, status_code=status.HTTP_201_CREATED)
+def create_feature(
+    feature: schemas.FeatureBase,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["admin"]))
+):
+    """Admin endpoint to create a new amenity/feature tag."""
+    existing = db.query(models.Feature).filter(models.Feature.name == feature.name).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Feature already exists")
+    new_feature = models.Feature(name=feature.name)
+    db.add(new_feature)
+    db.commit()
+    db.refresh(new_feature)
+    return new_feature
