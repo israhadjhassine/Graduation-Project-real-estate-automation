@@ -13,7 +13,7 @@
             {{ readOnly ? 'Viewing full property information' : (isEdit ? 'Update the information for this listing' : 'Fill in the details for your exclusive listing') }}
           </p>
         </div>
-        <button @click="$emit('close')" class="w-12 h-12 rounded-full hover:bg-white transition-colors flex items-center justify-center">
+        <button type="button" @click.stop="$emit('close')" class="w-12 h-12 rounded-full hover:bg-white transition-colors flex items-center justify-center">
           <LucideX class="w-6 h-6 text-primary-400" />
         </button>
       </div>
@@ -267,8 +267,8 @@
 
       <!-- Footer -->
       <div class="p-8 bg-primary-50/50 border-t border-primary-50 flex justify-end gap-4">
-        <button @click="$emit('close')" class="px-8 py-3 text-sm font-bold text-primary-400 hover:text-primary-950 transition-colors">{{ readOnly ? 'Close' : 'Cancel' }}</button>
-        <button v-if="!readOnly" @click="handleSubmit" class="btn-primary !px-12" :disabled="loading">
+        <button type="button" @click.stop="$emit('close')" class="px-8 py-3 text-sm font-bold text-primary-400 hover:text-primary-950 transition-colors">{{ readOnly ? 'Close' : 'Cancel' }}</button>
+        <button v-if="!readOnly" type="button" @click="handleSubmit" class="btn-primary !px-12" :disabled="loading">
           <LucideLoader2 v-if="loading" class="w-5 h-5 animate-spin" />
           <span v-else>{{ isEdit ? 'Save Changes' : 'List Property' }}</span>
         </button>

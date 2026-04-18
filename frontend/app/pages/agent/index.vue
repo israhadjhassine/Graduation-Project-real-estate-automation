@@ -8,13 +8,10 @@
           <div class="w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-900 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/20 text-white">
             <LucideHeadset class="w-10 h-10" />
           </div>
-        <div class="flex items-center gap-4">
-           <LucideHeadset class="w-10 h-10 text-blue-600" />
-           <div>
-             <h1 class="text-2xl font-bold text-primary-950">Agent Workspace</h1>
-             <p class="text-xs text-primary-500">Manage property visits and track your portfolio.</p>
-           </div>
-        </div>
+          <div>
+            <h1 class="text-2xl font-bold text-primary-950">Agent Workspace</h1>
+            <p class="text-xs text-primary-500">Manage property visits and track your portfolio.</p>
+          </div>
         </div>
       </div>
 

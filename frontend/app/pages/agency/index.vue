@@ -112,8 +112,8 @@
               <tr v-for="prop in activeProperties" :key="prop.id" @click="viewProperty(prop)" class="hover:bg-primary-50/50 transition-colors cursor-pointer group">
                 <td class="px-6 py-4">
                   <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-xl overflow-hidden bg-primary-100 flex-shrink-0">
-                       <img v-if="prop.images?.length" :src="`http://localhost:8000${prop.images[0].image_url}`" class="w-full h-full object-cover" />
+                     <div class="w-12 h-12 rounded-xl overflow-hidden bg-primary-100 flex-shrink-0">
+                       <img v-if="prop.images?.length" :src="getPublicUrl(prop.images[0].image_url)" class="w-full h-full object-cover" />
                        <LucideImage v-else class="w-12 h-12 p-3 text-primary-200" />
                     </div>
                     <div>
@@ -462,11 +462,13 @@ import {
 } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
+import { useAssetUrl } from '~/composables/useAssetUrl'
 
 definePageMeta({ layout: 'dashboard' })
 
 const auth = useAuthStore()
 const api = useApi()
+const { getPublicUrl } = useAssetUrl()
 const activeTab = ref('properties')
 const properties = ref([])
 const staff = ref([])
@@ -531,13 +533,7 @@ const fetchData = async () => {
       }
     }
     
-    console.log("Agency Dashboard Sync Success:", {
-      me: auth.user?.email,
-      myId: auth.user?.id,
-      properties: properties.value.length,
-      staff: staff.value.length,
-      staffRaw: staffRes.data
-    })
+    // console.log("Agency Dashboard Sync Success:", { ... })
   } catch (e) {
     console.error("Dashboard fetch error:", e)
   } finally {

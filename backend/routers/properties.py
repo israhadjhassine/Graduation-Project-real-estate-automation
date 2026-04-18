@@ -232,6 +232,39 @@ async def upload_property_image(
     db.refresh(db_image)
     return db_image
 
+@router.post("/properties/{property_id}/images", response_model=List[schemas.PropertyImage])
+async def upload_property_images(
+    property_id: int,
+    files: List[UploadFile] = File(...),
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
+):
+    """Allows uploading multiple images at once for a property."""
+    prop = db.query(models.Property).filter(models.Property.id == property_id).first()
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found")
+        
+    uploaded_images = []
+    for file in files:
+        image_url = await storage.upload_to_imagekit(file, file.filename)
+        if not image_url:
+            continue
+            
+        is_primary = (len(prop.images) + len(uploaded_images) == 0)
+        db_image = models.PropertyImage(
+            property_id=property_id,
+            image_url=image_url,
+            is_primary=is_primary
+        )
+        db.add(db_image)
+        uploaded_images.append(db_image)
+    
+    db.commit()
+    for img in uploaded_images:
+        db.refresh(img)
+        
+    return uploaded_images
+
 @router.get("/properties/{property_id}/map")
 def get_property_map(property_id: int, db: Session = Depends(database.get_db)):
     """Returns Google Maps coordinates for a property."""

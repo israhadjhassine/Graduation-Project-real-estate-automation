@@ -57,7 +57,7 @@
             <td class="px-6 py-4">
               <div class="flex items-center gap-4">
                 <div class="w-12 h-12 rounded-xl overflow-hidden bg-primary-100">
-                   <img v-if="prop.images?.length" :src="`http://localhost:8000${prop.images[0].image_url}`" class="w-full h-full object-cover" />
+                   <img v-if="prop.images?.length" :src="getPublicUrl(prop.images[0].image_url)" class="w-full h-full object-cover" />
                    <LucideImage v-else class="w-12 h-12 p-3 text-primary-200" />
                 </div>
                 <div>
@@ -109,9 +109,11 @@ import {
   LucideBuilding
 } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/auth'
+import { useAssetUrl } from '~/composables/useAssetUrl'
 
 const auth = useAuthStore()
 const api = useApi()
+const { getPublicUrl } = useAssetUrl()
 const properties = ref([])
 const loading = ref(false)
 const showModal = ref(false)
