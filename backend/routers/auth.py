@@ -102,16 +102,28 @@ def get_team_staff(
 @router.patch("/agency/staff/{agent_id}/toggle-status")
 def toggle_sub_agent_status(
     agent_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
 ):
-    """Toggles sub-agent status."""
+    """Toggles sub-agent status and notifies them."""
     agent = db.query(models.User).filter(models.User.id == agent_id).first()
     if not agent: raise HTTPException(status_code=404, detail="Agent not found")
     if current_user.role == "head_agent" and agent.manager_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
     agent.is_active = not agent.is_active
     db.commit()
+    
+    # [RESTORE] Notify sub-agent of status change
+    if agent.email:
+        background_tasks.add_task(
+            email.send_account_status_email,
+            user_email=agent.email,
+            user_name=agent.full_name,
+            is_active=agent.is_active,
+            manager_name=current_user.full_name
+        )
+        
     return {"message": f"Agent {'enabled' if agent.is_active else 'disabled'}", "is_active": agent.is_active}
 
 @router.get("/admin/users", response_model=List[schemas.User])
@@ -148,15 +160,27 @@ def create_user_admin(
 @router.patch("/admin/users/{user_id}/toggle-status")
 def toggle_user_status(
     user_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.RoleChecker(["admin"]))
 ):
-    """Toggle any user status."""
+    """Toggle any user status and notify them."""
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user: raise HTTPException(status_code=404, detail="User not found")
     if user.id == current_user.id: raise HTTPException(status_code=400, detail="Cannot disable yourself")
     user.is_active = not user.is_active
     db.commit()
+    
+    # [RESTORE] Notify user of status change
+    if user.email:
+        background_tasks.add_task(
+            email.send_account_status_email,
+            user_email=user.email,
+            user_name=user.full_name,
+            is_active=user.is_active,
+            manager_name=current_user.full_name
+        )
+        
     return {"message": f"User {'enabled' if user.is_active else 'disabled'} successfully", "is_active": user.is_active}
 
 @router.get("/admin/head_agents", response_model=List[schemas.User])

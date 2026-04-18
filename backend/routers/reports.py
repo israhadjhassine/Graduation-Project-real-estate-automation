@@ -9,40 +9,98 @@ router = APIRouter(
     tags=["Reports & Approvals"]
 )
 
-def generate_transaction_report_txt(db, prop, tx_type):
-    """Restored original .txt report generation logic."""
+from fpdf import FPDF
+
+def generate_transaction_report(db, prop, tx_type):
+    """Restored professional PDF report generation logic."""
     os.makedirs("reports", exist_ok=True)
-    filename = f"reports/Transaction_Prop{prop.id}_{tx_type}_{datetime.now().strftime('%Y%m%d%H%M%S')}.txt"
-    agent = db.query(models.User).get(prop.agent_id) if prop.agent_id else None
-    owner = db.query(models.User).get(prop.owner_id) if prop.owner_id else None
-    buyer = db.query(models.User).get(prop.buyer_id) if prop.buyer_id else None
+    filename = f"reports/Transaction_Prop{prop.id}_{tx_type}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+    agent = db.query(models.User).filter(models.User.id == prop.agent_id).first() if prop.agent_id else None
+    owner = db.query(models.User).filter(models.User.id == prop.owner_id).first() if prop.owner_id else None
+    buyer = db.query(models.User).filter(models.User.id == prop.buyer_id).first() if prop.buyer_id else None
     
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write(f"=== {tx_type.upper()} TRANSACTION REPORT ===\n")
-        f.write(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-        f.write("[PROPERTY DETAILS]\n")
-        f.write(f"ID: {prop.id}\n")
-        f.write(f"Title: {prop.title}\n")
-        f.write(f"Location: {prop.city}, {prop.country}\n")
-        f.write(f"Price: {prop.price} {prop.currency}\n")
-        if tx_type == "Rent" and prop.rent_start_date:
-            f.write(f"Rent Duration: {prop.rent_start_date.strftime('%Y-%m-%d')} to {prop.rent_end_date.strftime('%Y-%m-%d')}\n")
-        f.write("\n")
-        f.write("[STAFF DETAILS]\n")
-        f.write(f"Head Agent: {owner.full_name if owner else 'None'} ({owner.email if owner else 'N/A'})\n")
-        f.write(f"Sub Agent: {agent.full_name if agent else 'None'} ({agent.email if agent else 'N/A'})\n\n")
-        f.write("[CLIENT/BUYER DETAILS]\n")
-        if buyer:
-            f.write(f"Name: {buyer.full_name}\n")
-            f.write(f"Email: {buyer.email}\n")
-            f.write(f"Phone: {buyer.phone_number or 'N/A'}\n")
-        else:
-            f.write("No client specified in this transaction.\n")
+    pdf = FPDF()
+    pdf.add_page()
+    
+    # Header
+    pdf.set_font("helvetica", "B", 20)
+    pdf.set_text_color(30, 41, 59) # Slate 800
+    pdf.cell(0, 20, f"{tx_type.upper()} TRANSACTION REPORT", ln=True, align="C")
+    
+    pdf.set_font("helvetica", "", 10)
+    pdf.set_text_color(100, 116, 139) # Slate 500
+    pdf.cell(0, 5, f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", ln=True, align="C")
+    pdf.ln(10)
+    
+    # Property Section
+    pdf.set_font("helvetica", "B", 14)
+    pdf.set_text_color(30, 41, 59)
+    pdf.cell(0, 10, "PROPERTY DETAILS", ln=True)
+    pdf.set_draw_color(226, 232, 240)
+    pdf.line(pdf.get_x(), pdf.get_y(), pdf.get_x() + 190, pdf.get_y())
+    pdf.ln(2)
+    
+    pdf.set_font("helvetica", "", 12)
+    pdf.set_text_color(51, 65, 85)
+    pdf.cell(50, 8, txt="Property ID:", border=0)
+    pdf.cell(0, 8, txt=str(prop.id), border=0, ln=1)
+    
+    pdf.cell(50, 8, txt="Title:", border=0)
+    pdf.multi_cell(0, 8, txt=prop.title, border=0, align="L")
+    
+    pdf.cell(50, 8, txt="Location:", border=0)
+    pdf.cell(0, 8, txt=f"{prop.city}, {prop.country}", border=0, ln=1)
+    
+    pdf.cell(50, 8, txt="Price:", border=0)
+    pdf.cell(0, 8, txt=f"{prop.price:,} {prop.currency}", border=0, ln=1)
+    
+    if tx_type == "Rent" and prop.rent_start_date:
+        pdf.cell(50, 8, txt="Rent Duration:", border=0)
+        pdf.cell(0, 8, txt=f"{prop.rent_start_date.strftime('%Y-%m-%d')} to {prop.rent_end_date.strftime('%Y-%m-%d')}", border=0, ln=1)
+    pdf.ln(10)
+    
+    # Staff Section
+    pdf.set_font("helvetica", "B", 14)
+    pdf.set_text_color(30, 41, 59)
+    pdf.cell(0, 10, txt="STAFF DETAILS", ln=True)
+    pdf.line(pdf.get_x(), pdf.get_y(), pdf.get_x() + 190, pdf.get_y())
+    pdf.ln(2)
+    
+    pdf.set_font("helvetica", "", 12)
+    pdf.set_text_color(51, 65, 85)
+    pdf.cell(50, 8, txt="Head Agent:", border=0)
+    pdf.cell(0, 8, txt=f"{owner.full_name if owner else 'None'} ({owner.email if owner else 'N/A'})", border=0, ln=1)
+    
+    pdf.cell(50, 8, txt="Sub Agent:", border=0)
+    pdf.cell(0, 8, txt=f"{agent.full_name if agent else 'None'} ({agent.email if agent else 'N/A'})", border=0, ln=1)
+    pdf.ln(10)
+    
+    # Client Section
+    pdf.set_font("helvetica", "B", 14)
+    pdf.set_text_color(30, 41, 59)
+    pdf.cell(0, 10, txt="CLIENT / BUYER DETAILS", ln=True)
+    pdf.line(pdf.get_x(), pdf.get_y(), pdf.get_x() + 190, pdf.get_y())
+    pdf.ln(2)
+    
+    pdf.set_font("helvetica", "", 12)
+    pdf.set_text_color(51, 65, 85)
+    if buyer:
+        pdf.cell(50, 8, txt="Name:", border=0)
+        pdf.cell(0, 8, txt=buyer.full_name, border=0, ln=1)
+        pdf.cell(50, 8, txt="Email:", border=0)
+        pdf.cell(0, 8, txt=buyer.email, border=0, ln=1)
+        pdf.cell(50, 8, txt="Phone:", border=0)
+        pdf.cell(0, 8, txt=buyer.phone_number or "N/A", border=0, ln=1)
+    else:
+        pdf.cell(0, 8, txt="No client specified in this transaction.", border=0, ln=1)
+    
+    pdf.output(filename)
     return filename
 
 @router.post("/agency/properties/{property_id}/approve-sale")
 def approve_property_sale(
     property_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
 ):
@@ -56,9 +114,23 @@ def approve_property_sale(
         raise HTTPException(status_code=400, detail="Property is not pending a sale approval")
     
     prop.status = "sold"
-    generate_transaction_report_txt(db, prop, "Sale")
+    pdf_path = generate_transaction_report(db, prop, "Sale")
     db.commit()
-    return {"message": "Sale approved. Property is now marked as sold."}
+
+    # [RESTORE] Notify Admins of finalized transaction
+    admins = db.query(models.User).filter(models.User.role == "admin").all()
+    for admin in admins:
+        if admin.email:
+            background_tasks.add_task(
+                email.send_admin_report_email,
+                admin_email=admin.email,
+                admin_name=admin.full_name,
+                property_title=prop.title,
+                tx_type="Sale",
+                pdf_path=pdf_path
+            )
+
+    return {"message": "Sale approved. Property is now marked as sold and report generated."}
 
 @router.post("/agency/properties/{property_id}/reject-sale")
 def reject_property_sale(
@@ -79,6 +151,7 @@ def reject_property_sale(
 @router.post("/agency/properties/{property_id}/approve-rent")
 def approve_property_rent(
     property_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
 ):
@@ -92,9 +165,23 @@ def approve_property_rent(
         raise HTTPException(status_code=400, detail="Property is not pending a rent approval")
     
     prop.status = "rented"
-    generate_transaction_report_txt(db, prop, "Rent")
+    pdf_path = generate_transaction_report(db, prop, "Rent")
     db.commit()
-    return {"message": "Rent approved. Property is now marked as rented."}
+
+    # [RESTORE] Notify Admins of finalized transaction
+    admins = db.query(models.User).filter(models.User.role == "admin").all()
+    for admin in admins:
+        if admin.email:
+            background_tasks.add_task(
+                email.send_admin_report_email,
+                admin_email=admin.email,
+                admin_name=admin.full_name,
+                property_title=prop.title,
+                tx_type="Rent",
+                pdf_path=pdf_path
+            )
+
+    return {"message": "Rent approved. Property is now marked as rented and report generated."}
 
 @router.post("/agency/properties/{property_id}/reject-rent")
 def reject_property_rent(
@@ -119,7 +206,7 @@ def list_reports(current_user: models.User = Depends(auth.RoleChecker(["admin"])
     """Returns a list of available transaction reports."""
     if not os.path.exists("reports"):
         return []
-    return [{"name": f} for f in os.listdir("reports") if f.endswith(".txt")]
+    return [{"name": f} for f in os.listdir("reports") if f.endswith(".pdf")]
 
 @router.get("/admin/reports/{filename}")
 def download_report(filename: str, current_user: models.User = Depends(auth.RoleChecker(["admin"]))):

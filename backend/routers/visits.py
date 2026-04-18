@@ -14,11 +14,14 @@ def book_visit(
     db: Session = Depends(database.get_db)
 ):
     """Called by n8n after a Google Calendar event is successfully created."""
+    # Convert to UTC to match original behavior
+    visit_date_utc = payload.visit_date.astimezone(timezone.utc)
+    
     new_visit = models.Visit(
         property_id=payload.property_id,
         client_id=None,
         agent_id=payload.agent_id,
-        visit_date=payload.visit_date,
+        visit_date=visit_date_utc,
         telegram_chat_id=payload.client_telegram_id,
         status="scheduled",
         reminder_sent=False
@@ -34,8 +37,8 @@ def get_upcoming_visits(
 ):
     """Returns visits scheduled within the next window (40-50 min) as per original logic."""
     now = datetime.now(timezone.utc).replace(tzinfo=None) # naive for compare
-    window_start = now + timedelta(minutes=40)
-    window_end = now + timedelta(minutes=50)
+    window_start = now
+    window_end = now + timedelta(minutes=60)
     
     return db.query(models.Visit).filter(
         models.Visit.status == 'scheduled',
@@ -66,10 +69,14 @@ def get_agent_inquiries(
     if current_user.role == "admin":
         visits = db.query(models.Visit).order_by(models.Visit.created_at.desc()).all()
     elif current_user.role == "head_agent":
+        # Properties owned by the head agent OR properties owned by users managed by the head agent
+        managed_user_ids_query = db.query(models.User.id).filter(models.User.manager_id == current_user.id).all()
+        allowed_owner_ids = [current_user.id] + [uid[0] for uid in managed_user_ids_query]
+        
         visits = db.query(models.Visit).join(
             models.Property, models.Visit.property_id == models.Property.id
         ).filter(
-            models.Property.owner_id == current_user.id
+            models.Property.owner_id.in_(allowed_owner_ids)
         ).order_by(models.Visit.created_at.desc()).all()
     else:
         visits = db.query(models.Visit).filter(
@@ -95,9 +102,12 @@ def get_agent_inquiries(
         })
     
     if current_user.role in ["head_agent", "admin"]:
+        managed_user_ids_query = db.query(models.User.id).filter(models.User.manager_id == current_user.id).all()
+        allowed_owner_ids = [current_user.id] + [uid[0] for uid in managed_user_ids_query]
+
         pending_props = db.query(models.Property).filter(
             models.Property.status.in_(["pending_sold", "pending_rent"]),
-            models.Property.owner_id == current_user.id if current_user.role == "head_agent" else True
+            models.Property.owner_id.in_(allowed_owner_ids) if current_user.role == "head_agent" else True
         ).all()
         for p in pending_props:
             agent = db.query(models.User).filter(models.User.id == p.agent_id).first() if p.agent_id else None
@@ -150,6 +160,11 @@ def get_agent_visits_list(
     """Simple list of visits for the current agent."""
     if current_user.role == "admin":
         return db.query(models.Visit).all()
+    elif current_user.role == "head_agent":
+        managed_user_ids_query = db.query(models.User.id).filter(models.User.manager_id == current_user.id).all()
+        allowed_agent_ids = [current_user.id] + [uid[0] for uid in managed_user_ids_query]
+        return db.query(models.Visit).filter(models.Visit.agent_id.in_(allowed_agent_ids)).order_by(models.Visit.visit_date.asc()).all()
+    
     return db.query(models.Visit).filter(models.Visit.agent_id == current_user.id).order_by(models.Visit.visit_date.asc()).all()
 
 @router.put("/agent/visits/{visit_id}/status")
@@ -160,9 +175,19 @@ def update_visit_status(
     current_user: models.User = Depends(auth.RoleChecker(["agent", "head_agent", "admin"]))
 ):
     """Updates a visit status."""
-    vis = db.query(models.Visit).filter(models.Visit.id == visit_id).first()
+    vis = db.query(models.Visit).options(joinedload(models.Visit.property).joinedload(models.Property.owner)).filter(models.Visit.id == visit_id).first()
     if not vis:
         raise HTTPException(status_code=404, detail="Visit not found")
+        
+    # Authorization: Admin, Assigned Agent, Property Owner, or Owner's Manager
+    is_admin = current_user.role == "admin"
+    is_assigned = vis.agent_id == current_user.id
+    is_owner = vis.property and vis.property.owner_id == current_user.id
+    is_manager = current_user.role == "head_agent" and vis.property and vis.property.owner and vis.property.owner.manager_id == current_user.id
+    
+    if not (is_admin or is_assigned or is_owner or is_manager):
+        raise HTTPException(status_code=403, detail="Not authorized to update this visit")
+
     vis.status = status
     db.commit()
     return {"message": "Visit status updated"}

@@ -66,15 +66,26 @@ def update_property(
     current_user: models.User = Depends(auth.RoleChecker(["admin", "head_agent"]))
 ):
     """Updates property details. Only owners or admins can perform this."""
-    prop = db.query(models.Property).filter(models.Property.id == property_id).first()
+    prop = db.query(models.Property).options(joinedload(models.Property.owner)).filter(models.Property.id == property_id).first()
     if not prop:
         raise HTTPException(status_code=404, detail="Property not found")
         
-    if current_user.role != "admin" and prop.owner_id != current_user.id:
+    # Authorization: Admin, Owner, or the Manager of the Owner
+    is_admin = current_user.role == "admin"
+    is_owner = prop.owner_id == current_user.id
+    is_manager = current_user.role == "head_agent" and prop.owner and prop.owner.manager_id == current_user.id
+        
+    if not (is_admin or is_owner or is_manager):
         raise HTTPException(status_code=403, detail="Not authorized to edit this property")
         
     update_data = property_in.dict(exclude_unset=True, exclude={"feature_ids"})
+    
+    # Check if description changed for AI re-embedding
     description_changed = "description" in update_data and update_data["description"] != prop.description
+    
+    # Apply updates
+    for key, value in update_data.items():
+        setattr(prop, key, value)
     
     if description_changed:
         prop.description_vector = ai.get_embedding(prop.description)
@@ -94,11 +105,16 @@ def delete_property(
     current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
 ):
     """Deletes a property listing. Only owner or admin can perform this."""
-    prop = db.query(models.Property).filter(models.Property.id == property_id).first()
+    prop = db.query(models.Property).options(joinedload(models.Property.owner)).filter(models.Property.id == property_id).first()
     if not prop:
         raise HTTPException(status_code=404, detail="Property not found")
         
-    if current_user.role != "admin" and prop.owner_id != current_user.id:
+    # Authorization: Admin, Owner, or the Manager of the Owner
+    is_admin = current_user.role == "admin"
+    is_owner = prop.owner_id == current_user.id
+    is_manager = current_user.role == "head_agent" and prop.owner and prop.owner.manager_id == current_user.id
+        
+    if not (is_admin or is_owner or is_manager):
         raise HTTPException(status_code=403, detail="Not authorized to delete this property")
         
     db.delete(prop)
@@ -113,11 +129,16 @@ def assign_property_to_agent(
     current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
 ):
     """Allows Head Agents or Admins to assign a property to a Sub-Agent."""
-    prop = db.query(models.Property).filter(models.Property.id == property_id).first()
+    prop = db.query(models.Property).options(joinedload(models.Property.owner)).filter(models.Property.id == property_id).first()
     if not prop:
         raise HTTPException(status_code=404, detail="Property not found")
         
-    if current_user.role != "admin" and prop.owner_id != current_user.id:
+    # Authorization: Admin, Owner, or the Manager of the Owner
+    is_admin = current_user.role == "admin"
+    is_owner = prop.owner_id == current_user.id
+    is_manager = current_user.role == "head_agent" and prop.owner and prop.owner.manager_id == current_user.id
+        
+    if not (is_admin or is_owner or is_manager):
         raise HTTPException(status_code=403, detail="Not authorized to assign this property")
         
     prop.agent_id = payload.get("agent_id")
@@ -128,19 +149,30 @@ def assign_property_to_agent(
 def update_property_status(
     property_id: int,
     payload: dict,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.RoleChecker(["agent", "head_agent", "admin"]))
 ):
     """Allows agents to update property status (e.g., mark as sold/pending)."""
-    prop = db.query(models.Property).filter(models.Property.id == property_id).first()
+    prop = db.query(models.Property).options(joinedload(models.Property.owner)).filter(models.Property.id == property_id).first()
     if not prop:
         raise HTTPException(status_code=404, detail="Property not found")
+    
+    # Authorization: Admin, Owner, Assigned Agent, or the Manager of the Owner
+    is_admin = current_user.role == "admin"
+    is_owner = prop.owner_id == current_user.id
+    is_agent = prop.agent_id == current_user.id
+    is_manager = current_user.role == "head_agent" and prop.owner and prop.owner.manager_id == current_user.id
+    
+    if not (is_admin or is_owner or is_agent or is_manager):
+        raise HTTPException(status_code=403, detail="Not authorized to update status for this property")
     
     new_status = payload.get("status")
     if new_status not in ["available", "sold", "pending_sold", "rented", "pending_rent"]:
         raise HTTPException(status_code=400, detail="Invalid status value")
     
     prop.status = new_status
+    buyer = None
     if new_status == "pending_rent":
         if "rent_start_date" in payload and payload["rent_start_date"]:
             prop.rent_start_date = datetime.fromisoformat(payload["rent_start_date"].replace("Z", "+00:00"))
@@ -150,6 +182,25 @@ def update_property_status(
     if new_status in ["pending_sold", "pending_rent"]:
         if "buyer_id" in payload and payload["buyer_id"]:
             prop.buyer_id = payload["buyer_id"]
+            buyer = db.query(models.User).filter(models.User.id == payload["buyer_id"]).first()
+            
+        # [RESTORE] Send email to Head Agent/Admin to notify about the transaction
+        owner = db.query(models.User).filter(models.User.id == prop.owner_id).first()
+        if owner and owner.email:
+            background_tasks.add_task(
+                email.send_transaction_request_email,
+                head_agent_email=owner.email,
+                head_agent_name=owner.full_name,
+                sub_agent_name=current_user.full_name,
+                sub_agent_email=current_user.email,
+                property_title=prop.title,
+                property_location=f"{prop.city}, {prop.country}",
+                property_price=f"{prop.price:,} {prop.currency}",
+                tx_type="Sale" if new_status == "pending_sold" else "Rent",
+                client_email=buyer.email if buyer else None,
+                rent_start=prop.rent_start_date.strftime('%Y-%m-%d') if prop.rent_start_date else None,
+                rent_end=prop.rent_end_date.strftime('%Y-%m-%d') if prop.rent_end_date else None
+            )
             
     db.commit()
     return {"message": f"Property status updated to {new_status}"}
