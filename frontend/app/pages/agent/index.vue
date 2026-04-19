@@ -1,69 +1,111 @@
 <template>
   <div class="bg-primary-50/20 min-h-screen py-12">
     <div class="max-w-7xl mx-auto px-6">
-      
       <!-- Sub-Agent Header -->
-      <div class="flex items-center justify-between mb-8">
-        <div class="flex items-center gap-6">
-          <div class="w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-900 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/20 text-white">
-            <LucideHeadset class="w-10 h-10" />
-          </div>
-          <div>
-            <h1 class="text-2xl font-bold text-primary-950">Agent Workspace</h1>
-            <p class="text-xs text-primary-500">Manage property visits and track your portfolio.</p>
-          </div>
+      <div class="flex items-center justify-between mb-10 pb-8 border-b border-primary-100">
+        <div>
+          <h1 class="text-3xl font-extrabold text-primary-950 !font-sans tracking-tight">Agent Workspace</h1>
+          <p class="text-primary-500 font-medium mt-1">Field Operations • Visit Tracking • Lead Management</p>
         </div>
       </div>
 
       <!-- Quick Stats -->
-      <div class="grid md:grid-cols-3 gap-6 mb-8">
-        <div class="card-premium">
-          <div class="flex items-center justify-between mb-4">
-            <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-              <LucideHome class="w-6 h-6 text-blue-600" />
+      <div class="grid md:grid-cols-3 gap-6 mb-10">
+        <div class="card-premium border-l-4 border-l-primary-900 !rounded-lg">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-primary-50 rounded-lg flex items-center justify-center">
+              <LucideHome class="w-6 h-6 text-primary-900" />
+            </div>
+            <div>
+              <p class="text-[10px] font-bold text-primary-400 uppercase tracking-[0.2em]">My Listings</p>
+              <p class="text-2xl font-bold text-primary-950 mt-0.5">{{ myProperties.length }}</p>
             </div>
           </div>
-           <p class="text-xs font-bold text-primary-400 uppercase tracking-widest">My Listings</p>
-           <p class="text-3xl font-bold text-primary-950 mt-1">{{ myProperties.length }}</p>
         </div>
 
-        <div class="card-premium">
-          <div class="flex items-center justify-between mb-4">
-            <div class="w-12 h-12 bg-accent-100 rounded-xl flex items-center justify-center">
+        <div class="card-premium border-l-4 border-l-accent-600 !rounded-lg">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-accent-50 rounded-lg flex items-center justify-center">
               <LucideCalendar class="w-6 h-6 text-accent-600" />
             </div>
-          </div>
-          <p class="text-xs font-bold text-primary-400 uppercase tracking-widest">Upcoming Visits</p>
-          <p class="text-3xl font-bold text-primary-950 mt-1">{{ upcomingVisits.length }}</p>
-        </div>
-
-        <div class="card-premium">
-          <div class="flex items-center justify-between mb-4">
-            <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-              <LucideCheckCircle2 class="w-6 h-6 text-green-600" />
+            <div>
+              <p class="text-[10px] font-bold text-primary-400 uppercase tracking-[0.2em]">Upcoming Visits</p>
+              <p class="text-2xl font-bold text-primary-950 mt-0.5">{{ upcomingVisits.length }}</p>
             </div>
           </div>
-           <p class="text-xs font-bold text-primary-400 uppercase tracking-widest">Completed Visits</p>
-           <p class="text-3xl font-bold text-primary-950 mt-1">{{ finishedVisits.length }}</p>
+        </div>
+
+        <div class="card-premium border-l-4 border-l-green-600 !rounded-lg">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+              <LucideCheckCircle2 class="w-6 h-6 text-green-600" />
+            </div>
+            <div>
+              <p class="text-[10px] font-bold text-primary-400 uppercase tracking-[0.2em]">Completed Visits</p>
+              <p class="text-2xl font-bold text-primary-950 mt-0.5">{{ finishedVisits.length }}</p>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- Navigation Tabs -->
-      <div class="flex gap-4 border-b border-primary-100 mb-8 overflow-x-auto pb-2">
-         <button 
-           @click="activeTab = 'visits'" 
-           :class="['px-6 py-3 rounded-full text-sm font-bold transition-all whitespace-nowrap', activeTab === 'visits' ? 'bg-primary-950 text-white shadow-md' : 'text-primary-600 hover:bg-primary-100']"
-         >
-           <LucideCalendar class="w-4 h-4 inline-block mr-2" /> Property Visits
-         </button>
+      <div class="flex gap-2 border-b border-primary-100 mb-8 overflow-x-auto pb-0">
+        <button 
+          @click="activeTab = 'visits'" 
+          :class="['px-5 py-3 text-sm font-bold transition-all whitespace-nowrap border-b-2', activeTab === 'visits' ? 'border-primary-950 text-primary-950' : 'border-transparent text-primary-400 hover:text-primary-600']"
+        >
+          <LucideCalendar class="w-4 h-4 inline-block mr-2" /> Property Visits
+        </button>
         <button 
           @click="activeTab = 'properties'" 
-          :class="['px-6 py-3 rounded-full text-sm font-bold transition-all whitespace-nowrap', activeTab === 'properties' ? 'bg-primary-950 text-white shadow-md' : 'text-primary-600 hover:bg-primary-100']"
+          :class="['px-5 py-3 text-sm font-bold transition-all whitespace-nowrap border-b-2', activeTab === 'properties' ? 'border-primary-950 text-primary-950' : 'border-transparent text-primary-400 hover:text-primary-600']"
         >
           <LucideHome class="w-4 h-4 inline-block mr-2" /> My Portfolio
         </button>
+        <button 
+          @click="activeTab = 'analytics'" 
+          :class="['px-5 py-3 text-sm font-bold transition-all whitespace-nowrap border-b-2 flex items-center gap-2', activeTab === 'analytics' ? 'border-primary-950 text-primary-950' : 'border-transparent text-primary-400 hover:text-primary-600']"
+        >
+          <LucidePieChart class="w-4 h-4 inline-block" /> My Performance
+        </button>
       </div>
 
+
+      <!-- Tab Content: Analytics -->
+      <div v-show="activeTab === 'analytics'">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-bold text-primary-950">Analytics & KPIs</h2>
+        </div>
+        <div v-if="statsLoading" class="grid md:grid-cols-2 gap-6 animate-pulse">
+           <div class="h-64 bg-white rounded-[2rem]"></div>
+           <div class="h-64 bg-white rounded-[2rem]"></div>
+        </div>
+        <div v-else class="grid lg:grid-cols-2 gap-8">
+           <!-- Doughnut: Visit Statuses -->
+           <div class="card-premium h-[400px] flex flex-col">
+              <h3 class="text-sm font-bold text-primary-400 uppercase tracking-widest mb-4">Visit Success Rate</h3>
+              <div class="flex-1 relative">
+                 <ChartsDoughnutChart v-if="visitChartData" :chart-data="visitChartData" />
+              </div>
+           </div>
+           
+           <!-- Line: Monthly Visits -->
+           <div class="card-premium h-[400px] flex flex-col">
+              <h3 class="text-sm font-bold text-primary-400 uppercase tracking-widest mb-4">Monthly Visits Setup</h3>
+              <div class="flex-1 relative">
+                 <ChartsLineChart v-if="monthlyVisitsChartData" :chart-data="monthlyVisitsChartData" />
+              </div>
+           </div>
+           
+           <!-- Doughnut: Portfolio Status -->
+           <div class="card-premium h-[400px] flex flex-col lg:col-span-2">
+              <h3 class="text-sm font-bold text-primary-400 uppercase tracking-widest mb-4">My Listings Breakdown</h3>
+              <div class="flex-1 relative flex items-center justify-center pt-8">
+                 <ChartsDoughnutChart v-if="propertyStatusChartData" :chart-data="propertyStatusChartData" :chart-options="{ cutout: '60%' }" />
+              </div>
+           </div>
+        </div>
+      </div>
 
       <!-- Tab Content: Properties -->
       <div v-show="activeTab === 'properties'">
@@ -262,27 +304,76 @@
 
 <script setup>
 import { 
-  LucideHeadset, LucideCalendar, 
-  LucideCheckCircle2, LucideHome,
-  LucideCalendarOff, LucideX
+  LucideHeadset, LucideHome, LucideCalendar, 
+  LucideCheckCircle2, LucideXCircle, LucideX,
+  LucideCheck, LucidePieChart, LucideCalendarOff
 } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/auth'
+import { useApi } from '~/composables/useApi'
 import axios from 'axios'
 
 definePageMeta({ layout: 'dashboard' })
 
 const auth = useAuthStore()
+const api = useApi()
 const activeTab = ref('visits')
 
 const visits = ref([])
-const properties = ref([])
+const myProperties = ref([])
 const clients = ref([])
+const loading = ref(false)
+const statsLoading = ref(false)
 
-const myProperties = computed(() => properties.value.filter(p => p.agent_id === auth.user?.id))
-
-// Computed properties for dashboard stats
 const upcomingVisits = computed(() => visits.value.filter(v => v.status === 'scheduled'))
 const finishedVisits = computed(() => visits.value.filter(v => v.status === 'finished'))
+
+// Statistics State
+const statistics = ref(null)
+
+// Chart Computeds
+const visitChartData = computed(() => {
+  if (!statistics.value || !statistics.value.visit_statuses) return null
+  const data = statistics.value.visit_statuses
+  return {
+    labels: Object.keys(data).map(k => k.charAt(0).toUpperCase() + k.slice(1)),
+    datasets: [{
+      data: Object.values(data),
+      backgroundColor: ['#3b82f6', '#22c55e', '#ef4444', '#f59e0b'],
+      borderWidth: 0,
+      hoverOffset: 10
+    }]
+  }
+})
+
+const propertyStatusChartData = computed(() => {
+  if (!statistics.value || !statistics.value.property_statuses) return null
+  const data = statistics.value.property_statuses
+  return {
+    labels: Object.keys(data).map(k => k.replace('_', ' ').toUpperCase()),
+    datasets: [{
+      data: Object.values(data),
+      backgroundColor: ['#6366f1', '#a855f7', '#ec4899', '#14b8a6', '#f59e0b'],
+      borderWidth: 0,
+      hoverOffset: 10
+    }]
+  }
+})
+
+const monthlyVisitsChartData = computed(() => {
+  if (!statistics.value || !statistics.value.monthly_visits) return null
+  const data = statistics.value.monthly_visits
+  return {
+    labels: Object.keys(data),
+    datasets: [{
+      label: 'Visits Conducted',
+      data: Object.values(data),
+      borderColor: '#3b82f6',
+      backgroundColor: '#ebf5ff',
+      borderWidth: 3,
+      fill: true
+    }]
+  }
+})
 
 const showDetailsModal = ref(false)
 const selectedProperty = ref(null)
@@ -318,8 +409,19 @@ const fetchData = async () => {
       axios.get(`${getApiUrl()}/agency/clients`, { headers: { Authorization: `Bearer ${auth.token}` } })
     ])
     visits.value = visitsRes.data
-    properties.value = propsRes.data
+    myProperties.value = propsRes.data.filter(p => p.agent_id === auth.user?.id)
     clients.value = clientsRes.data
+    
+    // Fetch stats
+    statsLoading.value = true
+    try {
+      const statsRes = await api.get('/statistics/agent')
+      statistics.value = statsRes.data
+    } catch (err) {
+      console.error("Failed to load statistics", err)
+    } finally {
+      statsLoading.value = false
+    }
   } catch (e) {
     console.error("Agent dashboard fetch error:", e)
   }

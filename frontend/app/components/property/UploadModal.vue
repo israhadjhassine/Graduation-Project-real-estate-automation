@@ -35,7 +35,7 @@
                <label class="block text-xs font-bold text-primary-400 uppercase tracking-widest mb-3">Governorate</label>
                <div class="relative">
                  <LucideMapPin class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400 z-10 pointer-events-none" />
-                 <select v-model="form.city" :disabled="readOnly" class="form-input pl-10 appearance-none cursor-pointer">
+                 <select v-model="form.city" :disabled="readOnly" class="form-input !pl-16 appearance-none cursor-pointer" style="padding-left: 4rem !important;">
                    <option value="" disabled>Select Governorate...</option>
                    <option v-for="gov in tunisianGovernorates" :key="gov" :value="gov">{{ gov }}</option>
                  </select>
@@ -52,6 +52,8 @@
                     <option value="apartment">Apartment</option>
                     <option value="house">House</option>
                     <option value="villa">Villa</option>
+                    <option value="studio">Studio</option>
+                    <option value="office">Office</option>
                   </select>
                 </div>
                 <div>

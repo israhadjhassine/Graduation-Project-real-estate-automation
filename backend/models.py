@@ -46,7 +46,7 @@ class Property(Base):
     description = Column(Text, nullable=False)
     
     # Classification
-    property_type = Column(String(50), nullable=False)  # apartment, house, villa, land
+    property_type = Column(String(50), nullable=False)  # apartment, house, villa, studio, office
     listing_type = Column(String(20), nullable=False)   # sale, rent
     status = Column(String(20), default='available')    # available, sold, rented, pending
     

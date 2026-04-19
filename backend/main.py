@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 import models, database
-from routers import auth, properties, visits, reports
+from routers import auth, properties, visits, reports, statistics
 
 # IMPORTANT: Ensure database tables are created
 models.Base.metadata.create_all(bind=database.engine)
@@ -35,6 +35,7 @@ app.include_router(auth.router)
 app.include_router(properties.router)
 app.include_router(visits.router)
 app.include_router(reports.router)
+app.include_router(statistics.router)
 
 @app.get("/")
 async def root():

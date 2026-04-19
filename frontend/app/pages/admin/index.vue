@@ -2,71 +2,77 @@
   <div class="bg-primary-50/20 min-h-screen py-12">
     <div class="max-w-7xl mx-auto px-6">
       <!-- Admin Header -->
-      <div class="flex items-center justify-between mb-8">
-        <div class="flex items-center gap-6">
-          <div class="w-20 h-20 bg-gradient-to-br from-red-600 to-red-900 rounded-2xl flex items-center justify-center shadow-lg shadow-red-900/20 text-white">
-            <LucideShieldAlert class="w-10 h-10" />
-          </div>
-          <div>
-            <h1 class="text-3xl font-bold text-primary-950">System Administration</h1>
-            <p class="text-primary-500 font-medium mt-1">Superuser Control Panel</p>
-          </div>
+      <div class="flex items-center justify-between mb-10 pb-8 border-b border-primary-100">
+        <div>
+          <h1 class="text-3xl font-extrabold text-primary-950 !font-sans tracking-tight">System Administration</h1>
+          <p class="text-primary-500 font-medium mt-1">Superuser Control Panel • Platform Intelligence</p>
         </div>
       </div>
 
       <!-- Quick Stats -->
-      <div class="grid md:grid-cols-3 gap-6 mb-8">
-
-        <div class="card-premium">
-          <div class="flex items-center justify-between mb-4">
-            <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center">
-              <LucideUsers class="w-6 h-6 text-primary-600" />
+      <div class="grid md:grid-cols-3 gap-6 mb-10">
+        <div class="card-premium border-l-4 border-l-primary-900 !rounded-lg">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-primary-50 rounded-lg flex items-center justify-center">
+              <LucideUsers class="w-6 h-6 text-primary-900" />
+            </div>
+            <div>
+              <p class="text-[10px] font-bold text-primary-400 uppercase tracking-[0.2em]">Total Users</p>
+              <p class="text-2xl font-bold text-primary-950 mt-0.5">{{ users.length }}</p>
             </div>
           </div>
-          <p class="text-xs font-bold text-primary-400 uppercase tracking-widest">Total Users</p>
-          <p class="text-3xl font-bold text-primary-950 mt-1">{{ users.length }}</p>
         </div>
 
-        <div class="card-premium">
-          <div class="flex items-center justify-between mb-4">
-            <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+        <div class="card-premium border-l-4 border-l-purple-600 !rounded-lg">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center">
               <LucideUsers class="w-6 h-6 text-purple-600" />
             </div>
-          </div>
-          <p class="text-xs font-bold text-purple-400 uppercase tracking-widest">Head Agents</p>
-          <p class="text-3xl font-bold text-primary-950 mt-1">{{ headAgents.length }}</p>
-        </div>
-
-        <div class="card-premium">
-          <div class="flex items-center justify-between mb-4">
-            <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-              <LucideHome class="w-6 h-6 text-green-600" />
+            <div>
+              <p class="text-[10px] font-bold text-primary-400 uppercase tracking-[0.2em]">Head Agents</p>
+              <p class="text-2xl font-bold text-primary-950 mt-0.5">{{ headAgents.length }}</p>
             </div>
           </div>
-          <p class="text-xs font-bold text-primary-400 uppercase tracking-widest">Total Listings</p>
-          <p class="text-3xl font-bold text-primary-950 mt-1">{{ properties.length }}</p>
+        </div>
+
+        <div class="card-premium border-l-4 border-l-green-600 !rounded-lg">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+              <LucideHome class="w-6 h-6 text-green-600" />
+            </div>
+            <div>
+              <p class="text-[10px] font-bold text-primary-400 uppercase tracking-[0.2em]">Total Listings</p>
+              <p class="text-2xl font-bold text-primary-950 mt-0.5">{{ properties.length }}</p>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- Navigation Tabs -->
-      <div class="flex gap-4 border-b border-primary-100 mb-8 overflow-x-auto pb-2">
+      <div class="flex gap-2 border-b border-primary-100 mb-8 overflow-x-auto pb-0">
         <button 
           @click="activeTab = 'users'" 
-          :class="['px-6 py-3 rounded-full text-sm font-bold transition-all whitespace-nowrap', activeTab === 'users' ? 'bg-primary-950 text-white shadow-md' : 'text-primary-600 hover:bg-primary-100']"
+          :class="['px-5 py-3 text-sm font-bold transition-all whitespace-nowrap border-b-2', activeTab === 'users' ? 'border-primary-950 text-primary-950' : 'border-transparent text-primary-400 hover:text-primary-600']"
         >
           <LucideUsers class="w-4 h-4 inline-block mr-2" /> Manage Users
         </button>
         <button 
           @click="activeTab = 'properties'" 
-          :class="['px-6 py-3 rounded-full text-sm font-bold transition-all whitespace-nowrap', activeTab === 'properties' ? 'bg-primary-950 text-white shadow-md' : 'text-primary-600 hover:bg-primary-100']"
+          :class="['px-5 py-3 text-sm font-bold transition-all whitespace-nowrap border-b-2', activeTab === 'properties' ? 'border-primary-950 text-primary-950' : 'border-transparent text-primary-400 hover:text-primary-600']"
         >
           <LucideHome class="w-4 h-4 inline-block mr-2" /> All Properties
         </button>
         <button 
           @click="activeTab = 'reports'" 
-          :class="['px-6 py-3 rounded-full text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2', activeTab === 'reports' ? 'bg-primary-950 text-white shadow-md' : 'text-primary-600 hover:bg-primary-100']"
+          :class="['px-5 py-3 text-sm font-bold transition-all whitespace-nowrap border-b-2 flex items-center gap-2', activeTab === 'reports' ? 'border-primary-950 text-primary-950' : 'border-transparent text-primary-400 hover:text-primary-600']"
         >
           <LucideFileText class="w-4 h-4 inline-block" /> Transaction Reports
+        </button>
+        <button 
+          @click="activeTab = 'analytics'" 
+          :class="['px-5 py-3 text-sm font-bold transition-all whitespace-nowrap border-b-2 flex items-center gap-2', activeTab === 'analytics' ? 'border-primary-950 text-primary-950' : 'border-transparent text-primary-400 hover:text-primary-600']"
+        >
+          <LucidePieChart class="w-4 h-4 inline-block" /> Platform Analytics
         </button>
       </div>
 
@@ -153,6 +159,64 @@
            </div>
            <div v-if="!properties.length" class="col-span-full text-center py-12 text-primary-400">
              No properties listed yet.
+           </div>
+        </div>
+      </div>
+
+      <!-- Tab Content: Analytics -->
+      <div v-show="activeTab === 'analytics'">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-bold text-primary-950">Platform Analytics & KPIs</h2>
+        </div>
+        
+        <div v-if="statsLoading" class="grid md:grid-cols-2 gap-6 animate-pulse">
+           <div class="h-64 bg-white rounded-[2rem]"></div>
+           <div class="h-64 bg-white rounded-[2rem]"></div>
+        </div>
+        
+        <!-- Key Metrics Cards -->
+        <div v-else-if="statistics" class="grid md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-gradient-to-br from-green-500 to-green-700 rounded-3xl p-6 text-white shadow-lg shadow-green-900/20">
+               <p class="text-xs font-bold uppercase tracking-widest opacity-80 mb-1">Total Sales Revenue</p>
+               <p class="text-3xl font-bold">{{ formatPrice(statistics.revenue.sales) }} <span class="text-xs font-normal">TND</span></p>
+            </div>
+            <div class="bg-gradient-to-br from-purple-500 to-purple-700 rounded-3xl p-6 text-white shadow-lg shadow-purple-900/20">
+               <p class="text-xs font-bold uppercase tracking-widest opacity-80 mb-1">Total Rental Revenue</p>
+               <p class="text-3xl font-bold">{{ formatPrice(statistics.revenue.rentals) }} <span class="text-xs font-normal">TND</span></p>
+            </div>
+            <div class="bg-white rounded-3xl p-6 border border-primary-100 shadow-sm flex flex-col justify-center">
+               <p class="text-xs font-bold text-primary-400 uppercase tracking-widest mb-1">Total Sold</p>
+               <p class="text-3xl font-bold text-primary-950">{{ statistics.property_statuses.sold || 0 }}</p>
+            </div>
+            <div class="bg-white rounded-3xl p-6 border border-primary-100 shadow-sm flex flex-col justify-center">
+               <p class="text-xs font-bold text-primary-400 uppercase tracking-widest mb-1">Available</p>
+               <p class="text-3xl font-bold text-primary-950">{{ statistics.property_statuses.available || 0 }}</p>
+            </div>
+        </div>
+
+        <div v-if="!statsLoading && statistics" class="grid lg:grid-cols-2 gap-8">
+           <!-- Doughnut: User Roles -->
+           <div class="card-premium h-[400px] flex flex-col">
+              <h3 class="text-sm font-bold text-primary-400 uppercase tracking-widest mb-4">Platform Users by Role</h3>
+              <div class="flex-1 relative pb-4">
+                 <ChartsDoughnutChart v-if="userRolesChartData" :chart-data="userRolesChartData" />
+              </div>
+           </div>
+           
+           <!-- Bar: Top Agents -->
+           <div class="card-premium h-[400px] flex flex-col">
+              <h3 class="text-sm font-bold text-primary-400 uppercase tracking-widest mb-4">Top 5 Performing Agents</h3>
+              <div class="flex-1 relative pb-4">
+                 <ChartsBarChart v-if="topAgentsChartData" :chart-data="topAgentsChartData" />
+              </div>
+           </div>
+           
+           <!-- Doughnut: Platform Property Statuses -->
+           <div class="card-premium h-[400px] flex flex-col lg:col-span-2">
+              <h3 class="text-sm font-bold text-primary-400 uppercase tracking-widest mb-[60px]">Total Properties Breakdown</h3>
+              <div class="flex-1 relative">
+                 <ChartsDoughnutChart v-if="propertyStatusChartData" :chart-data="propertyStatusChartData" :chart-options="{ cutout: '65%' }" />
+              </div>
            </div>
         </div>
       </div>
@@ -260,7 +324,7 @@
 import { 
   LucideShieldAlert, LucideUsers, LucideBuilding2, 
   LucideHome, LucidePlus, LucideX, LucideEye,
-  LucideFileText, LucideDownload
+  LucideFileText, LucideDownload, LucidePieChart
 } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/auth'
 import axios from 'axios'
@@ -274,6 +338,51 @@ const loading = ref(false)
 const users = ref([])
 const properties = ref([])
 const reports = ref([])
+const statistics = ref(null)
+const statsLoading = ref(false)
+
+const userRolesChartData = computed(() => {
+  if (!statistics.value || !statistics.value.user_roles) return null
+  const data = statistics.value.user_roles
+  return {
+    labels: Object.keys(data).map(k => k.replace('_', ' ').toUpperCase()),
+    datasets: [{
+      data: Object.values(data),
+      backgroundColor: ['#6366f1', '#a855f7', '#ec4899', '#14b8a6', '#f59e0b'],
+      borderWidth: 0,
+      hoverOffset: 10
+    }]
+  }
+})
+
+const topAgentsChartData = computed(() => {
+  if (!statistics.value || !statistics.value.top_agents) return null
+  const data = statistics.value.top_agents
+  return {
+    labels: data.map(d => d.agent),
+    datasets: [{
+      label: 'Sold Properties',
+      data: data.map(d => d.sold),
+      backgroundColor: '#f43f5e',
+      borderRadius: 6
+    }]
+  }
+})
+
+const propertyStatusChartData = computed(() => {
+  if (!statistics.value || !statistics.value.property_statuses) return null
+  const data = statistics.value.property_statuses
+  return {
+    labels: Object.keys(data).map(k => k.replace('_', ' ').toUpperCase()),
+    datasets: [{
+      data: Object.values(data),
+      backgroundColor: ['#3b82f6', '#22c55e', '#ef4444', '#f59e0b', '#8b5cf6'],
+      borderWidth: 0,
+      hoverOffset: 10
+    }]
+  }
+})
+
 const headAgents = computed(() => users.value.filter(u => u.role === 'head_agent'))
 
 const showUserModal = ref(false)
@@ -299,14 +408,16 @@ const getApiUrl = () => {
 
 const fetchData = async () => {
   try {
-    const [usersRes, propsRes, reportsRes] = await Promise.all([
+const [...responses] = await Promise.all([
       axios.get(`${getApiUrl()}/admin/users`, { headers: { Authorization: `Bearer ${auth.token}` } }),
       axios.get(`${getApiUrl()}/admin/properties`, { headers: { Authorization: `Bearer ${auth.token}` } }),
-      axios.get(`${getApiUrl()}/admin/reports`, { headers: { Authorization: `Bearer ${auth.token}` } })
+      axios.get(`${getApiUrl()}/admin/reports`, { headers: { Authorization: `Bearer ${auth.token}` } }),
+      axios.get(`${getApiUrl()}/statistics/admin`, { headers: { Authorization: `Bearer ${auth.token}` } })
     ])
-    users.value = usersRes.data
-    properties.value = propsRes.data
-    reports.value = reportsRes.data
+    users.value = responses[0].data || []
+    properties.value = responses[1].data || []
+    reports.value = responses[2].data || []
+    statistics.value = responses[3].data || null
   } catch (e) {
     console.error("Failed to load admin data", e)
   }
@@ -329,6 +440,10 @@ const downloadReport = async (filename) => {
     console.error("Failed to download report", e)
     alert("Could not download report.")
   }
+}
+
+const formatPrice = (price) => {
+  return new Intl.NumberFormat('fr-TN').format(price || 0)
 }
 
 const createUser = async () => {

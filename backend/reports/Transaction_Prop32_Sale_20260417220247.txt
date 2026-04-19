@@ -1,0 +1,17 @@
+=== SALE TRANSACTION REPORT ===
+Date: 2026-04-17 22:02:47
+
+[PROPERTY DETAILS]
+ID: 32
+Title: opopopmmpppp
+Location: Mahdia, Tunisia
+Price: 0.00 TND
+
+[STAFF DETAILS]
+Head Agent: isra head (hadjhassineisra@gmail.com)
+Sub Agent: isra sub222 (israhh222@gmail.com)
+
+[CLIENT/BUYER DETAILS]
+Name: isra
+Email: isra@gmail.com
+Phone: 98852755

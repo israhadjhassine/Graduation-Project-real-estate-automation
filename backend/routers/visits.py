@@ -159,13 +159,22 @@ def get_agent_visits_list(
 ):
     """Simple list of visits for the current agent."""
     if current_user.role == "admin":
-        return db.query(models.Visit).all()
+        return db.query(models.Visit).options(
+            joinedload(models.Visit.property),
+            joinedload(models.Visit.client)
+        ).all()
     elif current_user.role == "head_agent":
         managed_user_ids_query = db.query(models.User.id).filter(models.User.manager_id == current_user.id).all()
         allowed_agent_ids = [current_user.id] + [uid[0] for uid in managed_user_ids_query]
-        return db.query(models.Visit).filter(models.Visit.agent_id.in_(allowed_agent_ids)).order_by(models.Visit.visit_date.asc()).all()
+        return db.query(models.Visit).options(
+            joinedload(models.Visit.property),
+            joinedload(models.Visit.client)
+        ).filter(models.Visit.agent_id.in_(allowed_agent_ids)).order_by(models.Visit.visit_date.asc()).all()
     
-    return db.query(models.Visit).filter(models.Visit.agent_id == current_user.id).order_by(models.Visit.visit_date.asc()).all()
+    return db.query(models.Visit).options(
+        joinedload(models.Visit.property),
+        joinedload(models.Visit.client)
+    ).filter(models.Visit.agent_id == current_user.id).order_by(models.Visit.visit_date.asc()).all()
 
 @router.put("/agent/visits/{visit_id}/status")
 def update_visit_status(

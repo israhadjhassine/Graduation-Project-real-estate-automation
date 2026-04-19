@@ -44,13 +44,15 @@ async def upload_to_imagekit(file_obj, original_filename):
         content = await file_obj.read()
         log_debug(f"📊 File read size: {len(content)} bytes")
         
-        from types import SimpleNamespace
-        upload_options = SimpleNamespace(
-            folder="/properties/",
-            use_unique_file_name=True
-        )
+        # Standard dictionary for options (SimpleNamespace might fail in some SDK versions)
+        upload_options = {
+            "folder": "/properties/",
+            "use_unique_file_name": True
+        }
         
         encoded = base64.b64encode(content).decode('utf-8')
+        log_debug(f"📤 Calling ImageKit SDK upload for {original_filename}...")
+        
         result = imagekit.upload_file(
             file=encoded,
             file_name=f"{uuid4()}_{original_filename}",
@@ -59,21 +61,20 @@ async def upload_to_imagekit(file_obj, original_filename):
         
         if result:
             log_debug(f"DEBUG: result type: {type(result)}")
+            log_debug(f"DEBUG: raw result: {result}")
+            
             # Handle both object attributes and dictionary keys
             url = None
             if hasattr(result, 'url'):
                 url = result.url
             elif isinstance(result, dict):
                 url = result.get('url')
-            elif hasattr(result, 'response_metadata') and hasattr(result.response_metadata, 'raw'):
-                # Some SDK versions store it in raw metadata
-                url = result.raw.get('url') if hasattr(result, 'raw') else None
             
             if url:
                 log_debug(f"✅ ImageKit Upload Success: {url}")
                 return url
             else:
-                log_debug(f"❌ ImageKit Upload returned unexpected result format: {result}")
+                log_debug(f"❌ ImageKit Upload returned result without URL: {result}")
                 return None
     except Exception as e:
         import traceback

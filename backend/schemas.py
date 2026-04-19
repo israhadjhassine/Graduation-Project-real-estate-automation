@@ -71,6 +71,8 @@ class PropertyType(str, Enum):
     apartment = "apartment"
     house = "house"
     villa = "villa"
+    studio = "studio"
+    office = "office"
 
 class ListingType(str, Enum):
     sale = "sale"

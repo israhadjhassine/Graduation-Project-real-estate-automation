@@ -34,7 +34,7 @@
           <label class="text-[10px] font-bold text-primary-400 uppercase tracking-widest">Location</label>
           <div class="relative">
              <LucideMapPin class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400 z-10 pointer-events-none" />
-             <select v-model="location" @change="handleSearch" class="w-full bg-white border border-primary-100 rounded-xl pl-10 pr-4 py-3 text-sm font-medium appearance-none focus:border-primary-300 focus:ring-4 focus:ring-primary-50 transition-all outline-none cursor-pointer relative z-0">
+             <select v-model="location" @change="handleSearch" class="w-full bg-white border border-primary-100 rounded-xl !pl-16 pr-4 py-3 text-sm font-medium appearance-none focus:border-primary-300 focus:ring-4 focus:ring-primary-50 transition-all outline-none cursor-pointer relative z-0" style="padding-left: 4rem !important;">
                <option value="">Any Place</option>
                <option v-for="gov in governorates" :key="gov" :value="gov">{{ gov }}</option>
              </select>
@@ -70,7 +70,9 @@
             <button @click="setPropertyType('All')" :class="['py-2 px-3 border rounded-lg text-xs font-bold transition-all', propertyType === 'All' ? 'border-primary-950 bg-primary-950 text-white' : 'border-primary-100 bg-white text-primary-600 hover:bg-primary-50 hover:border-primary-200']">All</button>
             <button @click="setPropertyType('Villa')" :class="['py-2 px-3 border rounded-lg text-xs font-bold transition-all', propertyType === 'Villa' ? 'border-primary-950 bg-primary-950 text-white' : 'border-primary-100 bg-white text-primary-600 hover:bg-primary-50 hover:border-primary-200']">Villa</button>
             <button @click="setPropertyType('Apartment')" :class="['py-2 px-3 border rounded-lg text-xs font-bold transition-all', propertyType === 'Apartment' ? 'border-primary-950 bg-primary-950 text-white' : 'border-primary-100 bg-white text-primary-600 hover:bg-primary-50 hover:border-primary-200']">Apartment</button>
+            <button @click="setPropertyType('House')" :class="['py-2 px-3 border rounded-lg text-xs font-bold transition-all', propertyType === 'House' ? 'border-primary-950 bg-primary-950 text-white' : 'border-primary-100 bg-white text-primary-600 hover:bg-primary-50 hover:border-primary-200']">House</button>
             <button @click="setPropertyType('Studio')" :class="['py-2 px-3 border rounded-lg text-xs font-bold transition-all', propertyType === 'Studio' ? 'border-primary-950 bg-primary-950 text-white' : 'border-primary-100 bg-white text-primary-600 hover:bg-primary-50 hover:border-primary-200']">Studio</button>
+            <button @click="setPropertyType('Office')" :class="['py-2 px-3 border rounded-lg text-xs font-bold transition-all', propertyType === 'Office' ? 'border-primary-950 bg-primary-950 text-white' : 'border-primary-100 bg-white text-primary-600 hover:bg-primary-50 hover:border-primary-200']">Office</button>
           </div>
         </div>
 

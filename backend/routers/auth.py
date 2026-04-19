@@ -38,6 +38,14 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    # Check if account is active
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="This account has been deactivated. Please contact your manager.",
+        )
+    
     access_token = auth.create_access_token(data={"sub": user.email, "role": user.role, "user_id": user.id})
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -106,15 +114,16 @@ def toggle_sub_agent_status(
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
 ):
-    """Toggles sub-agent status and notifies them."""
+    """Toggles sub-agent status."""
     agent = db.query(models.User).filter(models.User.id == agent_id).first()
     if not agent: raise HTTPException(status_code=404, detail="Agent not found")
     if current_user.role == "head_agent" and agent.manager_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
+    
     agent.is_active = not agent.is_active
     db.commit()
-    
-    # [RESTORE] Notify sub-agent of status change
+
+    # Send status update email
     if agent.email:
         background_tasks.add_task(
             email.send_account_status_email,
@@ -123,7 +132,7 @@ def toggle_sub_agent_status(
             is_active=agent.is_active,
             manager_name=current_user.full_name
         )
-        
+
     return {"message": f"Agent {'enabled' if agent.is_active else 'disabled'}", "is_active": agent.is_active}
 
 @router.get("/admin/users", response_model=List[schemas.User])
@@ -164,14 +173,15 @@ def toggle_user_status(
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.RoleChecker(["admin"]))
 ):
-    """Toggle any user status and notify them."""
+    """Toggle any user status."""
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user: raise HTTPException(status_code=404, detail="User not found")
     if user.id == current_user.id: raise HTTPException(status_code=400, detail="Cannot disable yourself")
+    
     user.is_active = not user.is_active
     db.commit()
-    
-    # [RESTORE] Notify user of status change
+
+    # Send status update email
     if user.email:
         background_tasks.add_task(
             email.send_account_status_email,
@@ -180,7 +190,7 @@ def toggle_user_status(
             is_active=user.is_active,
             manager_name=current_user.full_name
         )
-        
+
     return {"message": f"User {'enabled' if user.is_active else 'disabled'} successfully", "is_active": user.is_active}
 
 @router.get("/admin/head_agents", response_model=List[schemas.User])

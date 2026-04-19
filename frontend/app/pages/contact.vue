@@ -8,11 +8,11 @@
       </p>
     </div>
 
-    <div class="max-w-7xl mx-auto px-6 py-16">
-      <div class="grid lg:grid-cols-3 gap-12">
+    <div class="max-w-4xl mx-auto px-6 py-16">
+      <div class="flex justify-center">
         
         <!-- Contact Information -->
-        <div class="lg:col-span-1 space-y-8">
+        <div class="w-full max-w-xl space-y-8">
           <div class="bg-white rounded-3xl p-8 border border-primary-100 shadow-xl shadow-primary-900/5">
             <h3 class="text-2xl font-bold text-primary-950 mb-6">Contact Information</h3>
             
@@ -65,69 +65,6 @@
           </div>
         </div>
 
-        <!-- Contact Form -->
-        <div class="lg:col-span-2">
-          <div class="bg-white rounded-3xl p-8 md:p-12 border border-primary-100 shadow-xl shadow-primary-900/5">
-            <h3 class="text-2xl font-bold text-primary-950 mb-8">Send us a Message</h3>
-            
-            <form @submit.prevent="submitForm" class="space-y-6">
-              <!-- Unauthenticated Fields -->
-              <div v-if="!auth.isAuthenticated" class="space-y-6">
-                <div class="grid md:grid-cols-2 gap-6">
-                  <div class="space-y-2">
-                    <label class="text-sm font-bold text-primary-950">First Name</label>
-                    <input type="text" class="w-full bg-primary-50 border border-primary-100 rounded-xl px-4 py-3 text-sm font-medium focus:border-accent-400 focus:bg-white focus:ring-4 focus:ring-accent-500/10 transition-all outline-none" placeholder="John" />
-                  </div>
-                  <div class="space-y-2">
-                    <label class="text-sm font-bold text-primary-950">Last Name</label>
-                    <input type="text" class="w-full bg-primary-50 border border-primary-100 rounded-xl px-4 py-3 text-sm font-medium focus:border-accent-400 focus:bg-white focus:ring-4 focus:ring-accent-500/10 transition-all outline-none" placeholder="Doe" />
-                  </div>
-                </div>
-
-                <div class="grid md:grid-cols-2 gap-6">
-                  <div class="space-y-2">
-                    <label class="text-sm font-bold text-primary-950">Email Address</label>
-                    <input type="email" class="w-full bg-primary-50 border border-primary-100 rounded-xl px-4 py-3 text-sm font-medium focus:border-accent-400 focus:bg-white focus:ring-4 focus:ring-accent-500/10 transition-all outline-none" placeholder="john@example.com" />
-                  </div>
-                  <div class="space-y-2">
-                    <label class="text-sm font-bold text-primary-950">Phone Number</label>
-                    <input type="tel" class="w-full bg-primary-50 border border-primary-100 rounded-xl px-4 py-3 text-sm font-medium focus:border-accent-400 focus:bg-white focus:ring-4 focus:ring-accent-500/10 transition-all outline-none" placeholder="+216 00 000 000" />
-                  </div>
-                </div>
-              </div>
-
-              <!-- Authenticated User Banner -->
-              <div v-else class="flex items-center gap-4 p-4 bg-primary-50/50 border border-primary-100 rounded-2xl mb-6">
-                <div class="w-12 h-12 bg-white rounded-xl shadow-sm border border-primary-100 flex items-center justify-center text-primary-900 font-bold text-lg">
-                  {{ auth.user?.full_name?.charAt(0) }}
-                </div>
-                <div>
-                  <p class="font-bold text-primary-950">{{ auth.user?.full_name }}</p>
-                  <p class="text-sm text-primary-500">Sending as Client</p>
-                </div>
-              </div>
-
-              <div class="space-y-2">
-                <label class="text-sm font-bold text-primary-950">Subject</label>
-                <select class="w-full bg-primary-50 border border-primary-100 rounded-xl px-4 py-3 text-sm font-medium focus:border-accent-400 focus:bg-white focus:ring-4 focus:ring-accent-500/10 transition-all outline-none appearance-none">
-                  <option>Property Inquiry</option>
-                  <option>List my Property</option>
-                  <option>Career Opportunities</option>
-                  <option>General Support</option>
-                </select>
-              </div>
-
-              <div class="space-y-2">
-                <label class="text-sm font-bold text-primary-950">Message</label>
-                <textarea rows="5" class="w-full bg-primary-50 border border-primary-100 rounded-xl px-4 py-3 text-sm font-medium focus:border-accent-400 focus:bg-white focus:ring-4 focus:ring-accent-500/10 transition-all outline-none resize-none" placeholder="How can we help you?"></textarea>
-              </div>
-
-              <button type="submit" class="w-full py-4 bg-primary-950 hover:bg-primary-900 text-white rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2">
-                <LucideSend class="w-4 h-4" /> Send Message
-              </button>
-            </form>
-          </div>
-        </div>
 
       </div>
     </div>
@@ -143,11 +80,6 @@ import {
 import { useAuthStore } from '~/stores/auth'
 
 const auth = useAuthStore()
-
-const submitForm = () => {
-  // In a real implementation, this would connect to an API backend
-  alert("Thank you for your message. An agent will contact you shortly.")
-}
 
 useHead({
   title: 'Contact Us | Elite Real Estate'

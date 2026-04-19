@@ -117,7 +117,7 @@ def approve_property_sale(
     pdf_path = generate_transaction_report(db, prop, "Sale")
     db.commit()
 
-    # [RESTORE] Notify Admins of finalized transaction
+    # 1. Notify Admins of finalized transaction
     admins = db.query(models.User).filter(models.User.role == "admin").all()
     for admin in admins:
         if admin.email:
@@ -129,12 +129,26 @@ def approve_property_sale(
                 tx_type="Sale",
                 pdf_path=pdf_path
             )
+            
+    # 2. Notify Client of Success
+    buyer = db.query(models.User).filter(models.User.id == prop.buyer_id).first() if prop.buyer_id else None
+    if buyer and buyer.email:
+        background_tasks.add_task(
+            email.send_client_transaction_success_email,
+            client_email=buyer.email,
+            client_name=buyer.full_name,
+            property_title=prop.title,
+            tx_type="Sale",
+            property_price=f"{prop.price:,} {prop.currency}",
+            property_location=f"{prop.city}, {prop.country}"
+        )
 
     return {"message": "Sale approved. Property is now marked as sold and report generated."}
 
 @router.post("/agency/properties/{property_id}/reject-sale")
 def reject_property_sale(
     property_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
 ):
@@ -144,8 +158,23 @@ def reject_property_sale(
         raise HTTPException(status_code=404, detail="Property not found")
     if current_user.role == "head_agent" and prop.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
+    
     prop.status = "available"
+    # Capture agent details before clearing
+    agent = db.query(models.User).filter(models.User.id == prop.agent_id).first() if prop.agent_id else None
     db.commit()
+
+    # Notify Sub-Agent of Rejection
+    if agent and agent.email:
+        background_tasks.add_task(
+            email.send_transaction_rejection_email,
+            sub_agent_email=agent.email,
+            sub_agent_name=agent.full_name,
+            property_title=prop.title,
+            tx_type="Sale",
+            manager_name=current_user.full_name
+        )
+
     return {"message": "Sale rejected. Property reverted to available."}
 
 @router.post("/agency/properties/{property_id}/approve-rent")
@@ -168,7 +197,7 @@ def approve_property_rent(
     pdf_path = generate_transaction_report(db, prop, "Rent")
     db.commit()
 
-    # [RESTORE] Notify Admins of finalized transaction
+    # 1. Notify Admins of finalized transaction
     admins = db.query(models.User).filter(models.User.role == "admin").all()
     for admin in admins:
         if admin.email:
@@ -180,12 +209,26 @@ def approve_property_rent(
                 tx_type="Rent",
                 pdf_path=pdf_path
             )
+            
+    # 2. Notify Client of Success
+    buyer = db.query(models.User).filter(models.User.id == prop.buyer_id).first() if prop.buyer_id else None
+    if buyer and buyer.email:
+        background_tasks.add_task(
+            email.send_client_transaction_success_email,
+            client_email=buyer.email,
+            client_name=buyer.full_name,
+            property_title=prop.title,
+            tx_type="Rent",
+            property_price=f"{prop.price:,} {prop.currency}",
+            property_location=f"{prop.city}, {prop.country}"
+        )
 
     return {"message": "Rent approved. Property is now marked as rented and report generated."}
 
 @router.post("/agency/properties/{property_id}/reject-rent")
 def reject_property_rent(
     property_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
 ):
@@ -198,7 +241,22 @@ def reject_property_rent(
     prop.status = "available"
     prop.rent_start_date = None
     prop.rent_end_date = None
+
+    # Capture agent details
+    agent = db.query(models.User).filter(models.User.id == prop.agent_id).first() if prop.agent_id else None
     db.commit()
+
+    # Notify Sub-Agent of Rejection
+    if agent and agent.email:
+        background_tasks.add_task(
+            email.send_transaction_rejection_email,
+            sub_agent_email=agent.email,
+            sub_agent_name=agent.full_name,
+            property_title=prop.title,
+            tx_type="Rent",
+            manager_name=current_user.full_name
+        )
+
     return {"message": "Rent rejected. Property reverted to available."}
 
 @router.get("/admin/reports")

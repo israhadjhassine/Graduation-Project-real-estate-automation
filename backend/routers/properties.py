@@ -245,9 +245,12 @@ async def upload_property_images(
         raise HTTPException(status_code=404, detail="Property not found")
         
     uploaded_images = []
+    print(f"DEBUG: upload_property_images called for property {property_id} with {len(files)} files", flush=True)
     for file in files:
+        print(f"DEBUG: Processing file: {file.filename}", flush=True)
         image_url = await storage.upload_to_imagekit(file, file.filename)
         if not image_url:
+            print(f"ERROR: Image upload failed for {file.filename}", flush=True)
             continue
             
         is_primary = (len(prop.images) + len(uploaded_images) == 0)

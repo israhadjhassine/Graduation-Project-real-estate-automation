@@ -1,94 +1,99 @@
 <template>
   <div class="bg-primary-50/20 min-h-screen py-12">
     <div class="max-w-7xl mx-auto px-6">
-      
       <!-- Head Agent Header -->
-      <div class="flex items-center justify-between mb-8">
-        <div class="flex items-center gap-6">
-          <div class="w-20 h-20 bg-gradient-to-br from-purple-600 to-purple-900 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-900/20 text-white">
-            <LucideBriefcase class="w-10 h-10" />
-          </div>
-          <div>
-            <h1 class="text-3xl font-bold text-primary-950">Management Workspace</h1>
-            <p class="text-primary-500 font-medium mt-1">Manage listings and your team of sub-agents.</p>
-          </div>
+      <div class="flex items-center justify-between mb-10 pb-8 border-b border-primary-100">
+        <div>
+          <h1 class="text-3xl font-extrabold text-primary-950 !font-sans tracking-tight">Management Workspace</h1>
+          <p class="text-primary-500 font-medium mt-1">Agency Operations • Team Oversight • Listing Control</p>
         </div>
-        
-        <button @click="showModal = true" class="btn-primary">
-          <LucidePlus class="w-5 h-5" /> List New Property
+        <button @click="showModal = true" class="btn-primary !rounded-lg px-6 py-3">
+          <LucidePlus class="w-5 h-5 mr-2" /> List New Property
         </button>
       </div>
 
       <!-- Quick Stats -->
-      <div class="grid md:grid-cols-3 gap-6 mb-8">
-        <div class="card-premium">
-          <div class="flex items-center justify-between mb-4">
-            <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center">
-              <LucideHome class="w-6 h-6 text-primary-600" />
+      <div class="grid md:grid-cols-3 gap-6 mb-10">
+        <div class="card-premium border-l-4 border-l-primary-900 !rounded-lg">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-primary-50 rounded-lg flex items-center justify-center">
+              <LucideHome class="w-6 h-6 text-primary-900" />
+            </div>
+            <div>
+              <p class="text-[10px] font-bold text-primary-400 uppercase tracking-[0.2em]">Agency Listings</p>
+              <p class="text-2xl font-bold text-primary-950 mt-0.5">{{ properties.length }}</p>
             </div>
           </div>
-          <p class="text-xs font-bold text-primary-400 uppercase tracking-widest">Agency Listings</p>
-          <p class="text-3xl font-bold text-primary-950 mt-1">{{ properties.length }}</p>
         </div>
 
-        <div class="card-premium">
-          <div class="flex items-center justify-between mb-4">
-            <div class="w-12 h-12 bg-accent-100 rounded-xl flex items-center justify-center">
+        <div class="card-premium border-l-4 border-l-accent-600 !rounded-lg">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-accent-50 rounded-lg flex items-center justify-center">
               <LucideUsers class="w-6 h-6 text-accent-600" />
             </div>
-          </div>
-          <p class="text-xs font-bold text-primary-400 uppercase tracking-widest">Sub-Agents</p>
-          <p class="text-3xl font-bold text-primary-950 mt-1">{{ staff.length }}</p>
-        </div>
-
-        <div class="card-premium">
-          <div class="flex items-center justify-between mb-4">
-            <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-              <LucideEye class="w-6 h-6 text-green-600" />
+            <div>
+              <p class="text-[10px] font-bold text-primary-400 uppercase tracking-[0.2em]">Sub-Agents</p>
+              <p class="text-2xl font-bold text-primary-950 mt-0.5">{{ staff.length }}</p>
             </div>
           </div>
-          <p class="text-xs font-bold text-primary-400 uppercase tracking-widest">Total Client Views</p>
-          <p class="text-3xl font-bold text-primary-950 mt-1">2,492</p>
+        </div>
+
+        <div class="card-premium border-l-4 border-l-green-600 !rounded-lg">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+              <LucideEye class="w-6 h-6 text-green-600" />
+            </div>
+            <div>
+              <p class="text-[10px] font-bold text-primary-400 uppercase tracking-[0.2em]">Total Client Views</p>
+              <p class="text-2xl font-bold text-primary-950 mt-0.5">2,492</p>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- Navigation Tabs -->
-      <div class="flex gap-4 border-b border-primary-100 mb-8 overflow-x-auto pb-2">
+      <div class="flex gap-2 border-b border-primary-100 mb-8 overflow-x-auto pb-0">
         <button 
           @click="activeTab = 'properties'" 
-          :class="['px-6 py-3 rounded-full text-sm font-bold transition-all whitespace-nowrap', activeTab === 'properties' ? 'bg-primary-950 text-white shadow-md' : 'text-primary-600 hover:bg-primary-100']"
+          :class="['px-5 py-3 text-sm font-bold transition-all whitespace-nowrap border-b-2', activeTab === 'properties' ? 'border-primary-950 text-primary-950' : 'border-transparent text-primary-400 hover:text-primary-600']"
         >
           <LucideHome class="w-4 h-4 inline-block mr-2" /> Properties Portfolio
         </button>
         <button 
           @click="activeTab = 'staff'" 
-          :class="['px-6 py-3 rounded-full text-sm font-bold transition-all whitespace-nowrap', activeTab === 'staff' ? 'bg-primary-950 text-white shadow-md' : 'text-primary-600 hover:bg-primary-100']"
+          :class="['px-5 py-3 text-sm font-bold transition-all whitespace-nowrap border-b-2', activeTab === 'staff' ? 'border-primary-950 text-primary-950' : 'border-transparent text-primary-400 hover:text-primary-600']"
         >
           <LucideUsers class="w-4 h-4 inline-block mr-2" /> Sub-Agent Team
         </button>
         <button 
           @click="activeTab = 'sold'" 
-          :class="['px-6 py-3 rounded-full text-sm font-bold transition-all whitespace-nowrap', activeTab === 'sold' ? 'bg-primary-950 text-white shadow-md' : 'text-primary-600 hover:bg-primary-100']"
+          :class="['px-5 py-3 text-sm font-bold transition-all whitespace-nowrap border-b-2', activeTab === 'sold' ? 'border-primary-950 text-primary-950' : 'border-transparent text-primary-400 hover:text-primary-600']"
         >
           <LucideCheckCircle2 class="w-4 h-4 inline-block mr-2" /> Sold Properties
         </button>
         <button 
           @click="activeTab = 'rented'" 
-          :class="['px-6 py-3 rounded-full text-sm font-bold transition-all whitespace-nowrap', activeTab === 'rented' ? 'bg-primary-950 text-white shadow-md' : 'text-primary-600 hover:bg-primary-100']"
+          :class="['px-5 py-3 text-sm font-bold transition-all whitespace-nowrap border-b-2', activeTab === 'rented' ? 'border-primary-950 text-primary-950' : 'border-transparent text-primary-400 hover:text-primary-600']"
         >
           <LucideHome class="w-4 h-4 inline-block mr-2" /> Rented Properties
         </button>
         <button 
-          @click="activeTab = 'inquiries'" 
-          :class="['px-6 py-3 rounded-full text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2', activeTab === 'inquiries' ? 'bg-primary-950 text-white shadow-md' : 'text-primary-600 hover:bg-primary-100']"
+          @click="activeTab = 'analytics'" 
+          :class="['px-5 py-3 text-sm font-bold transition-all whitespace-nowrap border-b-2 flex items-center gap-2', activeTab === 'analytics' ? 'border-primary-950 text-primary-950' : 'border-transparent text-primary-400 hover:text-primary-600']"
         >
-          <LucideMessageSquare class="w-4 h-4 inline-block" /> Inquiries & Notifications
-          <span v-if="pendingSales.length" class="bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">{{ pendingSales.length }}</span>
+          <LucidePieChart class="w-4 h-4 inline-block" /> Team Performance
+        </button>
+        <button 
+          @click="activeTab = 'inquiries'" 
+          :class="['px-5 py-3 text-sm font-bold transition-all whitespace-nowrap border-b-2 flex items-center gap-2', activeTab === 'inquiries' ? 'border-primary-950 text-primary-950' : 'border-transparent text-primary-400 hover:text-primary-600']"
+        >
+          <LucideMessageSquare class="w-4 h-4 inline-block" /> Inquiries
+          <span v-if="pendingSales.length" class="bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center ml-1">{{ pendingSales.length }}</span>
         </button>
         <button 
           v-if="auth.isAdmin"
           @click="activeTab = 'reports'" 
-          :class="['px-6 py-3 rounded-full text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2', activeTab === 'reports' ? 'bg-primary-950 text-white shadow-md' : 'text-primary-600 hover:bg-primary-100']"
+          :class="['px-5 py-3 text-sm font-bold transition-all whitespace-nowrap border-b-2 flex items-center gap-2', activeTab === 'reports' ? 'border-primary-950 text-primary-950' : 'border-transparent text-primary-400 hover:text-primary-600']"
         >
           <LucideFileText class="w-4 h-4 inline-block" /> Transaction Reports
         </button>
@@ -407,6 +412,34 @@
         </div>
       </div>
 
+      <!-- Tab Content: Analytics -->
+      <div v-show="activeTab === 'analytics'">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-bold text-primary-950">Team Analytics & KPIs</h2>
+        </div>
+        <div v-if="loading" class="grid md:grid-cols-2 gap-6 animate-pulse">
+           <div class="h-64 bg-white rounded-[2rem]"></div>
+           <div class="h-64 bg-white rounded-[2rem]"></div>
+        </div>
+        <div v-else class="grid lg:grid-cols-2 gap-8">
+           <!-- Doughnut: Property Statuses -->
+           <div class="card-premium h-[400px] flex flex-col">
+              <h3 class="text-sm font-bold text-primary-400 uppercase tracking-widest mb-4">Agency Portfolio Status</h3>
+              <div class="flex-1 relative">
+                 <ChartsDoughnutChart v-if="propertyStatusChartData" :chart-data="propertyStatusChartData" />
+              </div>
+           </div>
+           
+           <!-- Bar: Agent Performance -->
+           <div class="card-premium h-[400px] flex flex-col">
+              <h3 class="text-sm font-bold text-primary-400 uppercase tracking-widest mb-4">Sub-Agent Closed Deals</h3>
+              <div class="flex-1 relative">
+                 <ChartsBarChart v-if="agentPerformanceChartData" :chart-data="agentPerformanceChartData" />
+              </div>
+           </div>
+        </div>
+      </div>
+
       <!-- Tab Content: Reports -->
       <div v-show="activeTab === 'reports' && auth.isAdmin">
         <div class="card-premium p-0 overflow-hidden">
@@ -458,7 +491,7 @@ import {
   LucideBriefcase, LucideHome, LucideUsers, LucideEye,
   LucidePlus, LucideImage, LucideEdit, LucideTrash2,
   LucideUserPlus, LucideX, LucideCheckCircle2,
-  LucideMessageSquare, LucideFileText, LucideDownload
+  LucideMessageSquare, LucideFileText, LucideDownload, LucidePieChart
 } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
@@ -481,6 +514,41 @@ const soldProperties = computed(() => properties.value.filter(p => p.status === 
 const rentedProperties = computed(() => properties.value.filter(p => p.status === 'rented'))
 const activeProperties = computed(() => properties.value.filter(p => !['sold', 'pending_sold'].includes(p.status)))
 const pendingSales = computed(() => properties.value.filter(p => ['pending_sold', 'pending_rent'].includes(p.status)))
+
+// Statistics State
+const statistics = ref(null)
+
+const propertyStatusChartData = computed(() => {
+  if (!statistics.value || !statistics.value.property_statuses) return null
+  const data = statistics.value.property_statuses
+  return {
+    labels: Object.keys(data).map(k => k.replace('_', ' ').toUpperCase()),
+    datasets: [{
+      data: Object.values(data),
+      backgroundColor: ['#6366f1', '#a855f7', '#ec4899', '#14b8a6', '#f59e0b'],
+      borderWidth: 0,
+      hoverOffset: 10
+    }]
+  }
+})
+
+const agentPerformanceChartData = computed(() => {
+  if (!statistics.value || !statistics.value.team_performance) return null
+  const data = statistics.value.team_performance
+  
+  // Sort by deals desc
+  const sorted = [...data].sort((a,b) => b.deals - a.deals)
+  
+  return {
+    labels: sorted.map(d => d.agent),
+    datasets: [{
+      label: 'Closed Deals',
+      data: sorted.map(d => d.deals),
+      backgroundColor: '#3b82f6',
+      borderRadius: 6
+    }]
+  }
+})
 
 const showModal = ref(false)
 const selectedProperty = ref(null)
@@ -512,17 +580,19 @@ const deleteProperty = async (propertyId) => {
 const fetchData = async () => {
   loading.value = true
   try {
-    const [propsRes, staffRes, inqRes, clientsRes] = await Promise.all([
+    const [propsRes, staffRes, inqRes, clientsRes, statsRes] = await Promise.all([
       api.get('/agency/properties'),
       api.get('/agency/staff'),
       api.get('/agent/inquiries'),
-      api.get('/agency/clients')
+      api.get('/agency/clients'),
+      api.get('/statistics/agency')
     ])
     
     properties.value = propsRes.data
     staff.value = staffRes.data
     inquiries.value = inqRes.data
     clients.value = clientsRes.data
+    statistics.value = statsRes.data
     
     if (auth.isAdmin) {
       try {
