@@ -11,9 +11,10 @@ def get_embedding(text: str) -> List[float]:
     Generates embedding using Ollama nomic-embed-text (Ollama service).
     1:1 matching backend/utils/embeddings.py
     """
+    ollama_host = os.environ.get("OLLAMA_HOST", "host.docker.internal")
     try:
         response = requests.post(
-            "http://host.docker.internal:11434/api/embeddings",
+            f"http://{ollama_host}:11434/api/embeddings",
             json={"model": "nomic-embed-text", "prompt": text}
         )
         response.raise_for_status()
