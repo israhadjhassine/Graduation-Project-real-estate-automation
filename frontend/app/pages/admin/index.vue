@@ -327,11 +327,13 @@ import {
   LucideFileText, LucideDownload, LucidePieChart
 } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/auth'
+import { useAlert } from '~/composables/useAlert'
 import axios from 'axios'
 
 definePageMeta({ layout: 'dashboard' })
 
 const auth = useAuthStore()
+const alert = useAlert()
 const activeTab = ref('users')
 const loading = ref(false)
 
@@ -438,7 +440,7 @@ const downloadReport = async (filename) => {
     link.click()
   } catch (e) {
     console.error("Failed to download report", e)
-    alert("Could not download report.")
+    alert.error("Download Failed", "Could not download report.")
   }
 }
 
@@ -479,7 +481,7 @@ const toggleUserStatus = async (userId) => {
     fetchData()
   } catch (e) {
     console.error("Failed to toggle user status", e)
-    alert(e.response?.data?.detail || "Failed to update account status")
+    alert.error("Status Update Failed", e.response?.data?.detail || "Failed to update account status")
   }
 }
 

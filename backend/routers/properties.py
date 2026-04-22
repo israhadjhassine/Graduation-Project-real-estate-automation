@@ -217,14 +217,21 @@ async def upload_property_image(
     if not prop:
         raise HTTPException(status_code=404, detail="Property not found")
     
-    image_url = await storage.upload_to_imagekit(file, file.filename)
-    if not image_url:
+    res = await storage.upload_to_imagekit(file, file.filename)
+    if not res:
         raise HTTPException(status_code=500, detail="Image upload failed")
         
-    is_primary = (len(prop.images) == 0)
+    # Check if there is already a primary image for this property
+    has_primary = db.query(models.PropertyImage).filter(
+        models.PropertyImage.property_id == property_id, 
+        models.PropertyImage.is_primary == True
+    ).first() is not None
+    
+    is_primary = not has_primary
     db_image = models.PropertyImage(
         property_id=property_id,
-        image_url=image_url,
+        image_url=res["url"],
+        file_id=res["file_id"],
         is_primary=is_primary
     )
     db.add(db_image)
@@ -248,15 +255,22 @@ async def upload_property_images(
     print(f"DEBUG: upload_property_images called for property {property_id} with {len(files)} files", flush=True)
     for file in files:
         print(f"DEBUG: Processing file: {file.filename}", flush=True)
-        image_url = await storage.upload_to_imagekit(file, file.filename)
-        if not image_url:
+        res = await storage.upload_to_imagekit(file, file.filename)
+        if not res:
             print(f"ERROR: Image upload failed for {file.filename}", flush=True)
             continue
             
-        is_primary = (len(prop.images) + len(uploaded_images) == 0)
+        # Check if there is already a primary image for this property
+        has_primary = db.query(models.PropertyImage).filter(
+            models.PropertyImage.property_id == property_id, 
+            models.PropertyImage.is_primary == True
+        ).first() is not None
+        
+        is_primary = (not has_primary and len(uploaded_images) == 0)
         db_image = models.PropertyImage(
             property_id=property_id,
-            image_url=image_url,
+            image_url=res["url"],
+            file_id=res["file_id"],
             is_primary=is_primary
         )
         db.add(db_image)
@@ -267,6 +281,48 @@ async def upload_property_images(
         db.refresh(img)
         
     return uploaded_images
+
+@router.delete("/properties/images/{image_id}")
+def delete_property_image(
+    image_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
+):
+    """Deletes a property image from DB and ImageKit."""
+    image = db.query(models.PropertyImage).filter(models.PropertyImage.id == image_id).first()
+    if not image:
+        raise HTTPException(status_code=404, detail="Image not found")
+        
+    prop = db.query(models.Property).options(joinedload(models.Property.owner)).filter(models.Property.id == image.property_id).first()
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found")
+        
+    # Authorization logic same as update_property
+    is_admin = current_user.role == "admin"
+    is_owner = prop.owner_id == current_user.id
+    is_manager = current_user.role == "head_agent" and prop.owner and prop.owner.manager_id == current_user.id
+        
+    if not (is_admin or is_owner or is_manager):
+        raise HTTPException(status_code=403, detail="Not authorized to delete images from this property")
+        
+    # Delete from ImageKit
+    if image.file_id:
+        storage.delete_from_imagekit(image.file_id)
+        
+    was_primary = image.is_primary
+    prop_id = image.property_id
+    
+    db.delete(image)
+    db.commit()
+
+    # If we deleted the primary image, pick a new one
+    if was_primary:
+        next_image = db.query(models.PropertyImage).filter(models.PropertyImage.property_id == prop_id).first()
+        if next_image:
+            next_image.is_primary = True
+            db.commit()
+            
+    return {"message": "Image deleted successfully"}
 
 @router.get("/properties/{property_id}/map")
 def get_property_map(property_id: int, db: Session = Depends(database.get_db)):

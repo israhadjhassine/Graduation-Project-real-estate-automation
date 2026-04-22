@@ -310,12 +310,14 @@ import {
 } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
+import { useAlert } from '~/composables/useAlert'
 import axios from 'axios'
 
 definePageMeta({ layout: 'dashboard' })
 
 const auth = useAuthStore()
 const api = useApi()
+const alert = useAlert()
 const activeTab = ref('visits')
 
 const visits = ref([])
@@ -440,7 +442,7 @@ const openSaleModal = (id) => {
 
 const submitSaleRequest = async () => {
   if (!selectedClientId.value) {
-    alert("Please select a registered client.")
+    alert.error("Selection Required", "Please select a registered client.")
     return
   }
   try {
@@ -452,10 +454,10 @@ const submitSaleRequest = async () => {
     })
     fetchData()
     showSaleModal.value = false
-    alert("Sale request sent! Your head agent will review and approve.")
+    alert.success("Sale Request Sent", "Your head agent will review and approve.")
   } catch (e) {
     console.error("Failed to request sale", e)
-    alert(e.response?.data?.detail || "Failed to submit sale request.")
+    alert.error("Submission Failed", e.response?.data?.detail || "Failed to submit sale request.")
   }
 }
 
@@ -474,11 +476,11 @@ const openRentModal = (id) => {
 
 const submitRentRequest = async () => {
   if (!selectedClientId.value) {
-    alert("Please select a registered client.")
+    alert.error("Selection Required", "Please select a registered client.")
     return
   }
   if (!rentStartDate.value || !rentEndDate.value) {
-    alert("Please select both start and end dates.")
+    alert.error("Date Required", "Please select both start and end dates.")
     return
   }
   
@@ -494,10 +496,10 @@ const submitRentRequest = async () => {
     
     showRentModal.value = false
     fetchData()
-    alert("Rent request sent! Your head agent will review and approve.")
+    alert.success("Rent Request Sent", "Your head agent will review and approve.")
   } catch (e) {
     console.error("Failed to request rent", e)
-    alert(e.response?.data?.detail || "Failed to submit rent request.")
+    alert.error("Submission Failed", e.response?.data?.detail || "Failed to submit rent request.")
   }
 }
 

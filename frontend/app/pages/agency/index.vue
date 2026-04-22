@@ -496,11 +496,13 @@ import {
 import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
 import { useAssetUrl } from '~/composables/useAssetUrl'
+import { useAlert } from '~/composables/useAlert'
 
 definePageMeta({ layout: 'dashboard' })
 
 const auth = useAuthStore()
 const api = useApi()
+const alert = useAlert()
 const { getPublicUrl } = useAssetUrl()
 const activeTab = ref('properties')
 const properties = ref([])
@@ -567,12 +569,15 @@ const viewProperty = (prop) => {
 }
 
 const deleteProperty = async (propertyId) => {
-  if (confirm('Are you sure you want to permanently delete this property listing?')) {
+  const result = await alert.confirm('Delete Property?', 'Are you sure you want to permanently delete this property listing?', 'Delete')
+  if (result.isConfirmed) {
     try {
       await api.delete(`/properties/${propertyId}`)
+      alert.success('Deleted', 'Property listing has been removed.')
       fetchData()
     } catch (e) {
       console.error("Failed to delete property", e)
+      alert.error('Delete Failed', 'Could not remove the property.')
     }
   }
 }
@@ -643,54 +648,62 @@ const toggleAgentStatus = async (agentId) => {
     fetchData()
   } catch (e) {
     console.error("Failed to toggle agent status", e)
-    alert(e.response?.data?.detail || 'Failed to update status')
+    alert.error('Status Update Failed', e.response?.data?.detail || 'Failed to update status')
   }
 }
 
 const approveSale = async (inq) => {
-  if (confirm(`Approve the sale of this property? It will be marked as sold and removed from public listings.`)) {
+  const result = await alert.confirm('Approve Sale?', 'Approve the sale of this property? It will be marked as sold and removed from public listings.', 'Approve')
+  if (result.isConfirmed) {
     try {
       await api.post(`/agency/properties/${inq.property_id}/approve-sale`)
+      alert.success('Finalized', 'Property sale has been approved and registered.')
       fetchData()
     } catch (e) {
       console.error("Failed to approve sale", e)
-      alert(e.response?.data?.detail || "Error approving sale.")
+      alert.error('Approval Error', e.response?.data?.detail || "Error approving sale.")
     }
   }
 }
 
 const rejectSale = async (inq) => {
-  if (confirm(`Reject this sale request? The property will return to Available status.`)) {
+  const result = await alert.confirm('Reject Sale?', 'Reject this sale request? The property will return to Available status.')
+  if (result.isConfirmed) {
     try {
       await api.post(`/agency/properties/${inq.property_id}/reject-sale`)
+      alert.success('Rejected', 'Sale request has been rejected.')
       fetchData()
     } catch (e) {
       console.error("Failed to reject sale", e)
-      alert(e.response?.data?.detail || "Error rejecting sale.")
+      alert.error('Error', e.response?.data?.detail || "Error rejecting sale.")
     }
   }
 }
 
 const approveRent = async (inq) => {
-  if (confirm(`Approve the rent of this property?`)) {
+  const result = await alert.confirm('Approve Rent?', 'Approve the rent of this property?', 'Approve')
+  if (result.isConfirmed) {
     try {
       await api.post(`/agency/properties/${inq.property_id}/approve-rent`)
+      alert.success('Rented', 'Property rent has been approved.')
       fetchData()
     } catch (e) {
       console.error("Failed to approve rent", e)
-      alert(e.response?.data?.detail || "Error approving rent.")
+      alert.error('Error', e.response?.data?.detail || "Error approving rent.")
     }
   }
 }
 
 const rejectRent = async (inq) => {
-  if (confirm(`Reject this rent request? The property will return to Available status.`)) {
+  const result = await alert.confirm('Reject Rent?', 'Reject this rent request? The property will return to Available status.')
+  if (result.isConfirmed) {
     try {
       await api.post(`/agency/properties/${inq.property_id}/reject-rent`)
+      alert.success('Rejected', 'Rent request has been rejected.')
       fetchData()
     } catch (e) {
       console.error("Failed to reject rent", e)
-      alert(e.response?.data?.detail || "Error rejecting rent.")
+      alert.error('Error', e.response?.data?.detail || "Error rejecting rent.")
     }
   }
 }
@@ -715,7 +728,7 @@ const downloadReport = async (filename) => {
     link.click()
   } catch (e) {
     console.error("Failed to download report", e)
-    alert("Could not download report.")
+    alert.error('Download Failed', "Could not download report.")
   }
 }
 

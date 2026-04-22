@@ -60,6 +60,7 @@ class Feature(FeatureBase):
 
 class PropertyImageBase(BaseModel):
     image_url: str
+    file_id: Optional[str] = None
     is_primary: bool
 
 class PropertyImage(PropertyImageBase):

@@ -114,6 +114,7 @@ class PropertyImage(Base):
     id = Column(BigInteger, primary_key=True, index=True)
     property_id = Column(BigInteger, ForeignKey("properties.id", ondelete="CASCADE"))
     image_url = Column(String, nullable=False)
+    file_id = Column(String, nullable=True)
     is_primary = Column(Boolean, default=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
