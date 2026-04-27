@@ -46,7 +46,7 @@ services:
       - N8N_WEBHOOK_URL=${WEBHOOK_URL}
       - N8N_EDITOR_BASE_URL=${N8N_EDITOR_BASE_URL}
       - N8N_PROTOCOL=https
-      - N8N_HOST=embryologically-shrewd-may.ngrok-free.dev
+      - N8N_HOST=${N8N_HOST}
       - N8N_PORT=5678
       - NODE_FUNCTION_ALLOW_EXTERNAL=*
       - GOOGLE_CLIENT_ID=${N8N_GOOGLE_CLIENT_ID}

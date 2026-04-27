@@ -20,7 +20,7 @@ def get_embedding(text: str) -> List[float]:
         response.raise_for_status()
         return response.json()["embedding"]
     except Exception as e:
-        print(f"❌ Error generating embedding for text '{text[:50]}...': {e}")
+        print(f"❌ Error generating embedding: {e}")
         return None
 
 def get_query_embedding(query: str) -> List[float]:

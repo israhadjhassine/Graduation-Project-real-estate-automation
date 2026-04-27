@@ -94,7 +94,8 @@ def get_agent_calendar(agent_id: int, db: Session = Depends(database.get_db)):
     return {
         "agent_id": agent.id,
         "full_name": agent.full_name,
-        "google_calendar_id": agent.google_calendar_id
+        "google_calendar_id": agent.google_calendar_id,
+        "email": agent.email
     }
 
 @router.get("/agency/staff", response_model=List[schemas.User])

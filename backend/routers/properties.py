@@ -184,7 +184,6 @@ def update_property_status(
             prop.buyer_id = payload["buyer_id"]
             buyer = db.query(models.User).filter(models.User.id == payload["buyer_id"]).first()
             
-        # [RESTORE] Send email to Head Agent/Admin to notify about the transaction
         owner = db.query(models.User).filter(models.User.id == prop.owner_id).first()
         if owner and owner.email:
             background_tasks.add_task(
@@ -205,40 +204,6 @@ def update_property_status(
     db.commit()
     return {"message": f"Property status updated to {new_status}"}
 
-@router.post("/properties/{property_id}/upload-image")
-async def upload_property_image(
-    property_id: int,
-    file: UploadFile = File(...),
-    db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
-):
-    """Uploads a single image for a specific property (Original URL)."""
-    prop = db.query(models.Property).filter(models.Property.id == property_id).first()
-    if not prop:
-        raise HTTPException(status_code=404, detail="Property not found")
-    
-    res = await storage.upload_to_imagekit(file, file.filename)
-    if not res:
-        raise HTTPException(status_code=500, detail="Image upload failed")
-        
-    # Check if there is already a primary image for this property
-    has_primary = db.query(models.PropertyImage).filter(
-        models.PropertyImage.property_id == property_id, 
-        models.PropertyImage.is_primary == True
-    ).first() is not None
-    
-    is_primary = not has_primary
-    db_image = models.PropertyImage(
-        property_id=property_id,
-        image_url=res["url"],
-        file_id=res["file_id"],
-        is_primary=is_primary
-    )
-    db.add(db_image)
-    db.commit()
-    db.refresh(db_image)
-    return db_image
-
 @router.post("/properties/{property_id}/images", response_model=List[schemas.PropertyImage])
 async def upload_property_images(
     property_id: int,
@@ -252,15 +217,11 @@ async def upload_property_images(
         raise HTTPException(status_code=404, detail="Property not found")
         
     uploaded_images = []
-    print(f"DEBUG: upload_property_images called for property {property_id} with {len(files)} files", flush=True)
     for file in files:
-        print(f"DEBUG: Processing file: {file.filename}", flush=True)
         res = await storage.upload_to_imagekit(file, file.filename)
         if not res:
-            print(f"ERROR: Image upload failed for {file.filename}", flush=True)
             continue
             
-        # Check if there is already a primary image for this property
         has_primary = db.query(models.PropertyImage).filter(
             models.PropertyImage.property_id == property_id, 
             models.PropertyImage.is_primary == True
@@ -279,7 +240,6 @@ async def upload_property_images(
     db.commit()
     for img in uploaded_images:
         db.refresh(img)
-        
     return uploaded_images
 
 @router.delete("/properties/images/{image_id}")
@@ -297,7 +257,6 @@ def delete_property_image(
     if not prop:
         raise HTTPException(status_code=404, detail="Property not found")
         
-    # Authorization logic same as update_property
     is_admin = current_user.role == "admin"
     is_owner = prop.owner_id == current_user.id
     is_manager = current_user.role == "head_agent" and prop.owner and prop.owner.manager_id == current_user.id
@@ -305,7 +264,6 @@ def delete_property_image(
     if not (is_admin or is_owner or is_manager):
         raise HTTPException(status_code=403, detail="Not authorized to delete images from this property")
         
-    # Delete from ImageKit
     if image.file_id:
         storage.delete_from_imagekit(image.file_id)
         
@@ -315,7 +273,6 @@ def delete_property_image(
     db.delete(image)
     db.commit()
 
-    # If we deleted the primary image, pick a new one
     if was_primary:
         next_image = db.query(models.PropertyImage).filter(models.PropertyImage.property_id == prop_id).first()
         if next_image:
@@ -376,9 +333,8 @@ def semantic_search(
     payload: Optional[schemas.SemanticSearchQuery] = None,
     db: Session = Depends(database.get_db)
 ):
-    """Matches original keyword-based 'semantic' search exactly."""
+    """Strict Semantic Search - No keyword fallback."""
     search_text = payload.query if (payload and payload.query) else query
-    selected_features = payload.feature_ids if (payload and payload.feature_ids) else feature_ids
     
     q = db.query(models.Property).options(
         joinedload(models.Property.images),
@@ -393,21 +349,24 @@ def semantic_search(
         q = q.filter(models.Property.price >= min_price)
     if max_price:
         q = q.filter(models.Property.price <= max_price)
+        
     if search_text:
-        q = q.filter(
-            (models.Property.title.ilike(f"%{search_text}%")) | 
-            (models.Property.description.ilike(f"%{search_text}%"))
-        )
-    if selected_features:
-        for fid in selected_features:
-            q = q.filter(models.Property.features.any(models.Feature.id == fid))
-
-    if sort_price == 'asc':
-        q = q.order_by(models.Property.price.asc())
-    elif sort_price == 'desc':
-        q = q.order_by(models.Property.price.desc())
+        query_embedding = ai.get_query_embedding(search_text)
+        if not query_embedding:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
+                detail="Semantic search service (Ollama) is temporarily unavailable."
+            )
+        
+        # Strict rank by semantic similarity
+        q = q.order_by(models.Property.description_vector.l2_distance(query_embedding))
     else:
-        q = q.order_by(models.Property.created_at.desc())
+        if sort_price == 'asc':
+            q = q.order_by(models.Property.price.asc())
+        elif sort_price == 'desc':
+            q = q.order_by(models.Property.price.desc())
+        else:
+            q = q.order_by(models.Property.created_at.desc())
 
     return q.limit(40).all()
 
@@ -416,12 +375,20 @@ def rag_search(
     payload: schemas.SemanticSearchQuery,
     db: Session = Depends(database.get_db)
 ):
-    """RAG context preparation endpoint."""
+    """RAG search - Strict Semantic context preparation."""
     search_text = payload.query
     q = db.query(models.Property).options(joinedload(models.Property.features)).filter(models.Property.status == 'available')
     
     if search_text:
-        q = q.filter((models.Property.title.ilike(f"%{search_text}%")) | (models.Property.description.ilike(f"%{search_text}%")))
+        query_embedding = ai.get_query_embedding(search_text)
+        if not query_embedding:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
+                detail="RAG search service (Ollama) is temporarily unavailable."
+            )
+            
+        q = q.order_by(models.Property.description_vector.l2_distance(query_embedding))
+            
     if payload.feature_ids:
         for fid in payload.feature_ids:
             q = q.filter(models.Property.features.any(models.Feature.id == fid))
@@ -447,7 +414,8 @@ def rag_search(
         rag_properties.append(rag_prop)
         context_parts.append(
             f"Property ID: {prop.id}\nTitle: {prop.title}\nType: {prop.property_type} for {prop.listing_type}\n"
-            f"Price: {prop.price:,.0f} {prop.currency}\nLocation: {prop.city}, {prop.country}"
+            f"Price: {prop.price:,.0f} {prop.currency}\nLocation: {prop.city}, {prop.country}\n"
+            f"Assigned Agent: {agent_name}"
         )
         
     return {"context": "\n\n".join(context_parts), "properties": rag_properties}
@@ -465,14 +433,6 @@ def get_agency_properties(
     if current_user.role == "admin":
         return query.all()
     return query.filter(models.Property.owner_id == current_user.id).all()
-
-@router.get("/admin/properties", response_model=List[schemas.Property])
-def admin_all_properties(
-    db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(auth.RoleChecker(["admin"]))
-):
-    """Administrator access to view every property on the platform."""
-    return db.query(models.Property).all()
 
 @router.get("/features", response_model=List[schemas.Feature])
 def list_features(db: Session = Depends(database.get_db)):
