@@ -174,6 +174,7 @@ class VisitResponse(BaseModel):
 class VisitDetailResponse(VisitResponse):
     property: Optional[PropertyMinimal] = None
     client: Optional[User] = None
+    agent: Optional[User] = None
 
 class VisitCreate(BaseModel):
     property_id: int

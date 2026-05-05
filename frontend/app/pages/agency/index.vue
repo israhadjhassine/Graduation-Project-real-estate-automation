@@ -66,6 +66,12 @@
           <LucideUsers class="w-4 h-4 inline-block mr-2" /> Sub-Agent Team
         </button>
         <button 
+          @click="activeTab = 'schedule'" 
+          :class="['px-5 py-3 text-sm font-bold transition-all whitespace-nowrap border-b-2 flex items-center gap-2', activeTab === 'schedule' ? 'border-primary-950 text-primary-950' : 'border-transparent text-primary-400 hover:text-primary-600']"
+        >
+          <LucideCalendar class="w-4 h-4 inline-block" /> Team Schedule
+        </button>
+        <button 
           @click="activeTab = 'sold'" 
           :class="['px-5 py-3 text-sm font-bold transition-all whitespace-nowrap border-b-2', activeTab === 'sold' ? 'border-primary-950 text-primary-950' : 'border-transparent text-primary-400 hover:text-primary-600']"
         >
@@ -257,6 +263,16 @@
             </tbody>
           </table>
         </div>
+      </div>
+
+      <!-- Tab Content: Team Schedule -->
+      <div v-show="activeTab === 'schedule'">
+        <div class="mb-6">
+          <h2 class="text-xl font-bold text-primary-950">Team Visit Schedule</h2>
+          <p class="text-xs text-primary-500 mt-1">Consolidated view of all upcoming visits across your sub-agent team.</p>
+        </div>
+        
+        <AgencyTeamCalendar :visits="visits" :agents="staff" @view-visit="viewVisitDetails" />
       </div>
 
       <!-- Tab Content: Sold Properties -->
@@ -491,7 +507,8 @@ import {
   LucideBriefcase, LucideHome, LucideUsers, LucideEye,
   LucidePlus, LucideImage, LucideEdit, LucideTrash2,
   LucideUserPlus, LucideX, LucideCheckCircle2,
-  LucideMessageSquare, LucideFileText, LucideDownload, LucidePieChart
+  LucideMessageSquare, LucideFileText, LucideDownload, LucidePieChart,
+  LucideCalendar
 } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
@@ -510,6 +527,7 @@ const staff = ref([])
 const inquiries = ref([])
 const reports = ref([])
 const clients = ref([])
+const visits = ref([])
 const loading = ref(false)
 
 const soldProperties = computed(() => properties.value.filter(p => p.status === 'sold'))
@@ -568,6 +586,12 @@ const viewProperty = (prop) => {
   showModal.value = true
 }
 
+const viewVisitDetails = (visit) => {
+  if (visit.property) {
+    viewProperty(visit.property)
+  }
+}
+
 const deleteProperty = async (propertyId) => {
   const result = await alert.confirm('Delete Property?', 'Are you sure you want to permanently delete this property listing?', 'Delete')
   if (result.isConfirmed) {
@@ -585,12 +609,13 @@ const deleteProperty = async (propertyId) => {
 const fetchData = async () => {
   loading.value = true
   try {
-    const [propsRes, staffRes, inqRes, clientsRes, statsRes] = await Promise.all([
+    const [propsRes, staffRes, inqRes, clientsRes, statsRes, visitsRes] = await Promise.all([
       api.get('/agency/properties'),
       api.get('/agency/staff'),
       api.get('/agent/inquiries'),
       api.get('/agency/clients'),
-      api.get('/statistics/agency')
+      api.get('/statistics/agency'),
+      api.get('/agent/visits')
     ])
     
     properties.value = propsRes.data
@@ -598,6 +623,7 @@ const fetchData = async () => {
     inquiries.value = inqRes.data
     clients.value = clientsRes.data
     statistics.value = statsRes.data
+    visits.value = visitsRes.data
     
     if (auth.isAdmin) {
       try {

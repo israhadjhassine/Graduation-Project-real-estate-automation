@@ -154,15 +154,15 @@ n8n was selected because:
 3. It natively supports **webhook triggers**, essential for the Telegram bot integration.
 4. It has first-class support for **Google Calendar OAuth2** and **AI Agent nodes** with tool-use capabilities.
 
-### 4.5 AI Models: Google Gemini API + Ollama (nomic-embed-text)
+### 4.5 AI Models: OpenRouter (Gemini 2.0 Flash) + Ollama (nomic-embed-text)
 
 | Model | Purpose | Provider |
 |---|---|---|
 | `nomic-embed-text` (768-dim) | Generating vector embeddings for property descriptions | Ollama (local) |
-| `gemini-1.5-pro` | RAG-based property Q&A assistant (generative) | Google Gemini API |
-| `gemini-1.5-flash` (n8n agent) | Intelligent Telegram bot responses with tool use | Google Gemini API (via n8n) |
+| `gemini-1.5-pro` | RAG-based property Q&A assistant (generative) | OpenRouter |
+| `gemini-2.0-flash` (n8n agent) | Intelligent Telegram bot responses with tool use | OpenRouter (via n8n) |
 
-The dual-model strategy separates embedding generation (local, fast, no cost) from generation (cloud, powerful, context-aware).
+The dual-model strategy separates embedding generation (local, fast, no cost) from generation (cloud, powerful, context-aware). The switch to OpenRouter ensures high availability and access to the latest frontier models like Gemini 2.0.
 
 ---
 
@@ -389,6 +389,7 @@ Reusable components were organized into 4 families:
 | `components/property/` | Property cards, image gallery, filter panel |
 | `components/ai/` | AI search bar, property Q&A chat interface |
 | `components/charts/` | LineChart, BarChart for dashboard analytics |
+| `components/agency/` | **TeamCalendar** (Consolidated visit schedule) |
 | `components/ui/` | Modal, notification toast, loading skeletons |
 
 #### 6.4.4 Map Integration
@@ -510,6 +511,8 @@ The entire platform (5 services) is orchestrated via a single `docker-compose.ym
 | 6 | **Database startup race condition** | FastAPI started before PostgreSQL was fully ready | Added `service_healthy` condition with `pg_isready` health check |
 | 7 | **Google OAuth2 redirect mismatch** | Development and production URLs differed from registered Google Console URIs | Maintained separate `GOOGLE_WEB_CLIENT_ID` (for FastAPI) and `N8N_GOOGLE_CLIENT_ID` (for n8n) |
 | 8 | **pgvector embedding dimension mismatch** | Property embeddings stored with 768 dims; search query used different model | Standardized all embedding calls to `nomic-embed-text` via Ollama at 768 dimensions |
+| 9 | **Telegram Webhook "Gateway Timeout"** | Communication failure between Telegram and local n8n via ngrok | Implemented tunnel recovery script and updated `WEBHOOK_URL` registration |
+| 10 | **Consolidated Team Oversight** | Head Agents lacked a unified view of sub-agent schedules | Built custom TeamCalendar component with multi-agent eager loading |
 
 ---
 
@@ -526,7 +529,7 @@ All planned features from the initial project checklist were successfully implem
 | Property CRUD with Multi-Image Upload | ✅ Complete | ImageKit CDN integration, batch upload endpoint |
 | AI Semantic Search (pgvector) | ✅ Complete | 768-dim cosine similarity search via Ollama |
 | RAG Property Q&A Assistant | ✅ Complete | Gemini 1.5 Pro, property-scoped context |
-| Visit Scheduling & Management | ✅ Complete | Sub-agent and head-agent dashboards |
+| Visit Scheduling & Management | ✅ Complete | Sub-agent and head-agent dashboards, **Team Visit Calendar** |
 | Transaction Approval Workflow | ✅ Complete | Email notifications, status state machine |
 | Telegram AI Bot (5 tools) | ✅ Complete | Multi-turn memory via PostgreSQL |
 | Google Calendar Integration | ✅ Complete | OAuth2, event creation on visit booking |

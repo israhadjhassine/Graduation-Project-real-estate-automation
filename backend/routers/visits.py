@@ -152,7 +152,7 @@ def update_inquiry_status(
     db.commit()
     return {"message": "Status updated"}
 
-@router.get("/agent/visits", response_model=List[schemas.VisitResponse])
+@router.get("/agent/visits", response_model=List[schemas.VisitDetailResponse])
 def get_agent_visits_list(
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.RoleChecker(["agent", "head_agent", "admin"]))
@@ -161,19 +161,22 @@ def get_agent_visits_list(
     if current_user.role == "admin":
         return db.query(models.Visit).options(
             joinedload(models.Visit.property),
-            joinedload(models.Visit.client)
+            joinedload(models.Visit.client),
+            joinedload(models.Visit.agent)
         ).all()
     elif current_user.role == "head_agent":
         managed_user_ids_query = db.query(models.User.id).filter(models.User.manager_id == current_user.id).all()
         allowed_agent_ids = [current_user.id] + [uid[0] for uid in managed_user_ids_query]
         return db.query(models.Visit).options(
             joinedload(models.Visit.property),
-            joinedload(models.Visit.client)
+            joinedload(models.Visit.client),
+            joinedload(models.Visit.agent)
         ).filter(models.Visit.agent_id.in_(allowed_agent_ids)).order_by(models.Visit.visit_date.asc()).all()
     
     return db.query(models.Visit).options(
         joinedload(models.Visit.property),
-        joinedload(models.Visit.client)
+        joinedload(models.Visit.client),
+        joinedload(models.Visit.agent)
     ).filter(models.Visit.agent_id == current_user.id).order_by(models.Visit.visit_date.asc()).all()
 
 @router.put("/agent/visits/{visit_id}/status")

@@ -87,6 +87,44 @@
           </button>
         </div>
 
+        <!-- Filters Bar -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div class="relative">
+            <LucideSearch class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
+            <input 
+              v-model="userSearchQuery"
+              type="text" 
+              placeholder="Search by full name..."
+              class="w-full pl-11 pr-4 py-3 bg-white border border-primary-100 rounded-2xl text-sm focus:ring-2 focus:ring-primary-900/10 focus:border-primary-900 outline-none transition-all font-medium text-primary-950 shadow-sm"
+            />
+          </div>
+
+          <div class="relative">
+            <LucideFilter class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
+            <select 
+              v-model="userRoleFilter"
+              class="w-full pl-11 pr-4 py-3 bg-white border border-primary-100 rounded-2xl text-sm focus:ring-2 focus:ring-primary-900/10 focus:border-primary-900 outline-none transition-all font-medium text-primary-950 shadow-sm appearance-none cursor-pointer"
+            >
+              <option value="all">All Roles</option>
+              <option value="admin">Administrators</option>
+              <option value="head_agent">Head Agents</option>
+              <option value="agent">Sub-Agents</option>
+            </select>
+          </div>
+
+          <div class="relative">
+            <LucideUserCheck class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
+            <select 
+              v-model="userStatusFilter"
+              class="w-full pl-11 pr-4 py-3 bg-white border border-primary-100 rounded-2xl text-sm focus:ring-2 focus:ring-primary-900/10 focus:border-primary-900 outline-none transition-all font-medium text-primary-950 shadow-sm appearance-none cursor-pointer"
+            >
+              <option value="all">Account Status: All</option>
+              <option value="active">Active Accounts</option>
+              <option value="disabled">Disabled Accounts</option>
+            </select>
+          </div>
+        </div>
+
         <div class="card-premium p-0 overflow-hidden">
           <table class="w-full text-left">
             <thead>
@@ -99,7 +137,7 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-primary-100">
-              <tr v-for="user in users" :key="user.id" class="hover:bg-primary-50/50">
+              <tr v-for="user in filteredUsers" :key="user.id" class="hover:bg-primary-50/50 transition-colors">
                 <td class="px-6 py-4 text-sm font-bold text-primary-950">{{ user.full_name }}</td>
                 <td class="px-6 py-4 text-sm text-primary-600">{{ user.email }}</td>
                 <td class="px-6 py-4">
@@ -145,8 +183,31 @@
           <h2 class="text-xl font-bold text-primary-950">Global Property Feed</h2>
         </div>
 
+        <!-- Filters Bar -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          <div class="relative">
+            <LucideSearch class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
+            <input 
+              v-model="propSearchQuery"
+              type="text" 
+              placeholder="Search by property name..."
+              class="w-full pl-11 pr-4 py-3 bg-white border border-primary-100 rounded-2xl text-sm focus:ring-2 focus:ring-primary-900/10 focus:border-primary-900 outline-none transition-all font-medium text-primary-950 shadow-sm"
+            />
+          </div>
+
+          <div class="relative">
+            <LucideMapPin class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
+            <input 
+              v-model="propLocationQuery"
+              type="text" 
+              placeholder="Filter by city/location..."
+              class="w-full pl-11 pr-4 py-3 bg-white border border-primary-100 rounded-2xl text-sm focus:ring-2 focus:ring-primary-900/10 focus:border-primary-900 outline-none transition-all font-medium text-primary-950 shadow-sm"
+            />
+          </div>
+        </div>
+
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-           <div v-for="prop in properties" :key="prop.id" class="relative group">
+           <div v-for="prop in filteredProperties" :key="prop.id" class="relative group">
              <PropertyCard :property="prop" />
              <div class="absolute inset-x-0 bottom-0 p-4 translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all flex gap-2">
                <button 
@@ -157,9 +218,9 @@
                </button>
              </div>
            </div>
-           <div v-if="!properties.length" class="col-span-full text-center py-12 text-primary-400">
-             No properties listed yet.
-           </div>
+            <div v-if="!filteredProperties.length" class="col-span-full text-center py-12 text-primary-400">
+              {{ properties.length > 0 ? 'No properties match your filters.' : 'No properties listed yet.' }}
+            </div>
         </div>
       </div>
 
@@ -324,8 +385,11 @@
 import { 
   LucideShieldAlert, LucideUsers, LucideBuilding2, 
   LucideHome, LucidePlus, LucideX, LucideEye,
-  LucideFileText, LucideDownload, LucidePieChart
+  LucideFileText, LucideDownload, LucidePieChart,
+  LucideSearch, LucideFilter, LucideUserCheck, LucideMapPin
 } from 'lucide-vue-next'
+
+
 import { useAuthStore } from '~/stores/auth'
 import { useAlert } from '~/composables/useAlert'
 import axios from 'axios'
@@ -341,7 +405,43 @@ const users = ref([])
 const properties = ref([])
 const reports = ref([])
 const statistics = ref(null)
+
+// Filters State
+const userSearchQuery = ref('')
+const userRoleFilter = ref('all')
+const userStatusFilter = ref('all')
+
+const propSearchQuery = ref('')
+const propLocationQuery = ref('')
 const statsLoading = ref(false)
+
+const filteredUsers = computed(() => {
+  return users.value.filter(u => {
+    const matchesSearch = !userSearchQuery.value || 
+      u.full_name.toLowerCase().includes(userSearchQuery.value.toLowerCase())
+    
+    const matchesRole = userRoleFilter.value === 'all' || u.role === userRoleFilter.value
+    
+    const matchesStatus = userStatusFilter.value === 'all' || 
+      (userStatusFilter.value === 'active' ? u.is_active : !u.is_active)
+      
+    const isStaff = u.role !== 'visitor'
+      
+    return matchesSearch && matchesRole && matchesStatus && isStaff
+  })
+})
+
+const filteredProperties = computed(() => {
+  return properties.value.filter(p => {
+    const matchesSearch = !propSearchQuery.value || 
+      p.title.toLowerCase().includes(propSearchQuery.value.toLowerCase())
+    
+    const matchesLocation = !propLocationQuery.value || 
+      p.city?.toLowerCase().includes(propLocationQuery.value.toLowerCase())
+      
+    return matchesSearch && matchesLocation
+  })
+})
 
 const userRolesChartData = computed(() => {
   if (!statistics.value || !statistics.value.user_roles) return null
@@ -412,7 +512,7 @@ const fetchData = async () => {
   try {
 const [...responses] = await Promise.all([
       axios.get(`${getApiUrl()}/admin/users`, { headers: { Authorization: `Bearer ${auth.token}` } }),
-      axios.get(`${getApiUrl()}/admin/properties`, { headers: { Authorization: `Bearer ${auth.token}` } }),
+      axios.get(`${getApiUrl()}/properties`, { headers: { Authorization: `Bearer ${auth.token}` } }),
       axios.get(`${getApiUrl()}/admin/reports`, { headers: { Authorization: `Bearer ${auth.token}` } }),
       axios.get(`${getApiUrl()}/statistics/admin`, { headers: { Authorization: `Bearer ${auth.token}` } })
     ])

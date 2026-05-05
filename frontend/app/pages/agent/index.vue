@@ -170,6 +170,59 @@
          </div>
       </div>
       <div v-show="activeTab === 'visits'">
+         <!-- Filters Bar -->
+         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+           <!-- Property Name Search -->
+           <div class="relative">
+             <LucideSearch class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
+             <input 
+               v-model="searchQuery"
+               type="text" 
+               placeholder="Search property name..."
+               class="w-full pl-11 pr-4 py-3 bg-white border border-primary-100 rounded-2xl text-sm focus:ring-2 focus:ring-primary-900/10 focus:border-primary-900 outline-none transition-all font-medium text-primary-950 shadow-sm"
+             />
+           </div>
+
+           <!-- Location Filter -->
+           <div class="relative">
+             <LucideMapPin class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
+             <input 
+               v-model="locationQuery"
+               type="text" 
+               placeholder="Filter by city/location..."
+               class="w-full pl-11 pr-4 py-3 bg-white border border-primary-100 rounded-2xl text-sm focus:ring-2 focus:ring-primary-900/10 focus:border-primary-900 outline-none transition-all font-medium text-primary-950 shadow-sm"
+             />
+           </div>
+
+           <!-- Status Select -->
+           <div class="relative">
+             <LucideFilter class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
+             <select 
+               v-model="statusFilter"
+               class="w-full pl-11 pr-4 py-3 bg-white border border-primary-100 rounded-2xl text-sm focus:ring-2 focus:ring-primary-900/10 focus:border-primary-900 outline-none transition-all font-medium text-primary-950 shadow-sm appearance-none cursor-pointer"
+             >
+               <option value="all">All Statuses</option>
+               <option value="scheduled">Scheduled</option>
+               <option value="finished">Finished</option>
+               <option value="cancelled">Cancelled</option>
+             </select>
+           </div>
+
+           <!-- Date Filter -->
+           <div class="relative">
+             <LucideCalendar class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
+             <select 
+               v-model="dateFilter"
+               class="w-full pl-11 pr-4 py-3 bg-white border border-primary-100 rounded-2xl text-sm focus:ring-2 focus:ring-primary-900/10 focus:border-primary-900 outline-none transition-all font-medium text-primary-950 shadow-sm appearance-none cursor-pointer"
+             >
+               <option value="all">All Time</option>
+               <option value="today">Today</option>
+               <option value="week">This Week</option>
+               <option value="month">This Month</option>
+             </select>
+           </div>
+         </div>
+
          <div class="card-premium p-0 overflow-hidden">
           <table class="w-full text-left">
             <thead>
@@ -178,11 +231,11 @@
                 <th class="px-6 py-4 text-xs font-bold text-primary-600">Client</th>
                 <th class="px-6 py-4 text-xs font-bold text-primary-600">Listing</th>
                 <th class="px-6 py-4 text-xs font-bold text-primary-600">Status</th>
-                <th class="px-6 py-4 text-xs font-bold text-primary-600">Actions</th>
+                <th class="px-6 py-4 text-xs font-bold text-primary-600 text-right">Actions</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-primary-100">
-              <tr v-for="visit in visits" :key="visit.id" class="hover:bg-primary-50/50">
+              <tr v-for="visit in filteredVisits" :key="visit.id" class="hover:bg-primary-50/50 transition-colors">
                 <td class="px-6 py-4 text-sm font-bold text-primary-950">
                    <div class="flex items-center gap-3">
                       <LucideCalendar class="w-4 h-4 text-primary-400" />
@@ -206,8 +259,8 @@
                       {{ visit.status }}
                    </span>
                 </td>
-                <td class="px-6 py-4">
-                   <div v-if="visit.status === 'scheduled'" class="flex items-center gap-2">
+                <td class="px-6 py-4 text-right">
+                   <div v-if="visit.status === 'scheduled'" class="flex items-center justify-end gap-2">
                       <button @click="updateVisitStatus(visit.id, 'finished')" class="text-xs font-bold text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 px-3 py-1.5 rounded-lg transition-colors">
                         Complete
                       </button>
@@ -218,10 +271,10 @@
                    <span v-else class="text-xs text-primary-400 font-medium">No actions</span>
                 </td>
               </tr>
-              <tr v-if="!visits.length">
+              <tr v-if="!filteredVisits.length">
                  <td colspan="5" class="py-12 text-center text-primary-500">
                     <LucideCalendarOff class="w-12 h-12 text-primary-200 mx-auto mb-3" />
-                    <p>No property viewings scheduled.</p>
+                    <p>{{ visits.length > 0 ? 'No visits match your filters.' : 'No property viewings scheduled.' }}</p>
                  </td>
               </tr>
             </tbody>
@@ -306,7 +359,8 @@
 import { 
   LucideHeadset, LucideHome, LucideCalendar, 
   LucideCheckCircle2, LucideXCircle, LucideX,
-  LucideCheck, LucidePieChart, LucideCalendarOff
+  LucideCheck, LucidePieChart, LucideCalendarOff,
+  LucideSearch, LucideMapPin, LucideFilter
 } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
@@ -323,11 +377,55 @@ const activeTab = ref('visits')
 const visits = ref([])
 const myProperties = ref([])
 const clients = ref([])
+
+// Filters State
+const searchQuery = ref('')
+const locationQuery = ref('')
+const statusFilter = ref('all')
+const dateFilter = ref('all')
 const loading = ref(false)
 const statsLoading = ref(false)
 
 const upcomingVisits = computed(() => visits.value.filter(v => v.status === 'scheduled'))
 const finishedVisits = computed(() => visits.value.filter(v => v.status === 'finished'))
+
+const filteredVisits = computed(() => {
+  return visits.value.filter(v => {
+    // Status Filter
+    const matchesStatus = statusFilter.value === 'all' || v.status === statusFilter.value
+    
+    // Property Name Filter
+    const matchesProperty = !searchQuery.value || 
+      v.property?.title?.toLowerCase().includes(searchQuery.value.toLowerCase())
+      
+    // Location Filter
+    const matchesLocation = !locationQuery.value || 
+      v.property?.city?.toLowerCase().includes(locationQuery.value.toLowerCase())
+      
+    // Date Filter
+    let matchesDate = true
+    if (dateFilter.value !== 'all') {
+      const vDate = new Date(v.visit_date)
+      const now = new Date()
+      
+      if (dateFilter.value === 'today') {
+        matchesDate = vDate.toDateString() === now.toDateString()
+      } else if (dateFilter.value === 'week') {
+        // Start of current week (Monday)
+        const currentNow = new Date()
+        const day = currentNow.getDay()
+        const diff = currentNow.getDate() - day + (day === 0 ? -6 : 1)
+        const monday = new Date(currentNow.setDate(diff))
+        monday.setHours(0,0,0,0)
+        matchesDate = vDate >= monday
+      } else if (dateFilter.value === 'month') {
+        matchesDate = vDate.getMonth() === now.getMonth() && vDate.getFullYear() === now.getFullYear()
+      }
+    }
+    
+    return matchesStatus && matchesProperty && matchesLocation && matchesDate
+  })
+})
 
 // Statistics State
 const statistics = ref(null)
