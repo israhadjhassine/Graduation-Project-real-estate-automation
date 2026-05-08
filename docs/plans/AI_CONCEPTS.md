@@ -6,10 +6,10 @@ This document explains the technical pillars of the **Elite Estate** platform: *
 
 ## 1. AI Semantic Search (The "Global Map" Metaphor)
 
-### ❌ The Old Way: Keyword Search
+### The Old Way: Keyword Search
 Traditional search works like a dictionary. If you search for "House with a pool," the computer looks for those *exact words*. If a listing says "Villa with a swimming area," the computer might miss it because the words don't match, even though the meaning is the same.
 
-### ✅ The New Way: AI Semantic Search
+### The New Way: AI Semantic Search
 Semantic search doesn't look for words; it looks for **meaning**.
 
 **Metaphor: The Global Map**
@@ -17,7 +17,7 @@ Imagine every idea in the world is a location on a giant map.
 - "House" and "Villa" are different words, but on the map, they are parked right next to each other.
 - "Swimming pool" and "Ocean view" are both related to water, so they are in the same "Waterfront" neighborhood.
 
-### 🧩 The "Translator": Embedding Models
+### The "Translator": Embedding Models
 If Semantic Search is the "Map," the **Embedding Model** is the translator that helps the computer build that map.
 
 **Why we use it:**
@@ -37,10 +37,10 @@ Computers are great at math (numbers), but they don't actually understand human 
 
 ## 2. RAG: Retrieval-Augmented Generation (The "Open-Book Exam" Metaphor)
 
-### ❌ The Problem: The "Know-it-all" AI
+### The Problem: The "Know-it-all" AI
 Standard AI models (like ChatGPT or Gemini) were trained on a massive amount of data, but they don't know the *specific* details of your private business. If you ask them a specific question they don't know, they might "hallucinate" (confidently make up a fake answer).
 
-### ✅ The Solution: RAG (The "Open-Book Exam")
+### The Solution: RAG (The "Open-Book Exam")
 **RAG** ensures the AI remains truthful by giving it a specific set of documents to read before it answers.
 
 **Metaphor: The Open-Book Exam**
@@ -51,10 +51,10 @@ Standard AI models (like ChatGPT or Gemini) were trained on a massive amount of 
 
 ## 3. n8n: The "Digital Orchestrator"
 
-### 🧩 What is n8n?
+### What is n8n?
 In a complex project, you have many different "workers": a Database, an AI Model, Telegram, and Google Calendar. Normally, they don't know how to talk to each other. **n8n** is the **Workflow Automation** tool that acts as the supervisor, connecting everyone together.
 
-### 🚀 How we are using it
+### How we are using it
 n8n is the "brain" behind our automation. We use it to create **active workflows**:
 
 1.  **The Telegram Bridge**: When a user sends a message on Telegram, n8n catches it, sends it to the AI for a response, and then sends that response back to the user.

@@ -2,7 +2,7 @@
 
 This document explains the architecture, issues, and solutions related to image management in the Real Estate Automation platform.
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 The image handling flow is as follows:
 
@@ -17,7 +17,7 @@ The image handling flow is as follows:
 
 ---
 
-## 🛠️ Issues & Solutions
+## Issues & Solutions
 
 ### 1. Hardcoded Localhost Prefixes (Frontend)
 **Issue**: The frontend was prepending `http://localhost:8000/` to all image paths. While this worked for local storage, it broke ImageKit URLs (e.g., `http://localhost:8000/https://ik.imagekit.io/...`).
@@ -43,7 +43,7 @@ elif isinstance(result, dict):
 
 ---
 
-## 🚀 Best Practices
+## Best Practices
 
 - **Adding new images**: Always use the `useAssetUrl` composable in Vue templates.
 - **Environment Variables**: Ensure `IMAGEKIT_PUBLIC_KEY`, `IMAGEKIT_PRIVATE_KEY`, and `IMAGEKIT_URL_ENDPOINT` are set in `.env`.

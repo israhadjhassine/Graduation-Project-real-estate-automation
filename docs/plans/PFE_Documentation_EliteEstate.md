@@ -117,10 +117,10 @@ The team used **Git and GitHub** as the primary collaboration tool:
 
 | Criterion | FastAPI | Django REST | Flask |
 |---|---|---|---|
-| Performance | ⭐⭐⭐⭐⭐ (async, ASGI) | ⭐⭐⭐ | ⭐⭐⭐ |
-| Auto-generated API docs | ✅ (Swagger/OpenAPI) | ⚠️ (requires drf-yasg) | ❌ |
-| Type safety (Pydantic) | ✅ Native | ⚠️ External | ❌ |
-| AI/ML ecosystem (Python) | ✅ | ✅ | ✅ |
+| Performance | Very High (async, ASGI) | Medium | Medium |
+| Auto-generated API docs | Yes (Swagger/OpenAPI) | Partial (requires drf-yasg) | No |
+| Type safety (Pydantic) | Yes Native | Partial External | No |
+| AI/ML ecosystem (Python) | Yes | Yes | Yes |
 | Learning curve | Low | High (heavy) | Low |
 
 **Justification**: FastAPI's native Pydantic integration enables strict request/response validation with minimal boilerplate. Its async-first design is essential for handling concurrent I/O operations (image uploads, AI API calls, email sending) without blocking the main thread.
@@ -189,7 +189,7 @@ The platform follows a **Containerized Micro-Architecture** pattern. All service
 │                                      │  ngrok Tunnel   │   │
 │                                      │  (HTTPS Bridge) │   │
 │                                      └────────┬────────┘   │
-└───────────────────────────────────────────────┼────────────┘
+│└───────────────────────────────────────────────┼────────────┘
                                                 │
                                ┌────────────────▼──────────────────┐
                                │         External Services          │
@@ -389,12 +389,29 @@ Reusable components were organized into 4 families:
 | `components/property/` | Property cards, image gallery, filter panel |
 | `components/ai/` | AI search bar, property Q&A chat interface |
 | `components/charts/` | LineChart, BarChart for dashboard analytics |
-| `components/agency/` | **TeamCalendar** (Consolidated visit schedule) |
-| `components/ui/` | Modal, notification toast, loading skeletons |
+| `components/agency/` | **TeamCalendar** (Interactive daily timeline with overlap handling) |
+| `components/ui/` | Modal, notification toast, loading skeletons, **Search/Filter bars** |
 
 #### 6.4.4 Map Integration
 
 Property detail pages include an interactive **Leaflet.js** map that renders the property's GPS coordinates (latitude/longitude stored in PostgreSQL). Clicking the map marker opens the location in Google Maps.
+
+#### 6.4.5 Advanced Dashboards & Filtering
+
+A major technical focus was the development of high-performance filtering and management interfaces for specialized roles:
+
+- **Admin User Management**: Implemented a real-time search and multi-criteria filter system. Administrators can search staff by name, filter by specific roles (Admin, Head Agent, Sub-Agent), and toggle account statuses. Non-staff users are excluded from this management view.
+- **Sub-Agent Visit Dashboard**: Developed a comprehensive filtering engine for agents to manage their schedule. Filters include visit status (Scheduled, Finished, Cancelled), property location, property name, and dynamic date ranges (Today, This Week, This Month, All Time).
+- **Global Property Feed**: Administrators can now perform precise property discovery using title-based search and location-specific filters.
+
+#### 6.4.6 Advanced Team Calendar
+
+A sophisticated calendar component was developed to provide head agents with total oversight of their team's field operations:
+
+- **Daily Timeline View**: A Google Calendar-inspired vertical timeline that renders visits with minute-level precision.
+- **Conflict & Overlap Detection**: Implemented a collision-detection algorithm that dynamically calculates the horizontal position and width of overlapping visits to ensure all events remain visible and readable.
+- **Real-Time Indicators**: Includes a dynamic "current time" line and agent-specific color coding for rapid visual identification.
+- **Scoped Filtering**: Head agents can toggle visibility for individual sub-agents to focus on specific team members.
 
 ---
 
@@ -474,7 +491,7 @@ A significant engineering challenge was making Telegram's webhook work during de
 ### 6.6 Cloud Image Management — ImageKit
 
 Property images are stored on **ImageKit.io**, a cloud-based Image CDN, rather than on the local Docker volume. This enables:
-- Automatic image optimization and WebP conversion.
+- Automatic image optimization and WebP delivery.
 - Global CDN delivery (low latency).
 - No storage limits on the local development machine.
 
@@ -513,6 +530,9 @@ The entire platform (5 services) is orchestrated via a single `docker-compose.ym
 | 8 | **pgvector embedding dimension mismatch** | Property embeddings stored with 768 dims; search query used different model | Standardized all embedding calls to `nomic-embed-text` via Ollama at 768 dimensions |
 | 9 | **Telegram Webhook "Gateway Timeout"** | Communication failure between Telegram and local n8n via ngrok | Implemented tunnel recovery script and updated `WEBHOOK_URL` registration |
 | 10 | **Consolidated Team Oversight** | Head Agents lacked a unified view of sub-agent schedules | Built custom TeamCalendar component with multi-agent eager loading |
+| 11 | **Calendar Event Overlaps** | Identical timeline positioning for concurrent visits | Implemented dynamic width and offset calculation logic |
+| 12 | **Data Seeding Integrity** | Visits assigned to Head Agents in test data | Refactored seed logic to strictly isolate field visits to sub-agents |
+| 13 | **Search Latency in Admin** | Large datasets slowing down UI responsiveness | Implemented reactive computed filtering in Vue for near-instant results |
 
 ---
 
@@ -524,18 +544,19 @@ All planned features from the initial project checklist were successfully implem
 
 | Module | Status | Notes |
 |---|---|---|
-| JWT Authentication & User Registration | ✅ Complete | pbkdf2_sha256 hashing, 60-min token expiry |
-| RBAC (4 roles) | ✅ Complete | `RoleChecker` dependency enforced on all protected routes |
-| Property CRUD with Multi-Image Upload | ✅ Complete | ImageKit CDN integration, batch upload endpoint |
-| AI Semantic Search (pgvector) | ✅ Complete | 768-dim cosine similarity search via Ollama |
-| RAG Property Q&A Assistant | ✅ Complete | Gemini 1.5 Pro, property-scoped context |
-| Visit Scheduling & Management | ✅ Complete | Sub-agent and head-agent dashboards, **Team Visit Calendar** |
-| Transaction Approval Workflow | ✅ Complete | Email notifications, status state machine |
-| Telegram AI Bot (5 tools) | ✅ Complete | Multi-turn memory via PostgreSQL |
-| Google Calendar Integration | ✅ Complete | OAuth2, event creation on visit booking |
-| Meeting Reminder Automation | ✅ Complete | Hourly CRON, Telegram push notification |
-| Admin & Analytics Dashboard | ✅ Complete | Platform-wide statistics charts (LineChart, BarChart) |
-| Docker Multi-Container Orchestration | ✅ Complete | 5 services, health checks, persistent volumes |
+| JWT Authentication & User Registration | Complete | pbkdf2_sha256 hashing, 60-min token expiry |
+| RBAC (4 roles) | Complete | `RoleChecker` dependency enforced on all protected routes |
+| Property CRUD with Multi-Image Upload | Complete | ImageKit CDN integration, batch upload endpoint |
+| AI Semantic Search (pgvector) | Complete | 768-dim cosine similarity search via Ollama |
+| RAG Property Q&A Assistant | Complete | Gemini 1.5 Pro, property-scoped context |
+| Visit Scheduling & Management | Complete | Sub-agent and head-agent dashboards, **Team Visit Calendar** |
+| Role-Specific Filters | Complete | Search/Filter engines for Admin and Agent dashboards |
+| Transaction Approval Workflow | Complete | Email notifications, status state machine |
+| Telegram AI Bot (5 tools) | Complete | Multi-turn memory via PostgreSQL |
+| Google Calendar Integration | Complete | OAuth2, event creation on visit booking |
+| Meeting Reminder Automation | Complete | Hourly CRON, Telegram push notification |
+| Admin & Analytics Dashboard | Complete | Platform-wide statistics charts (LineChart, BarChart) |
+| Docker Multi-Container Orchestration | Complete | 5 services, health checks, persistent volumes |
 
 ### 8.2 Performance Observations
 
