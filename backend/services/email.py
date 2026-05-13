@@ -364,3 +364,87 @@ def send_client_transaction_success_email(
             server.ehlo(); server.starttls(); server.ehlo(); server.login(smtp_user, smtp_password); server.sendmail(smtp_user, client_email, msg.as_string())
         print(f"[EMAIL] 🎉 Client success email sent to {client_email}", flush=True)
     except Exception as e: print(f"[EMAIL ERROR] {e}", flush=True)
+def send_property_assignment_email(
+    agent_email: str,
+    agent_name: str,
+    property_title: str,
+    property_location: str,
+    head_agent_name: str
+):
+    """Notifies a sub-agent that they have been assigned to a property."""
+    smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+    smtp_port = int(os.getenv("SMTP_PORT", 587))
+    smtp_user = os.getenv("SMTP_USER", "")
+    smtp_password = os.getenv("SMTP_PASSWORD", "")
+    email_from = os.getenv("EMAIL_FROM", smtp_user)
+
+    try:
+        subject = f"🏠 New Assignment: {property_title}"
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <body style="margin:0;padding:0;background:#f3f4f6;font-family:'Segoe UI',sans-serif;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 20px;">
+            <tr><td align="center">
+              <table width="580" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+                <tr>
+                  <td style="background:linear-gradient(135deg,#1e293b,#334155);padding:32px 40px;">
+                    <p style="margin:0;color:#94a3b8;font-size:12px;letter-spacing:2px;text-transform:uppercase;">New Assignment</p>
+                    <h1 style="margin:8px 0 0;color:#ffffff;font-size:22px;font-weight:700;">Property Assigned to You</h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:36px 40px;">
+                    <p style="margin:0 0 20px;color:#374151;font-size:15px;">
+                      Hi <strong>{agent_name}</strong>,
+                    </p>
+                    <p style="margin:0 0 20px;color:#374151;font-size:15px;line-height:1.6;">
+                      You have been assigned as the primary agent for a new property listing by <strong>{head_agent_name}</strong>.
+                    </p>
+                    <div style="background:#f8fafc;border-radius:12px;padding:24px;border:1px solid #e5e7eb;margin-bottom:24px;">
+                      <table width="100%">
+                        <tr>
+                          <td style="color:#6b7280;font-size:12px;padding-bottom:4px;text-transform:uppercase;">Property</td>
+                        </tr>
+                        <tr>
+                          <td style="font-weight:700;color:#1e293b;padding-bottom:16px;font-size:16px;">{property_title}</td>
+                        </tr>
+                        <tr>
+                          <td style="color:#6b7280;font-size:12px;padding-bottom:4px;text-transform:uppercase;">Location</td>
+                        </tr>
+                        <tr>
+                          <td style="font-weight:600;color:#1e293b;font-size:14px;">{property_location}</td>
+                        </tr>
+                      </table>
+                    </div>
+                    <p style="margin:0;color:#6b7280;font-size:13px;">
+                      Please log in to your dashboard to view the full details and start managing this listing.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="background:#f8fafc;padding:20px 40px;border-top:1px solid #e5e7eb;">
+                    <p style="margin:0;color:#9ca3af;font-size:12px;">Elite Estate Management System</p>
+                  </td>
+                </tr>
+              </table>
+            </td></tr>
+          </table>
+        </body>
+        </html>
+        """
+        msg = MIMEMultipart()
+        msg["Subject"] = subject
+        msg["From"] = email_from
+        msg["To"] = agent_email
+        msg.attach(MIMEText(html, "html"))
+
+        try:
+            with smtplib.SMTP(smtp_server, smtp_port, timeout=10) as server:
+                server.ehlo(); server.starttls(); server.ehlo(); server.login(smtp_user, smtp_password); server.sendmail(smtp_user, agent_email, msg.as_string())
+        except Exception:
+            with smtplib.SMTP_SSL(smtp_server, 465, timeout=10) as server:
+                server.ehlo(); server.login(smtp_user, smtp_password); server.sendmail(smtp_user, agent_email, msg.as_string())
+        print(f"[EMAIL] ✅ Assignment notification sent to {agent_email}", flush=True)
+    except Exception as e:
+        print(f"[EMAIL ERROR] {e}", flush=True)

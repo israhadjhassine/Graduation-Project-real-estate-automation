@@ -674,9 +674,14 @@ const assignAgent = async (propertyId, newAgentId) => {
   try {
     const payload = newAgentId ? { agent_id: parseInt(newAgentId) } : { agent_id: null }
     await api.put(`/properties/${propertyId}/assign`, payload)
+    
+    const agentName = newAgentId ? staff.value.find(s => s.id == newAgentId)?.full_name : 'Unassigned'
+    alert.success('Agent Assigned', `Property successfully assigned to ${agentName}.`)
+    
     fetchData()
   } catch (e) {
     console.error("Failed to assign agent", e)
+    alert.error('Assignment Failed', 'Could not update agent assignment.')
   }
 }
 

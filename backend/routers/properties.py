@@ -125,6 +125,7 @@ def delete_property(
 def assign_property_to_agent(
     property_id: int,
     payload: dict,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
 ):
@@ -141,8 +142,24 @@ def assign_property_to_agent(
     if not (is_admin or is_owner or is_manager):
         raise HTTPException(status_code=403, detail="Not authorized to assign this property")
         
-    prop.agent_id = payload.get("agent_id")
+    agent_id = payload.get("agent_id")
+    prop.agent_id = agent_id
     db.commit()
+
+    # Trigger Email Notification to Sub-Agent
+    if agent_id:
+        agent = db.query(models.User).filter(models.User.id == agent_id).first()
+        if agent and agent.email:
+            location = f"{prop.city}, {prop.country}"
+            background_tasks.add_task(
+                email.send_property_assignment_email,
+                agent_email=agent.email,
+                agent_name=agent.full_name,
+                property_title=prop.title,
+                property_location=location,
+                head_agent_name=current_user.full_name
+            )
+
     return {"message": "Agent assigned successfully"}
 
 from utils.reporting import finalize_transaction
