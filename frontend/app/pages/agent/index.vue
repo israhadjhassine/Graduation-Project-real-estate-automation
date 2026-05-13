@@ -260,15 +260,20 @@
                    </span>
                 </td>
                 <td class="px-6 py-4 text-right">
-                   <div v-if="visit.status === 'scheduled'" class="flex items-center justify-end gap-2">
-                      <button @click="updateVisitStatus(visit.id, 'finished')" class="text-xs font-bold text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 px-3 py-1.5 rounded-lg transition-colors">
-                        Complete
-                      </button>
-                      <button @click="updateVisitStatus(visit.id, 'cancelled')" class="text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors">
-                        Cancel
-                      </button>
-                   </div>
-                   <span v-else class="text-xs text-primary-400 font-medium">No actions</span>
+                    <div class="flex items-center justify-end gap-2">
+                       <button @click="viewVisitDetails(visit)" class="text-xs font-bold text-primary-600 hover:text-primary-950 bg-primary-50 hover:bg-primary-100 p-2 rounded-lg transition-colors">
+                         <LucideEye :size="16" />
+                       </button>
+                       <div v-if="visit.status === 'scheduled'" class="flex items-center gap-2">
+                          <button @click="updateVisitStatus(visit.id, 'finished')" class="text-xs font-bold text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 px-3 py-1.5 rounded-lg transition-colors">
+                            Complete
+                          </button>
+                          <button @click="updateVisitStatus(visit.id, 'cancelled')" class="text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors">
+                            Cancel
+                          </button>
+                       </div>
+                       <span v-else class="text-xs text-primary-400 font-medium">No further actions</span>
+                    </div>
                 </td>
               </tr>
               <tr v-if="!filteredVisits.length">
@@ -283,6 +288,14 @@
       </div>
 
     </div>
+
+    <!-- Details Modal -->
+    <VisitDetailsModal 
+      v-if="selectedVisit"
+      :isOpen="isVisitModalOpen"
+      :visit="selectedVisit"
+      @close="isVisitModalOpen = false"
+    />
 
     <!-- Sale Request Modal -->
     <div v-if="showSaleModal" class="fixed inset-0 z-50 flex items-center justify-center p-6 bg-primary-950/40 backdrop-blur-sm transition-all" @click="showSaleModal = false">
@@ -360,8 +373,9 @@ import {
   LucideHeadset, LucideHome, LucideCalendar, 
   LucideCheckCircle2, LucideXCircle, LucideX,
   LucideCheck, LucidePieChart, LucideCalendarOff,
-  LucideSearch, LucideMapPin, LucideFilter
+  LucideSearch, LucideMapPin, LucideFilter, LucideEye
 } from 'lucide-vue-next'
+import VisitDetailsModal from '~/components/agency/VisitDetailsModal.vue'
 import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
 import { useAlert } from '~/composables/useAlert'
@@ -504,12 +518,12 @@ const getApiUrl = () => {
 const fetchData = async () => {
   try {
     const [visitsRes, propsRes, clientsRes] = await Promise.all([
-      axios.get(`${getApiUrl()}/agent/visits`, { headers: { Authorization: `Bearer ${auth.token}` } }),
-      axios.get(`${getApiUrl()}/properties`, { headers: { Authorization: `Bearer ${auth.token}` } }),
-      axios.get(`${getApiUrl()}/agency/clients`, { headers: { Authorization: `Bearer ${auth.token}` } })
+      api.get('/agent/visits'),
+      api.get('/agent/properties'),
+      api.get('/agency/clients')
     ])
     visits.value = visitsRes.data
-    myProperties.value = propsRes.data.filter(p => p.agent_id === auth.user?.id)
+    myProperties.value = propsRes.data
     clients.value = clientsRes.data
     
     // Fetch stats
@@ -532,6 +546,14 @@ const showSaleModal = ref(false)
 const selectedSalePropertyId = ref(null)
 const selectedClientId = ref('')
 
+const isVisitModalOpen = ref(false)
+const selectedVisit = ref(null)
+
+const viewVisitDetails = (visit) => {
+  selectedVisit.value = visit
+  isVisitModalOpen.value = true
+}
+
 const openSaleModal = (id) => {
   selectedSalePropertyId.value = id
   selectedClientId.value = ''
@@ -544,12 +566,19 @@ const submitSaleRequest = async () => {
     return
   }
   try {
-    await axios.patch(`${getApiUrl()}/properties/${selectedSalePropertyId.value}/status`, { 
-      status: 'pending_sold',
-      buyer_id: selectedClientId.value 
+    // 1. Submit the formal Transaction Request
+    const prop = myProperties.value.find(p => p.id === selectedSalePropertyId.value)
+    await axios.post(`${getApiUrl()}/properties/${selectedSalePropertyId.value}/request-transaction`, { 
+      type: 'Sale',
+      price: prop.price,
+      client_id: selectedClientId.value 
     }, {
       headers: { Authorization: `Bearer ${auth.token}` }
     })
+
+    // 2. Optional: Mark property as pending in UI (this now happens via the request in our new logic)
+    // Actually, I'll update the backend to set property status to pending when a request is made for simplicity in UI.
+    
     fetchData()
     showSaleModal.value = false
     alert.success("Sale Request Sent", "Your head agent will review and approve.")
@@ -583,11 +612,13 @@ const submitRentRequest = async () => {
   }
   
   try {
-    await axios.patch(`${getApiUrl()}/properties/${selectedRentPropertyId.value}/status`, { 
-      status: 'pending_rent',
+    const prop = myProperties.value.find(p => p.id === selectedRentPropertyId.value)
+    await axios.post(`${getApiUrl()}/properties/${selectedRentPropertyId.value}/request-transaction`, { 
+      type: 'Rent',
+      price: prop.price,
+      client_id: selectedClientId.value,
       rent_start_date: new Date(rentStartDate.value).toISOString(),
-      rent_end_date: new Date(rentEndDate.value).toISOString(),
-      buyer_id: selectedClientId.value
+      rent_end_date: new Date(rentEndDate.value).toISOString()
     }, {
       headers: { Authorization: `Bearer ${auth.token}` }
     })

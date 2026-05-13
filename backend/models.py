@@ -25,7 +25,7 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     phone_number = Column(String(50), nullable=True)
     hashed_password = Column(String(255), nullable=False)
-    role = Column(String(20), default="visitor") # visitor, agent, head_agent, admin
+    role = Column(String(20), default="visitor") # visitor, client, agent, head_agent, admin
     is_active = Column(Boolean, default=True)
     google_calendar_id = Column(String(255), nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
@@ -146,5 +146,39 @@ class Visit(Base):
     property = relationship("Property")
     client = relationship("User", foreign_keys=[client_id])
     agent = relationship("User", foreign_keys=[agent_id])
+
+class Report(Base):
+    __tablename__ = "reports"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    property_id = Column(BigInteger, ForeignKey("properties.id", ondelete="CASCADE"))
+    transaction_type = Column(String(50), nullable=False) # Sale, Rent
+    buyer_id = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    agent_id = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    price_at_time = Column(Numeric(15, 2))
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    
+    property = relationship("Property")
+    buyer = relationship("User", foreign_keys=[buyer_id])
+    agent = relationship("User", foreign_keys=[agent_id])
+
+class TransactionRequest(Base):
+    __tablename__ = "transaction_requests"
+    
+    id = Column(BigInteger, primary_key=True, index=True)
+    property_id = Column(BigInteger, ForeignKey("properties.id", ondelete="CASCADE"))
+    agent_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"))
+    client_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"))
+    type = Column(String(50), nullable=False) # Sale, Rent
+    status = Column(String(50), default="pending") # pending, approved, rejected
+    price = Column(Numeric(15, 2))
+    rent_start_date = Column(TIMESTAMP, nullable=True)
+    rent_end_date = Column(TIMESTAMP, nullable=True)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
+
+    property = relationship("Property")
+    agent = relationship("User", foreign_keys=[agent_id])
+    client = relationship("User", foreign_keys=[client_id])
 
 

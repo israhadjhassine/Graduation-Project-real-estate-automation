@@ -97,7 +97,7 @@
           <span v-if="pendingSales.length" class="bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center ml-1">{{ pendingSales.length }}</span>
         </button>
         <button 
-          v-if="auth.isAdmin"
+          v-if="auth.isAdmin || auth.isHeadAgent"
           @click="activeTab = 'reports'" 
           :class="['px-5 py-3 text-sm font-bold transition-all whitespace-nowrap border-b-2 flex items-center gap-2', activeTab === 'reports' ? 'border-primary-950 text-primary-950' : 'border-transparent text-primary-400 hover:text-primary-600']"
         >
@@ -359,63 +359,56 @@
         </div>
       </div>
 
-      <!-- Tab Content: Inquiries -->
+      <!-- Tab Content: Approvals -->
       <div v-show="activeTab === 'inquiries'">
         <div class="flex items-center justify-between mb-6">
-          <h2 class="text-xl font-bold text-primary-950">Client Leads & System Alerts</h2>
+          <h2 class="text-xl font-bold text-primary-950">Transaction Approval Queue</h2>
         </div>
         <div class="grid md:grid-cols-2 gap-6">
           <div v-for="inq in inquiries" :key="inq.id" class="card-premium">
             <div class="flex items-center justify-between mb-4">
-              <span :class="['px-2 py-1 text-[10px] font-bold rounded-lg uppercase', inq.source === 'system' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700']">
-                {{ inq.source }}
+              <span class="px-2 py-1 text-[10px] font-bold rounded-lg uppercase bg-amber-100 text-amber-700">
+                {{ inq.request_type }} REQUEST
               </span>
               <span class="text-[10px] text-primary-400 font-bold uppercase">{{ inq.status }}</span>
             </div>
+            
             <p class="text-sm font-bold text-primary-950 mb-1">{{ inq.subject }}</p>
-            <p class="text-xs text-primary-600 mb-4 line-clamp-3">{{ inq.message }}</p>
+            <p class="text-xs text-primary-600 mb-4">{{ inq.message }}</p>
+            
+            <div class="bg-primary-50 rounded-xl p-4 mb-4">
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-[10px] font-bold text-primary-400 uppercase">Negotiated Price</span>
+                <span class="text-sm font-bold text-primary-950">{{ formatPrice(inq.price) }} TND</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-[10px] font-bold text-primary-400 uppercase">Requester</span>
+                <span class="text-xs font-medium text-primary-700">{{ inq.name.split(' for ')[0] }}</span>
+              </div>
+            </div>
+
             <div class="flex items-center gap-3 pt-4 border-t border-primary-100">
                <div class="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-[10px] font-bold">
-                 {{ inq.name.charAt(0) }}
+                 {{ inq.name.split(' for ')[1]?.charAt(0) || 'C' }}
                </div>
                <div>
-                 <p class="text-[10px] font-bold text-primary-950">{{ inq.name }}</p>
-                 <p class="text-[10px] text-primary-400">{{ inq.email }}</p>
+                 <p class="text-[10px] font-bold text-primary-950">Client: {{ inq.name.split(' for ')[1] || inq.name }}</p>
+                 <p class="text-[10px] text-primary-400">{{ inq.email || 'No email provided' }}</p>
                </div>
             </div>
             
-            <!-- Approval Action for Pending Sales -->
-            <div v-if="inq.property_status === 'pending_sold' && inq.status !== 'replied'" class="mt-4 pt-4 border-t border-amber-100 space-y-2">
-               <p class="text-[10px] font-bold text-amber-700 uppercase tracking-widest">⏳ Sale Approval Required</p>
+            <!-- Approval Actions -->
+            <div class="mt-4 pt-4 border-t border-primary-100 space-y-2">
                <div class="flex gap-2">
                  <button 
-                   @click="approveSale(inq)" 
-                   class="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-[10px] font-bold uppercase transition-all shadow-lg shadow-green-900/10"
+                   @click="updateInquiryStatus(inq.id, 'replied')" 
+                   class="flex-1 py-2 bg-primary-900 hover:bg-black text-white rounded-xl text-[10px] font-bold uppercase transition-all"
                  >
-                   ✓ Approve Sale
+                   ✓ Approve & Finalize
                  </button>
                  <button 
-                   @click="rejectSale(inq)" 
-                   class="flex-1 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl text-[10px] font-bold uppercase transition-all"
-                 >
-                   ✗ Reject
-                 </button>
-               </div>
-            </div>
-
-            <!-- Approval Action for Pending Rents -->
-            <div v-if="inq.property_status === 'pending_rent' && inq.status !== 'replied'" class="mt-4 pt-4 border-t border-blue-100 space-y-2">
-               <p class="text-[10px] font-bold text-blue-700 uppercase tracking-widest">⏳ Rent Approval Required</p>
-               <div class="flex gap-2">
-                 <button 
-                   @click="approveRent(inq)" 
-                   class="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[10px] font-bold uppercase transition-all shadow-lg shadow-blue-900/10"
-                 >
-                   ✓ Approve Rent
-                 </button>
-                 <button 
-                   @click="rejectRent(inq)" 
-                   class="flex-1 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl text-[10px] font-bold uppercase transition-all"
+                   @click="updateInquiryStatus(inq.id, 'closed')" 
+                   class="flex-1 py-2 bg-primary-50 hover:bg-primary-100 text-primary-600 border border-primary-200 rounded-xl text-[10px] font-bold uppercase transition-all"
                  >
                    ✗ Reject
                  </button>
@@ -423,7 +416,8 @@
             </div>
           </div>
           <div v-if="!inquiries.length" class="col-span-full py-12 text-center text-primary-400">
-             No inquiries or notifications found.
+             <LucideCheckCircle2 class="w-12 h-12 mx-auto text-primary-100 mb-3" />
+             <p>No pending transaction requests found.</p>
           </div>
         </div>
       </div>
@@ -457,31 +451,39 @@
       </div>
 
       <!-- Tab Content: Reports -->
-      <div v-show="activeTab === 'reports' && auth.isAdmin">
+      <div v-show="activeTab === 'reports' && (auth.isAdmin || auth.isHeadAgent)">
         <div class="card-premium p-0 overflow-hidden">
           <table class="w-full text-left">
             <thead>
               <tr class="bg-primary-50">
-                <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Report File</th>
+                <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Property Title</th>
+                <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Type</th>
+                <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Date</th>
                 <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-primary-50">
-              <tr v-for="report in reports" :key="report.name" class="hover:bg-primary-50/30 transition-colors">
+              <tr v-for="report in reports" :key="report.id" class="hover:bg-primary-50/30 transition-colors">
                 <td class="px-6 py-4">
                   <div class="flex items-center gap-3">
                     <LucideFileText class="w-5 h-5 text-primary-400" />
-                    <span class="font-bold text-primary-950 text-sm">{{ report.name }}</span>
+                    <span class="font-bold text-primary-950 text-sm">{{ report.property_title }}</span>
                   </div>
                 </td>
+                <td class="px-6 py-4">
+                  <span class="text-xs font-medium text-primary-600">{{ report.type }}</span>
+                </td>
+                <td class="px-6 py-4">
+                  <span class="text-xs font-medium text-primary-600">{{ report.date }}</span>
+                </td>
                 <td class="px-6 py-4 text-right">
-                  <button @click="downloadReport(report.name)" class="px-4 py-2 bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-xl text-[10px] font-bold uppercase transition-all inline-flex items-center gap-2">
+                  <button @click="downloadReport(report)" class="px-4 py-2 bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-xl text-[10px] font-bold uppercase transition-all inline-flex items-center gap-2">
                     <LucideDownload class="w-3 h-3" /> Download
                   </button>
                 </td>
               </tr>
               <tr v-if="!reports.length">
-                <td colspan="2" class="py-12 text-center text-primary-400">
+                <td colspan="4" class="py-12 text-center text-primary-400">
                   No transaction reports found. Reports are generated upon transaction approval.
                 </td>
               </tr>
@@ -499,6 +501,13 @@
       @success="handleSuccess"
     />
 
+    <VisitDetailsModal 
+      v-if="selectedVisit"
+      :isOpen="isVisitModalOpen"
+      :visit="selectedVisit"
+      @close="isVisitModalOpen = false"
+    />
+
   </div>
 </template>
 
@@ -514,6 +523,7 @@ import { useAuthStore } from '~/stores/auth'
 import { useApi } from '~/composables/useApi'
 import { useAssetUrl } from '~/composables/useAssetUrl'
 import { useAlert } from '~/composables/useAlert'
+import VisitDetailsModal from '~/components/agency/VisitDetailsModal.vue'
 
 definePageMeta({ layout: 'dashboard' })
 
@@ -529,6 +539,9 @@ const reports = ref([])
 const clients = ref([])
 const visits = ref([])
 const loading = ref(false)
+
+const isVisitModalOpen = ref(false)
+const selectedVisit = ref(null)
 
 const soldProperties = computed(() => properties.value.filter(p => p.status === 'sold'))
 const rentedProperties = computed(() => properties.value.filter(p => p.status === 'rented'))
@@ -587,9 +600,8 @@ const viewProperty = (prop) => {
 }
 
 const viewVisitDetails = (visit) => {
-  if (visit.property) {
-    viewProperty(visit.property)
-  }
+  selectedVisit.value = visit
+  isVisitModalOpen.value = true
 }
 
 const deleteProperty = async (propertyId) => {
@@ -625,7 +637,7 @@ const fetchData = async () => {
     statistics.value = statsRes.data
     visits.value = visitsRes.data
     
-    if (auth.isAdmin) {
+    if (auth.isAdmin || auth.isHeadAgent) {
       try {
         const reportsRes = await api.get('/admin/reports')
         reports.value = reportsRes.data
@@ -668,6 +680,17 @@ const assignAgent = async (propertyId, newAgentId) => {
   }
 }
 
+const updateInquiryStatus = async (inquiryId, status) => {
+  try {
+    await api.put(`/agent/inquiries/${inquiryId}/status?status=${status}`)
+    alert.success('Updated', 'Inquiry status has been updated.')
+    fetchData()
+  } catch (e) {
+    console.error("Failed to update inquiry status", e)
+    alert.error('Update Failed', "Could not update status.")
+  }
+}
+
 const toggleAgentStatus = async (agentId) => {
   try {
     await api.patch(`/agency/staff/${agentId}/toggle-status`, {})
@@ -678,70 +701,14 @@ const toggleAgentStatus = async (agentId) => {
   }
 }
 
-const approveSale = async (inq) => {
-  const result = await alert.confirm('Approve Sale?', 'Approve the sale of this property? It will be marked as sold and removed from public listings.', 'Approve')
-  if (result.isConfirmed) {
-    try {
-      await api.post(`/agency/properties/${inq.property_id}/approve-sale`)
-      alert.success('Finalized', 'Property sale has been approved and registered.')
-      fetchData()
-    } catch (e) {
-      console.error("Failed to approve sale", e)
-      alert.error('Approval Error', e.response?.data?.detail || "Error approving sale.")
-    }
-  }
-}
-
-const rejectSale = async (inq) => {
-  const result = await alert.confirm('Reject Sale?', 'Reject this sale request? The property will return to Available status.')
-  if (result.isConfirmed) {
-    try {
-      await api.post(`/agency/properties/${inq.property_id}/reject-sale`)
-      alert.success('Rejected', 'Sale request has been rejected.')
-      fetchData()
-    } catch (e) {
-      console.error("Failed to reject sale", e)
-      alert.error('Error', e.response?.data?.detail || "Error rejecting sale.")
-    }
-  }
-}
-
-const approveRent = async (inq) => {
-  const result = await alert.confirm('Approve Rent?', 'Approve the rent of this property?', 'Approve')
-  if (result.isConfirmed) {
-    try {
-      await api.post(`/agency/properties/${inq.property_id}/approve-rent`)
-      alert.success('Rented', 'Property rent has been approved.')
-      fetchData()
-    } catch (e) {
-      console.error("Failed to approve rent", e)
-      alert.error('Error', e.response?.data?.detail || "Error approving rent.")
-    }
-  }
-}
-
-const rejectRent = async (inq) => {
-  const result = await alert.confirm('Reject Rent?', 'Reject this rent request? The property will return to Available status.')
-  if (result.isConfirmed) {
-    try {
-      await api.post(`/agency/properties/${inq.property_id}/reject-rent`)
-      alert.success('Rejected', 'Rent request has been rejected.')
-      fetchData()
-    } catch (e) {
-      console.error("Failed to reject rent", e)
-      alert.error('Error', e.response?.data?.detail || "Error rejecting rent.")
-    }
-  }
-}
-
-const downloadReport = async (filename) => {
+const downloadReport = async (report) => {
   try {
     const config = useRuntimeConfig()
     let apiUrl = config.public.apiUrl
     if (process.client && apiUrl.includes('backend')) {
       apiUrl = 'http://localhost:8000'
     }
-    const res = await fetch(`${apiUrl}/admin/reports/${filename}`, {
+    const res = await fetch(`${apiUrl}/admin/reports/${report.id}/download`, {
       headers: { Authorization: `Bearer ${auth.token}` }
     })
     if (!res.ok) throw new Error("Failed to download")
@@ -749,6 +716,7 @@ const downloadReport = async (filename) => {
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
+    const filename = `Report_${report.type}_${report.property_title.replace(/\s+/g, '_')}.pdf`
     link.setAttribute('download', filename)
     document.body.appendChild(link)
     link.click()

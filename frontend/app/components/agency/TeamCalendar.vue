@@ -132,22 +132,28 @@
           <div 
             v-for="event in positionedVisits" 
             :key="`${event.visit.id}-${event.visit.agent?.id}-${event.style.left}`"
-            @click="emit('view-visit', event.visit)"
-            class="absolute p-1.5 rounded-lg border-l-4 shadow-sm cursor-pointer pointer-events-auto transition-all hover:shadow-md hover:z-30 overflow-hidden"
+            @click="openVisitDetails(event.visit)"
+            class="absolute p-2 rounded-xl border-l-4 shadow-sm cursor-pointer pointer-events-auto transition-all hover:shadow-md hover:z-30 overflow-hidden flex flex-col"
             :style="event.style"
             :class="getVisitColorClass(event.visit.status)"
           >
             <div class="flex flex-col h-full overflow-hidden">
               <div class="flex items-center justify-between gap-1 overflow-hidden mb-0.5">
-                <span class="text-xs font-bold truncate leading-tight">{{ event.visit.property?.title || 'Untitled' }}</span>
-                <span class="text-[10px] font-bold whitespace-nowrap opacity-80 bg-black/5 px-1 rounded">{{ formatTime(event.visit.visit_date) }}</span>
+                <span class="text-[11px] font-bold truncate leading-tight">{{ event.visit.property?.title || 'Untitled' }}</span>
+                <span class="text-[9px] font-black whitespace-nowrap opacity-80 bg-black/5 px-1.5 py-0.5 rounded uppercase tracking-tighter">{{ event.visit.status }}</span>
               </div>
               <div class="flex items-center gap-1.5 mt-0.5 min-w-0">
                 <div class="w-4 h-4 rounded-full bg-white/60 flex items-center justify-center text-[9px] font-bold border border-black/10 shrink-0 shadow-sm text-gray-700">
                   {{ event.visit.agent?.full_name?.charAt(0) || 'A' }}
                 </div>
-                <span class="text-[11px] truncate opacity-90 font-semibold tracking-tight">
+                <span class="text-[10px] truncate opacity-90 font-semibold tracking-tight">
                   {{ event.visit.agent?.full_name?.split(' ')[0] }} • {{ event.visit.client?.full_name || 'No Client' }}
+                </span>
+              </div>
+              <div class="mt-auto pt-1 flex items-center justify-between">
+                <span class="text-[9px] font-bold opacity-60 flex items-center gap-1">
+                  <LucideClock :size="8" />
+                  {{ formatTime(event.visit.visit_date) }}
                 </span>
               </div>
             </div>
@@ -155,11 +161,12 @@
         </div>
       </div>
     </div>
+
   </div>
 </template>
 
 <script setup>
-import { LucideChevronLeft, LucideChevronRight, LucideChevronDown, LucideCheck } from 'lucide-vue-next'
+import { LucideChevronLeft, LucideChevronRight, LucideChevronDown, LucideCheck, LucideClock } from 'lucide-vue-next'
 
 const props = defineProps({
   visits: {
@@ -173,6 +180,10 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['view-visit'])
+
+const openVisitDetails = (visit) => {
+  emit('view-visit', visit)
+}
 
 const monthNames = [
   'January', 'February', 'March', 'April', 'May', 'June',

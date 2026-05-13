@@ -13,6 +13,7 @@ docker exec -it real_estate_db psql -U postgres -d real_estate -c "SELECT id, ti
 
 5. Enter the interactive database shell (most flexible)
 If you want to run many queries, just enter the shell directly:
+
 docker exec -it real_estate_db psql -U postgres -d real_estate
 
 docker exec -it FastAPI_backend python -c "from database import SessionLocal; import models, auth; db=SessionLocal(); user=db.query(models.User).filter(models.User.email == 'israhadjhassine@gmail.com').first(); user.hashed_password=auth.get_password_hash('admin123'); db.commit(); print('Password reset successful for ' + user.email); db.close()"

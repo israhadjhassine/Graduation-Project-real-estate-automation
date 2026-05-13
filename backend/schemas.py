@@ -172,7 +172,7 @@ class VisitResponse(BaseModel):
         from_attributes = True
 
 class VisitDetailResponse(VisitResponse):
-    property: Optional[PropertyMinimal] = None
+    property: Optional[Property] = None
     client: Optional[User] = None
     agent: Optional[User] = None
 
@@ -211,3 +211,30 @@ class RAGProperty(BaseModel):
 class RAGSearchResponse(BaseModel):
     context: str
     properties: List[RAGProperty]
+
+# --- Transaction Requests ---
+class TransactionRequestBase(BaseModel):
+    type: str # Sale, Rent
+    price: Decimal
+    client_id: int
+    rent_start_date: Optional[datetime] = None
+    rent_end_date: Optional[datetime] = None
+
+class TransactionRequestCreate(TransactionRequestBase):
+    pass
+
+class TransactionRequest(TransactionRequestBase):
+    id: int
+    property_id: int
+    agent_id: int
+    status: str
+    created_at: datetime
+    updated_at: datetime
+    
+    # We might want nested details for the UI
+    property: Optional[PropertyMinimal] = None
+    agent: Optional[User] = None
+    client: Optional[User] = None
+
+    class Config:
+        from_attributes = True

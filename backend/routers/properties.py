@@ -145,6 +145,8 @@ def assign_property_to_agent(
     db.commit()
     return {"message": "Agent assigned successfully"}
 
+from utils.reporting import finalize_transaction
+
 @router.patch("/properties/{property_id}/status")
 def update_property_status(
     property_id: int,
@@ -153,56 +155,90 @@ def update_property_status(
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.RoleChecker(["agent", "head_agent", "admin"]))
 ):
-    """Allows agents to update property status (e.g., mark as sold/pending)."""
+    """Allows owners/admins to update property status. Sold/Rented finalizes immediately."""
     prop = db.query(models.Property).options(joinedload(models.Property.owner)).filter(models.Property.id == property_id).first()
     if not prop:
         raise HTTPException(status_code=404, detail="Property not found")
     
-    # Authorization: Admin, Owner, Assigned Agent, or the Manager of the Owner
+    # Authorization
     is_admin = current_user.role == "admin"
     is_owner = prop.owner_id == current_user.id
-    is_agent = prop.agent_id == current_user.id
     is_manager = current_user.role == "head_agent" and prop.owner and prop.owner.manager_id == current_user.id
-    
-    if not (is_admin or is_owner or is_agent or is_manager):
-        raise HTTPException(status_code=403, detail="Not authorized to update status for this property")
+    is_assigned = prop.agent_id == current_user.id
     
     new_status = payload.get("status")
-    if new_status not in ["available", "sold", "pending_sold", "rented", "pending_rent"]:
+    
+    # If trying to finalize (sold/rented), must be admin/owner/manager
+    if new_status in ["sold", "rented"]:
+        if not (is_admin or is_owner or is_manager):
+            raise HTTPException(status_code=403, detail="Only owners or admins can finalize transactions directly.")
+    else:
+        # For other statuses (available, pending_*), allow assigned agent too
+        if not (is_admin or is_owner or is_manager or is_assigned):
+            raise HTTPException(status_code=403, detail="You are not authorized to update this property status")
+    
+    if new_status not in ["available", "sold", "rented", "pending_sold", "pending_rent"]:
         raise HTTPException(status_code=400, detail="Invalid status value")
     
-    prop.status = new_status
-    buyer = None
-    if new_status == "pending_rent":
+    if new_status == "rented":
         if "rent_start_date" in payload and payload["rent_start_date"]:
             prop.rent_start_date = datetime.fromisoformat(payload["rent_start_date"].replace("Z", "+00:00"))
         if "rent_end_date" in payload and payload["rent_end_date"]:
             prop.rent_end_date = datetime.fromisoformat(payload["rent_end_date"].replace("Z", "+00:00"))
             
-    if new_status in ["pending_sold", "pending_rent"]:
+    if new_status in ["sold", "rented"]:
         if "buyer_id" in payload and payload["buyer_id"]:
             prop.buyer_id = payload["buyer_id"]
-            buyer = db.query(models.User).filter(models.User.id == payload["buyer_id"]).first()
+        
+        tx_type = "Sale" if new_status == "sold" else "Rent"
+        finalize_transaction(db, prop, tx_type, background_tasks)
+        return {"message": f"Transaction finalized as {tx_type}. Report generated."}
             
-        owner = db.query(models.User).filter(models.User.id == prop.owner_id).first()
-        if owner and owner.email:
-            background_tasks.add_task(
-                email.send_transaction_request_email,
-                head_agent_email=owner.email,
-                head_agent_name=owner.full_name,
-                sub_agent_name=current_user.full_name,
-                sub_agent_email=current_user.email,
-                property_title=prop.title,
-                property_location=f"{prop.city}, {prop.country}",
-                property_price=f"{prop.price:,} {prop.currency}",
-                tx_type="Sale" if new_status == "pending_sold" else "Rent",
-                client_email=buyer.email if buyer else None,
-                rent_start=prop.rent_start_date.strftime('%Y-%m-%d') if prop.rent_start_date else None,
-                rent_end=prop.rent_end_date.strftime('%Y-%m-%d') if prop.rent_end_date else None
-            )
-            
+    prop.status = new_status
     db.commit()
     return {"message": f"Property status updated to {new_status}"}
+
+@router.post("/properties/{property_id}/request-transaction")
+def request_property_transaction(
+    property_id: int,
+    request_in: schemas.TransactionRequestCreate,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["agent", "head_agent", "admin"]))
+):
+    """Allows Sub-Agents to request a sale/rent approval from their Head Agent."""
+    prop = db.query(models.Property).filter(models.Property.id == property_id).first()
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found")
+    
+    # Verify agent is assigned to this property or is the owner
+    if prop.agent_id != current_user.id and prop.owner_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="You are not assigned to this property")
+
+    # Check if a pending request already exists
+    existing = db.query(models.TransactionRequest).filter(
+        models.TransactionRequest.property_id == property_id,
+        models.TransactionRequest.status == "pending"
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="A pending transaction request already exists for this property")
+
+    new_request = models.TransactionRequest(
+        property_id=property_id,
+        agent_id=current_user.id,
+        client_id=request_in.client_id,
+        type=request_in.type,
+        price=request_in.price,
+        rent_start_date=request_in.rent_start_date,
+        rent_end_date=request_in.rent_end_date,
+        status="pending"
+    )
+    db.add(new_request)
+
+    # Update property status to show 'Pending' in UI
+    prop.status = "pending_sold" if request_in.type == "Sale" else "pending_rent"
+    
+    db.commit()
+    return {"message": "Transaction request submitted for head agent approval."}
 
 @router.post("/properties/{property_id}/images", response_model=List[schemas.PropertyImage])
 async def upload_property_images(
@@ -420,12 +456,23 @@ def rag_search(
         
     return {"context": "\n\n".join(context_parts), "properties": rag_properties}
 
+@router.get("/agent/properties", response_model=List[schemas.Property])
+def get_agent_properties(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["agent", "head_agent", "admin"]))
+):
+    """Returns properties assigned to the current agent, regardless of status."""
+    return db.query(models.Property).options(
+        joinedload(models.Property.images), joinedload(models.Property.features),
+        joinedload(models.Property.owner), joinedload(models.Property.agent)
+    ).filter(models.Property.agent_id == current_user.id).all()
+
 @router.get("/agency/properties", response_model=List[schemas.Property])
 def get_agency_properties(
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
 ):
-    """Returns all properties for agency management."""
+    """Returns all properties for agency management (Admin sees all, Head Agent sees owned)."""
     query = db.query(models.Property).options(
         joinedload(models.Property.images), joinedload(models.Property.features),
         joinedload(models.Property.owner), joinedload(models.Property.agent)

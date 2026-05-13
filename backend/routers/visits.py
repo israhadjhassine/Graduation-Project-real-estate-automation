@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session, joinedload
 from datetime import datetime, timedelta, timezone
 from typing import List
@@ -65,92 +65,114 @@ def get_agent_inquiries(
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.RoleChecker(["agent", "head_agent", "admin"]))
 ):
-    """Returns visits/inquiries for agents, formatted exactly as original main.py."""
-    if current_user.role == "admin":
-        visits = db.query(models.Visit).order_by(models.Visit.created_at.desc()).all()
-    elif current_user.role == "head_agent":
-        # Properties owned by the head agent OR properties owned by users managed by the head agent
-        managed_user_ids_query = db.query(models.User.id).filter(models.User.manager_id == current_user.id).all()
-        allowed_owner_ids = [current_user.id] + [uid[0] for uid in managed_user_ids_query]
+    """
+    Returns pending transaction requests for approval.
+    - Admins: See all pending requests.
+    - Head Agents: See requests for their properties OR from their team.
+    - Agents: See only their own submitted requests.
+    """
+    query = db.query(models.TransactionRequest).options(
+        joinedload(models.TransactionRequest.property),
+        joinedload(models.TransactionRequest.agent),
+        joinedload(models.TransactionRequest.client)
+    ).filter(models.TransactionRequest.status == "pending")
+
+    if current_user.role == "head_agent":
+        # Get IDs of sub-agents managed by this head agent
+        sub_agent_ids = [u.id for u in db.query(models.User.id).filter(models.User.manager_id == current_user.id).all()]
         
-        visits = db.query(models.Visit).join(
-            models.Property, models.Visit.property_id == models.Property.id
-        ).filter(
-            models.Property.owner_id.in_(allowed_owner_ids)
-        ).order_by(models.Visit.created_at.desc()).all()
-    else:
-        visits = db.query(models.Visit).filter(
-            models.Visit.agent_id == current_user.id
-        ).order_by(models.Visit.created_at.desc()).all()
+        # Explicitly join on the relationship to avoid any ambiguity
+        query = query.join(models.TransactionRequest.property).filter(
+            (models.Property.owner_id == current_user.id) | 
+            (models.TransactionRequest.agent_id.in_(sub_agent_ids))
+        )
+    elif current_user.role == "agent":
+        query = query.filter(models.TransactionRequest.agent_id == current_user.id)
+    
+    requests = query.order_by(models.TransactionRequest.created_at.desc()).all()
 
     result = []
-    for v in visits:
-        prop = db.query(models.Property).filter(models.Property.id == v.property_id).first()
+    for r in requests:
+        prop = r.property
+        agent = r.agent
+        client = r.client
+        
+        # Build descriptive message
+        msg = f"Agent {agent.full_name if agent else 'System'} requested approval for a {r.type.lower()}."
+        if r.type == "Rent" and r.rent_start_date and r.rent_end_date:
+            msg += f" Dates: {r.rent_start_date.strftime('%Y-%m-%d')} to {r.rent_end_date.strftime('%Y-%m-%d')}."
+        
         result.append({
-            "id": v.id,
-            "name": f"Client #{v.telegram_chat_id or v.client_id or 'Unknown'}",
-            "email": "",
-            "phone": v.telegram_chat_id or "",
-            "subject": f"Visit request: {prop.title if prop else 'Property'}",
-            "message": f"Scheduled for {v.visit_date.strftime('%Y-%m-%d %H:%M') if v.visit_date else 'TBD'}",
-            "status": "new" if v.status == "scheduled" else "replied" if v.status == "finished" else "closed",
-            "source": "telegram" if v.telegram_chat_id else "web",
-            "property_id": v.property_id,
-            "property_status": prop.status if prop else None,
-            "visit_id": v.id,
-            "visit_status": v.status
+            "id": r.id,
+            "name": client.full_name if client else "New Client",
+            "email": client.email if client else "",
+            "phone": client.phone_number if client else "",
+            "subject": f"{r.type} Request: {prop.title if prop else 'Property'}",
+            "message": msg,
+            "status": "new", # Compatibility field for UI
+            "property_id": r.property_id,
+            "agent_id": r.agent_id,
+            "client_id": r.client_id,
+            "price": float(r.price) if r.price else 0,
+            "request_type": r.type.upper()
         })
     
-    if current_user.role in ["head_agent", "admin"]:
-        managed_user_ids_query = db.query(models.User.id).filter(models.User.manager_id == current_user.id).all()
-        allowed_owner_ids = [current_user.id] + [uid[0] for uid in managed_user_ids_query]
-
-        pending_props = db.query(models.Property).filter(
-            models.Property.status.in_(["pending_sold", "pending_rent"]),
-            models.Property.owner_id.in_(allowed_owner_ids) if current_user.role == "head_agent" else True
-        ).all()
-        for p in pending_props:
-            agent = db.query(models.User).filter(models.User.id == p.agent_id).first() if p.agent_id else None
-            buyer = db.query(models.User).filter(models.User.id == p.buyer_id).first() if p.buyer_id else None
-            if not any(r["property_id"] == p.id for r in result):
-                req_type = "Sale" if p.status == "pending_sold" else "Rent"
-                status_display = "sold" if p.status == "pending_sold" else "rented"
-                msg = f"Sub-Agent {agent.full_name if agent else 'unknown'} is requesting approval to mark this property as {status_display}."
-                if buyer: msg += f" Client Email: {buyer.email}."
-                if p.status == "pending_rent" and p.rent_start_date and p.rent_end_date:
-                    msg += f" Duration: {p.rent_start_date.strftime('%b %d, %Y')} to {p.rent_end_date.strftime('%b %d, %Y')}."
-                
-                result.insert(0, {
-                    "id": -p.id,
-                    "name": agent.full_name if agent else "Sub-Agent",
-                    "email": agent.email if agent else "",
-                    "phone": "",
-                    "subject": f"{req_type} Request: {p.title}",
-                    "message": msg,
-                    "status": "new",
-                    "source": "system",
-                    "property_id": p.id,
-                    "property_status": p.status,
-                    "visit_id": None,
-                    "visit_status": None
-                })
     return result
+
+from utils.reporting import finalize_transaction
 
 @router.put("/agent/inquiries/{inquiry_id}/status")
 def update_inquiry_status(
     inquiry_id: int,
     status: str,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(database.get_db),
-    current_user: models.User = Depends(auth.RoleChecker(["agent", "head_agent", "admin"]))
+    current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
 ):
-    """Maps inquiry status back to visit status."""
-    vis = db.query(models.Visit).filter(models.Visit.id == inquiry_id).first()
-    if not vis:
-        raise HTTPException(status_code=404, detail="Inquiry not found")
-    status_map = {"new": "scheduled", "replied": "finished", "closed": "cancelled"}
-    vis.status = status_map.get(status, status)
-    db.commit()
-    return {"message": "Status updated"}
+    """
+    Handles Approval/Rejection of a TransactionRequest.
+    - status 'replied' -> Approved
+    - status 'closed' -> Rejected
+    """
+    req = db.query(models.TransactionRequest).filter(models.TransactionRequest.id == inquiry_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Transaction request not found")
+    
+    # Check if user is authorized to approve/reject
+    prop = db.query(models.Property).filter(models.Property.id == req.property_id).first()
+    requester = db.query(models.User).filter(models.User.id == req.agent_id).first()
+    
+    is_admin = current_user.role == "admin"
+    is_owner = prop.owner_id == current_user.id
+    is_manager = current_user.role == "head_agent" and requester and requester.manager_id == current_user.id
+    
+    if not (is_admin or is_owner or is_manager):
+        raise HTTPException(status_code=403, detail="Not authorized to approve this request")
+
+    if status == "replied": # APPROVE
+        req.status = "approved"
+        
+        # Finalize Property
+        prop.status = "sold" if req.type == "Sale" else "rented"
+        prop.buyer_id = req.client_id
+        if req.type == "Rent":
+            prop.rent_start_date = req.rent_start_date
+            prop.rent_end_date = req.rent_end_date
+        
+        # Generate Report
+        finalize_transaction(db, prop, req.type, background_tasks)
+        db.commit()
+        return {"message": "Request approved and transaction finalized."}
+    
+    elif status == "closed": # REJECT
+        req.status = "rejected"
+        # Revert property status back to available
+        prop.status = "available"
+        db.commit()
+        return {"message": "Request rejected and property marked available again."}
+    
+    else:
+        raise HTTPException(status_code=400, detail="Invalid status action")
 
 @router.get("/agent/visits", response_model=List[schemas.VisitDetailResponse])
 def get_agent_visits_list(

@@ -11,16 +11,19 @@ from models import Visit, Property, User
 def seed_visit():
     db = SessionLocal()
     try:
-        # 1. Setup Ocean Breeze Mansion for Ahmed (ID 105)
+        # 1. Setup Ocean Breeze Mansion for Ahmed (email killer.chebbi@gmail.com)
         ocean_breeze = db.query(Property).filter(Property.title == 'Ocean Breeze Mansion').first()
-        ahmed = db.query(User).filter(User.id == 105).first()
+        ahmed = db.query(User).filter(User.email == 'killer.chebbi@gmail.com').first()
         
-        # 2. Setup Blue Horizon Penthouse for Sonia (ID 106)
+        # 2. Setup Blue Horizon Penthouse for Sonia (email s.dridi@elite.tn)
         blue_horizon = db.query(Property).filter(Property.title == 'Blue Horizon Penthouse').first()
-        sonia = db.query(User).filter(User.id == 106).first()
+        sonia = db.query(User).filter(User.email == 's.dridi@elite.tn').first()
+        
+        # 3. Setup Client
+        client = db.query(User).filter(User.email == 'client@test.com').first()
 
-        if not (ocean_breeze and ahmed and blue_horizon and sonia):
-            print("❌ Could not find all required properties or agents.")
+        if not (ocean_breeze and ahmed and blue_horizon and sonia and client):
+            print("❌ Could not find all required properties, agents, or client.")
             return
 
         # Ensure properties are assigned to the right agents
@@ -33,6 +36,7 @@ def seed_visit():
         
         visit1 = Visit(
             property_id=ocean_breeze.id,
+            client_id=client.id,
             agent_id=ahmed.id,
             visit_date=today_10am,
             status="scheduled"
@@ -40,6 +44,7 @@ def seed_visit():
 
         visit2 = Visit(
             property_id=blue_horizon.id,
+            client_id=client.id,
             agent_id=sonia.id,
             visit_date=today_10am,
             status="scheduled"
@@ -49,6 +54,7 @@ def seed_visit():
         today_430pm = datetime.now().replace(hour=16, minute=30, second=0, microsecond=0)
         visit3 = Visit(
             property_id=ocean_breeze.id,
+            client_id=client.id,
             agent_id=ahmed.id,
             visit_date=today_430pm,
             status="scheduled"

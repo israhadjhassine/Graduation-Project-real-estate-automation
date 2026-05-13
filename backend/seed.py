@@ -54,9 +54,9 @@ def seed_db():
         
         db.add_all([agent1, agent2, agent3, agent4])
         
-        # Visitor
-        visitor = models.User(email="visitor@test.com", full_name="John Doe", role="visitor", hashed_password=auth.get_password_hash("visitorpassword"))
-        db.add(visitor)
+        # Client (for testing visits)
+        client = models.User(email="client@test.com", full_name="John Client", role="client", hashed_password=auth.get_password_hash("clientpassword"))
+        db.add(client)
         
         db.commit()
 

@@ -292,20 +292,28 @@
           <table class="w-full text-left">
             <thead>
               <tr class="bg-primary-50">
-                <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Report File</th>
+                <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Property Title</th>
+                <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Type</th>
+                <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Date</th>
                 <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-primary-50">
-              <tr v-for="report in reports" :key="report.name" class="hover:bg-primary-50/30 transition-colors">
+              <tr v-for="report in reports" :key="report.id" class="hover:bg-primary-50/30 transition-colors">
                 <td class="px-6 py-4">
                   <div class="flex items-center gap-3">
-                    <LucideFileDown class="w-5 h-5 text-red-500" />
-                    <span class="font-bold text-primary-950 text-sm">{{ report.name }}</span>
+                    <LucideFileText class="w-5 h-5 text-primary-400" />
+                    <span class="font-bold text-primary-950 text-sm">{{ report.property_title }}</span>
                   </div>
                 </td>
+                <td class="px-6 py-4">
+                  <span class="text-xs font-medium text-primary-600">{{ report.type }}</span>
+                </td>
+                <td class="px-6 py-4">
+                  <span class="text-xs font-medium text-primary-600">{{ report.date }}</span>
+                </td>
                 <td class="px-6 py-4 text-right">
-                  <button @click="downloadReport(report.name)" class="px-4 py-2 bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-xl text-[10px] font-bold uppercase transition-all inline-flex items-center gap-2">
+                  <button @click="downloadReport(report)" class="px-4 py-2 bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-xl text-[10px] font-bold uppercase transition-all inline-flex items-center gap-2">
                     <LucideDownload class="w-3 h-3" /> Download
                   </button>
                 </td>
@@ -525,9 +533,13 @@ const [...responses] = await Promise.all([
   }
 }
 
-const downloadReport = async (filename) => {
+const downloadReport = async (report) => {
   try {
-    const res = await fetch(`${getApiUrl()}/admin/reports/${filename}`, {
+    if (!report.id) {
+      console.error("Report ID is missing", report)
+      throw new Error("Invalid report ID")
+    }
+    const res = await fetch(`${getApiUrl()}/admin/reports/${report.id}/download`, {
       headers: { Authorization: `Bearer ${auth.token}` }
     })
     if (!res.ok) throw new Error("Failed to download")
@@ -535,9 +547,10 @@ const downloadReport = async (filename) => {
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.setAttribute('download', filename)
+    link.setAttribute('download', `Report_${report.property_title || 'Transaction'}.pdf`)
     document.body.appendChild(link)
     link.click()
+    document.body.removeChild(link)
   } catch (e) {
     console.error("Failed to download report", e)
     alert.error("Download Failed", "Could not download report.")
