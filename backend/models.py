@@ -56,8 +56,6 @@ class Property(Base):
     
     # Size & Structure
     area = Column(Numeric(10, 2))
-    built_area = Column(Numeric(10, 2))
-    land_area = Column(Numeric(10, 2))
     bedrooms = Column(Integer, default=0)
     bathrooms = Column(Integer, default=0)
     kitchens = Column(Integer, default=0)
@@ -65,13 +63,6 @@ class Property(Base):
     floors = Column(Integer)
     floor_number = Column(Integer)
     
-    # Features (Legacy checkboxes, keeping for compatibility with existing UI)
-    has_garage = Column(Boolean, default=False)
-    has_garden = Column(Boolean, default=False)
-    has_pool = Column(Boolean, default=False)
-    has_elevator = Column(Boolean, default=False)
-    has_furnished = Column(Boolean, default=False)
-    has_balcony = Column(Boolean, default=False)
     
     # Location
     country = Column(String(100), nullable=False)
@@ -83,9 +74,6 @@ class Property(Base):
     latitude = Column(Numeric(10, 8))
     longitude = Column(Numeric(11, 8))
 
-    # Analytics
-    views_count = Column(Integer, default=0)
-    
     # System Fields
     is_featured = Column(Boolean, default=False)
     published_at = Column(TIMESTAMP)

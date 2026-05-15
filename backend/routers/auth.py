@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List
 import models, schemas, database, auth
 from services import email
+from repositories.user_repository import UserRepository
 
 router = APIRouter(
     tags=["Authentication"]
@@ -12,9 +13,10 @@ router = APIRouter(
 @router.post("/auth/register", response_model=schemas.User, status_code=status.HTTP_201_CREATED)
 def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
     """Creates a new user account."""
-    db_user = db.query(models.User).filter(models.User.email == user.email).first()
+    db_user = UserRepository.get_by_email(db, user.email)
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
+    
     hashed_pwd = auth.get_password_hash(user.password)
     new_user = models.User(
         email=user.email,
@@ -23,15 +25,12 @@ def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
         role=user.role,
         manager_id=user.manager_id
     )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return new_user
+    return UserRepository.create(db, new_user)
 
 @router.post("/auth/login", response_model=schemas.Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
     """Standard OAuth2 Login flow."""
-    user = db.query(models.User).filter(models.User.email == form_data.username).first()
+    user = UserRepository.get_by_email(db, form_data.username)
     if not user or not auth.verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -61,16 +60,22 @@ def update_profile(
     current_user: models.User = Depends(auth.get_current_user)
 ):
     """Updates profile info."""
-    if user_update.full_name: current_user.full_name = user_update.full_name
+    if user_update.full_name: 
+        current_user.full_name = user_update.full_name
     if user_update.email:
         if current_user.email != user_update.email:
-            existing = db.query(models.User).filter(models.User.email == user_update.email).first()
-            if existing: raise HTTPException(status_code=400, detail="Email already registered")
+            existing = UserRepository.get_by_email(db, user_update.email)
+            if existing: 
+                raise HTTPException(status_code=400, detail="Email already registered")
         current_user.email = user_update.email
-    if user_update.phone_number: current_user.phone_number = user_update.phone_number
-    if user_update.google_calendar_id: current_user.google_calendar_id = user_update.google_calendar_id
-    db.commit()
-    db.refresh(current_user)
+    
+    if user_update.phone_number: 
+        current_user.phone_number = user_update.phone_number
+    if user_update.google_calendar_id: 
+        current_user.google_calendar_id = user_update.google_calendar_id
+    
+    UserRepository.commit(db)
+    UserRepository.refresh(db, current_user)
     return current_user
 
 @router.put("/auth/password")
@@ -82,15 +87,18 @@ def update_password(
     """Updates password."""
     if not auth.verify_password(passwords.current_password, current_user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect current password")
+    
     current_user.hashed_password = auth.get_password_hash(passwords.new_password)
-    db.commit()
+    UserRepository.commit(db)
     return {"message": "Password updated successfully"}
 
 @router.get("/agents/{agent_id}/calendar")
 def get_agent_calendar(agent_id: int, db: Session = Depends(database.get_db)):
     """Returns agent calendar ID."""
-    agent = db.query(models.User).filter(models.User.id == agent_id, models.User.role == "agent").first()
-    if not agent: raise HTTPException(status_code=404, detail="Agent not found")
+    agent = UserRepository.get_agent_by_id(db, agent_id)
+    if not agent: 
+        raise HTTPException(status_code=404, detail="Agent not found")
+    
     return {
         "agent_id": agent.id,
         "full_name": agent.full_name,
@@ -105,8 +113,8 @@ def get_team_staff(
 ):
     """Returns sub-agents."""
     if current_user.role == "admin":
-        return db.query(models.User).filter(models.User.role == "agent").all()
-    return db.query(models.User).filter(models.User.manager_id == current_user.id, models.User.role == "agent").all()
+        return UserRepository.get_all_agents(db)
+    return UserRepository.get_team_staff(db, current_user.id)
 
 @router.patch("/agency/staff/{agent_id}/toggle-status")
 def toggle_sub_agent_status(
@@ -116,13 +124,15 @@ def toggle_sub_agent_status(
     current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
 ):
     """Toggles sub-agent status."""
-    agent = db.query(models.User).filter(models.User.id == agent_id).first()
-    if not agent: raise HTTPException(status_code=404, detail="Agent not found")
+    agent = UserRepository.get_by_id(db, agent_id)
+    if not agent: 
+        raise HTTPException(status_code=404, detail="Agent not found")
+    
     if current_user.role == "head_agent" and agent.manager_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
     
     agent.is_active = not agent.is_active
-    db.commit()
+    UserRepository.commit(db)
 
     # Send status update email
     if agent.email:
@@ -142,7 +152,7 @@ def get_all_users(
     current_user: models.User = Depends(auth.RoleChecker(["admin"]))
 ):
     """Admin view all staff users."""
-    return db.query(models.User).filter(models.User.role != "visitor").all()
+    return UserRepository.get_all_staff(db)
 
 @router.post("/admin/users", response_model=schemas.User, status_code=status.HTTP_201_CREATED)
 def create_user_admin(
@@ -151,8 +161,10 @@ def create_user_admin(
     current_user: models.User = Depends(auth.RoleChecker(["admin", "head_agent"]))
 ):
     """Create staff accounts."""
-    db_user = db.query(models.User).filter(models.User.email == user_in.email).first()
-    if db_user: raise HTTPException(status_code=400, detail="Email already registered")
+    db_user = UserRepository.get_by_email(db, user_in.email)
+    if db_user: 
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
     hashed_pwd = auth.get_password_hash(user_in.password)
     new_user = models.User(
         email=user_in.email,
@@ -162,10 +174,7 @@ def create_user_admin(
         phone_number=user_in.phone_number,
         manager_id=user_in.manager_id
     )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return new_user
+    return UserRepository.create(db, new_user)
 
 @router.patch("/admin/users/{user_id}/toggle-status")
 def toggle_user_status(
@@ -175,12 +184,14 @@ def toggle_user_status(
     current_user: models.User = Depends(auth.RoleChecker(["admin"]))
 ):
     """Toggle any user status."""
-    user = db.query(models.User).filter(models.User.id == user_id).first()
-    if not user: raise HTTPException(status_code=404, detail="User not found")
-    if user.id == current_user.id: raise HTTPException(status_code=400, detail="Cannot disable yourself")
+    user = UserRepository.get_by_id(db, user_id)
+    if not user: 
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.id == current_user.id: 
+        raise HTTPException(status_code=400, detail="Cannot disable yourself")
     
     user.is_active = not user.is_active
-    db.commit()
+    UserRepository.commit(db)
 
     # Send status update email
     if user.email:
@@ -200,4 +211,4 @@ def get_head_agents(
     current_user: models.User = Depends(auth.RoleChecker(["admin"]))
 ):
     """Returns all Head Agents."""
-    return db.query(models.User).filter(models.User.role == "head_agent").all()
+    return UserRepository.get_head_agents(db)

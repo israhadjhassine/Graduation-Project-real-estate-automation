@@ -26,6 +26,14 @@ export const usePropertyService = () => {
             return api.delete(`/properties/${id}`)
         },
 
+        async assignProperty(id: number | string, data: { agent_id: number | string }) {
+            return api.put(`/properties/${id}/assign`, data)
+        },
+
+        async requestTransaction(id: number | string, data: any) {
+            return api.post(`/properties/${id}/request-transaction`, data)
+        },
+
         async uploadImages(propertyId: number | string, files: File[]) {
             const formData = new FormData()
             files.forEach(file => {

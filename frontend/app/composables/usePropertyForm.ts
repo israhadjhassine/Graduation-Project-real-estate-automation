@@ -27,8 +27,6 @@ export const usePropertyForm = (editData: Ref<any> | any = null) => {
         neighborhood: '',
         address: '',
         postal_code: '',
-        built_area: 0,
-        land_area: 0,
         latitude: null as number | null,
         longitude: null as number | null,
         agent_id: null as number | null,
@@ -73,12 +71,20 @@ export const usePropertyForm = (editData: Ref<any> | any = null) => {
 
     const fetchDependencies = async (isAdmin: boolean, isHeadAgent: boolean) => {
         try {
-            const [staffRes, featuresRes] = await Promise.all([
-                propertyService.getStaff(),
+            const promises: Promise<any>[] = [
                 propertyService.getFeatures()
-            ])
-            staff.value = staffRes.data
-            availableFeatures.value = featuresRes.data
+            ]
+
+            if (isAdmin || isHeadAgent) {
+                promises.push(propertyService.getStaff())
+            }
+
+            const results = await Promise.all(promises)
+            availableFeatures.value = results[0].data
+
+            if (isAdmin || isHeadAgent) {
+                staff.value = results[1].data
+            }
 
             if (isAdmin) {
                 const headsRes = await propertyService.getHeads()

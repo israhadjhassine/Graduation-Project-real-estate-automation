@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 import models, database, auth
 from datetime import datetime, timedelta
+from repositories.analytics_repository import AnalyticsRepository
 
 router = APIRouter(
     prefix="/statistics",
@@ -14,28 +14,18 @@ def get_admin_statistics(db: Session = Depends(database.get_db), current_user: m
     auth.RoleChecker(["admin"])(current_user)
     
     # 1. Properties by Status
-    status_counts = db.query(models.Property.status, func.count(models.Property.id)).group_by(models.Property.status).all()
-    property_statuses = {row[0]: row[1] for row in status_counts}
+    property_statuses = AnalyticsRepository.get_property_status_counts(db)
     
-    # 2. Total properties value (Assuming only "sold" price matters)
-    total_sales_value = db.query(func.sum(models.Property.price)).filter(models.Property.status == 'sold').scalar() or 0
-    total_rent_value = db.query(func.sum(models.Property.price)).filter(models.Property.status == 'rented').scalar() or 0
+    # 2. Total properties value
+    total_sales_value = AnalyticsRepository.get_total_sales_value(db, 'sold')
+    total_rent_value = AnalyticsRepository.get_total_sales_value(db, 'rented')
 
     # 3. Top Agents by Sold Properties
-    top_agents = db.query(
-        models.User.full_name,
-        func.count(models.Property.id).label('sold_count')
-    ).join(models.Property, models.User.id == models.Property.agent_id)\
-    .filter(models.Property.status == 'sold')\
-    .group_by(models.User.id)\
-    .order_by(func.count(models.Property.id).desc())\
-    .limit(5).all()
-    
+    top_agents = AnalyticsRepository.get_top_agents(db)
     top_agents_data = [{"agent": row[0], "sold": row[1]} for row in top_agents]
     
     # 4. User Roles Breakdown
-    role_counts = db.query(models.User.role, func.count(models.User.id)).group_by(models.User.role).all()
-    user_roles = {row[0]: row[1] for row in role_counts}
+    user_roles = AnalyticsRepository.get_role_counts(db)
     
     return {
         "property_statuses": property_statuses,
@@ -56,20 +46,10 @@ def get_agency_statistics(db: Session = Depends(database.get_db), current_user: 
     team_ids = [a.id for a in team_agents] + [current_user.id]
 
     # 1. Team's properties by status
-    status_counts = db.query(models.Property.status, func.count(models.Property.id))\
-        .filter(models.Property.agent_id.in_(team_ids))\
-        .group_by(models.Property.status).all()
-    property_statuses = {row[0]: row[1] for row in status_counts}
+    property_statuses = AnalyticsRepository.get_property_status_counts(db, agent_ids=team_ids)
 
     # 2. Team Member Performance (Sold/Rented properties)
-    performance = db.query(
-        models.User.full_name,
-        func.count(models.Property.id).label('closed_deals')
-    ).join(models.Property, models.User.id == models.Property.agent_id)\
-    .filter(models.Property.agent_id.in_(team_ids))\
-    .filter(models.Property.status.in_(['sold', 'rented']))\
-    .group_by(models.User.id).all()
-    
+    performance = AnalyticsRepository.get_team_performance(db, team_ids)
     team_performance = [{"agent": row[0], "deals": row[1]} for row in performance]
     
     # Fill in agents with 0 deals
@@ -89,32 +69,14 @@ def get_agent_statistics(db: Session = Depends(database.get_db), current_user: m
     # Standard agent or head_agent
     
     # 1. My properties by status
-    status_counts = db.query(models.Property.status, func.count(models.Property.id))\
-        .filter(models.Property.agent_id == current_user.id)\
-        .group_by(models.Property.status).all()
-    property_statuses = {row[0]: row[1] for row in status_counts}
+    property_statuses = AnalyticsRepository.get_property_status_counts(db, agent_ids=[current_user.id])
     
     # 2. Visit conversions / statuses
-    visit_counts = db.query(models.Visit.status, func.count(models.Visit.id))\
-        .filter(models.Visit.agent_id == current_user.id)\
-        .group_by(models.Visit.status).all()
-    visit_statuses = {row[0]: row[1] for row in visit_counts}
+    visit_statuses = AnalyticsRepository.get_visit_status_counts(db, current_user.id)
     
-    # 3. Monthly Activity (last 6 months created_at visits)
+    # 3. Monthly Activity (last 6 months)
     six_months_ago = datetime.now() - timedelta(days=180)
-    monthly_visits = db.query(
-        func.date_trunc('month', models.Visit.visit_date).label('month'),
-        func.count(models.Visit.id)
-    ).filter(models.Visit.agent_id == current_user.id)\
-     .filter(models.Visit.visit_date >= six_months_ago)\
-     .group_by(func.date_trunc('month', models.Visit.visit_date))\
-     .order_by('month').all()
-     
-    # SQLite uses string for dates, postgres uses date_trunc. The easiest safe way is group_by month.
-    # To be fully safe across sqlite/postgres, we handle formatting in Python
-    visits_history = db.query(models.Visit.visit_date)\
-        .filter(models.Visit.agent_id == current_user.id)\
-        .filter(models.Visit.visit_date >= six_months_ago).all()
+    visits_history = AnalyticsRepository.get_visits_history(db, current_user.id, six_months_ago)
         
     monthly_counts = {}
     for (v_date,) in visits_history:

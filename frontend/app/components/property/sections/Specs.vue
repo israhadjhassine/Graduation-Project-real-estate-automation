@@ -15,14 +15,6 @@
       </div>
     </div>
     <div class="flex items-center gap-4 bg-primary-50/50 p-4 rounded-3xl border border-primary-100/50">
-      <LucideMaximize class="w-6 h-6 text-primary-300" />
-      <div class="flex-1">
-        <p class="text-[10px] uppercase font-bold text-primary-300">Land Area</p>
-        <input v-model="form.land_area" type="number" :disabled="readOnly" class="bg-transparent border-none p-0 focus:ring-0 text-xl font-bold w-full" />
-      </div>
-    </div>
-    
-    <div class="flex items-center gap-4 bg-primary-50/50 p-4 rounded-3xl border border-primary-100/50">
       <LucideChefHat class="w-6 h-6 text-primary-300" />
       <div class="flex-1">
         <p class="text-[10px] uppercase font-bold text-primary-300">Kitchens</p>
@@ -53,7 +45,7 @@
 
 <script setup>
 import { 
-  LucideBedDouble, LucideBath, LucideMaximize, 
+  LucideBedDouble, LucideBath, 
   LucideChefHat, LucideLayout, LucideLayers 
 } from 'lucide-vue-next'
 

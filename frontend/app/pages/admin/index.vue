@@ -340,7 +340,7 @@
         </button>
         <h2 class="text-2xl font-bold text-primary-950 mb-6">Create Staff Account</h2>
         
-        <form @submit.prevent="createUser" class="space-y-4">
+        <form @submit.prevent="handleCreateUser" class="space-y-4">
           <div>
             <label class="block text-sm font-bold text-primary-950 mb-2">Full Name</label>
             <input v-model="userForm.full_name" type="text" required class="w-full bg-primary-50 border border-primary-200 rounded-xl px-4 py-3 outline-none focus:border-accent-500" placeholder="John Doe" />
@@ -397,107 +397,30 @@ import {
   LucideSearch, LucideFilter, LucideUserCheck, LucideMapPin
 } from 'lucide-vue-next'
 
-
 import { useAuthStore } from '~/stores/auth'
-import { useAlert } from '~/composables/useAlert'
-import axios from 'axios'
+import { useAdminDashboard } from '~/composables/useAdminDashboard'
 
 definePageMeta({ layout: 'dashboard' })
 
 const auth = useAuthStore()
-const alert = useAlert()
+
+// Domain Composable Orchestration
+const {
+  users, properties, reports, statistics,
+  loading, statsLoading,
+  userSearchQuery, userRoleFilter, userStatusFilter,
+  propSearchQuery, propLocationQuery,
+  filteredUsers, filteredProperties,
+  userRolesChartData, topAgentsChartData, propertyStatusChartData,
+  headAgents,
+  fetchData, createUser, toggleUserStatus, downloadReport
+} = useAdminDashboard()
+
+// UI State
 const activeTab = ref('users')
-const loading = ref(false)
-
-const users = ref([])
-const properties = ref([])
-const reports = ref([])
-const statistics = ref(null)
-
-// Filters State
-const userSearchQuery = ref('')
-const userRoleFilter = ref('all')
-const userStatusFilter = ref('all')
-
-const propSearchQuery = ref('')
-const propLocationQuery = ref('')
-const statsLoading = ref(false)
-
-const filteredUsers = computed(() => {
-  return users.value.filter(u => {
-    const matchesSearch = !userSearchQuery.value || 
-      u.full_name.toLowerCase().includes(userSearchQuery.value.toLowerCase())
-    
-    const matchesRole = userRoleFilter.value === 'all' || u.role === userRoleFilter.value
-    
-    const matchesStatus = userStatusFilter.value === 'all' || 
-      (userStatusFilter.value === 'active' ? u.is_active : !u.is_active)
-      
-    const isStaff = u.role !== 'visitor'
-      
-    return matchesSearch && matchesRole && matchesStatus && isStaff
-  })
-})
-
-const filteredProperties = computed(() => {
-  return properties.value.filter(p => {
-    const matchesSearch = !propSearchQuery.value || 
-      p.title.toLowerCase().includes(propSearchQuery.value.toLowerCase())
-    
-    const matchesLocation = !propLocationQuery.value || 
-      p.city?.toLowerCase().includes(propLocationQuery.value.toLowerCase())
-      
-    return matchesSearch && matchesLocation
-  })
-})
-
-const userRolesChartData = computed(() => {
-  if (!statistics.value || !statistics.value.user_roles) return null
-  const data = statistics.value.user_roles
-  return {
-    labels: Object.keys(data).map(k => k.replace('_', ' ').toUpperCase()),
-    datasets: [{
-      data: Object.values(data),
-      backgroundColor: ['#6366f1', '#a855f7', '#ec4899', '#14b8a6', '#f59e0b'],
-      borderWidth: 0,
-      hoverOffset: 10
-    }]
-  }
-})
-
-const topAgentsChartData = computed(() => {
-  if (!statistics.value || !statistics.value.top_agents) return null
-  const data = statistics.value.top_agents
-  return {
-    labels: data.map(d => d.agent),
-    datasets: [{
-      label: 'Sold Properties',
-      data: data.map(d => d.sold),
-      backgroundColor: '#f43f5e',
-      borderRadius: 6
-    }]
-  }
-})
-
-const propertyStatusChartData = computed(() => {
-  if (!statistics.value || !statistics.value.property_statuses) return null
-  const data = statistics.value.property_statuses
-  return {
-    labels: Object.keys(data).map(k => k.replace('_', ' ').toUpperCase()),
-    datasets: [{
-      data: Object.values(data),
-      backgroundColor: ['#3b82f6', '#22c55e', '#ef4444', '#f59e0b', '#8b5cf6'],
-      borderWidth: 0,
-      hoverOffset: 10
-    }]
-  }
-})
-
-const headAgents = computed(() => users.value.filter(u => u.role === 'head_agent'))
 
 const showUserModal = ref(false)
 const userError = ref('')
-
 const userForm = ref({ 
   full_name: '', email: '', password: '', 
   role: 'head_agent', manager_id: '', phone_number: '' 
@@ -506,65 +429,14 @@ const userForm = ref({
 const showPropertyModal = ref(false)
 const selectedProperty = ref(null)
 
-// Config
-const config = useRuntimeConfig()
-const getApiUrl = () => {
-    let url = config.public.apiUrl
-    if (process.client && url.includes('backend')) {
-        url = 'http://localhost:8000'
-    }
-    return url
-}
-
-const fetchData = async () => {
-  try {
-const [...responses] = await Promise.all([
-      axios.get(`${getApiUrl()}/admin/users`, { headers: { Authorization: `Bearer ${auth.token}` } }),
-      axios.get(`${getApiUrl()}/properties`, { headers: { Authorization: `Bearer ${auth.token}` } }),
-      axios.get(`${getApiUrl()}/admin/reports`, { headers: { Authorization: `Bearer ${auth.token}` } }),
-      axios.get(`${getApiUrl()}/statistics/admin`, { headers: { Authorization: `Bearer ${auth.token}` } })
-    ])
-    users.value = responses[0].data || []
-    properties.value = responses[1].data || []
-    reports.value = responses[2].data || []
-    statistics.value = responses[3].data || null
-  } catch (e) {
-    console.error("Failed to load admin data", e)
-  }
-}
-
-const downloadReport = async (report) => {
-  try {
-    if (!report.id) {
-      console.error("Report ID is missing", report)
-      throw new Error("Invalid report ID")
-    }
-    const res = await fetch(`${getApiUrl()}/admin/reports/${report.id}/download`, {
-      headers: { Authorization: `Bearer ${auth.token}` }
-    })
-    if (!res.ok) throw new Error("Failed to download")
-    const blob = await res.blob()
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', `Report_${report.property_title || 'Transaction'}.pdf`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  } catch (e) {
-    console.error("Failed to download report", e)
-    alert.error("Download Failed", "Could not download report.")
-  }
-}
-
 const formatPrice = (price) => {
   return new Intl.NumberFormat('fr-TN').format(price || 0)
 }
 
-const createUser = async () => {
-  loading.value = true
+// UI Handlers
+const handleCreateUser = async () => {
   userError.value = ''
-
+  
   // Format payload
   const payload = { ...userForm.value }
   if (!payload.manager_id || payload.role !== 'agent') {
@@ -574,27 +446,11 @@ const createUser = async () => {
   }
 
   try {
-    await axios.post(`${getApiUrl()}/admin/users`, payload, {
-      headers: { Authorization: `Bearer ${auth.token}` }
-    })
+    await createUser(payload)
     showUserModal.value = false
     userForm.value = { full_name: '', email: '', password: '', role: 'head_agent', manager_id: '', phone_number: '' }
-    fetchData()
   } catch (e) {
-    userError.value = e.response?.data?.detail || "Failed to create user"
-  } finally {
-    loading.value = false
-  }
-}
-const toggleUserStatus = async (userId) => {
-  try {
-    await axios.patch(`${getApiUrl()}/admin/users/${userId}/toggle-status`, {}, {
-      headers: { Authorization: `Bearer ${auth.token}` }
-    })
-    fetchData()
-  } catch (e) {
-    console.error("Failed to toggle user status", e)
-    alert.error("Status Update Failed", e.response?.data?.detail || "Failed to update account status")
+    userError.value = e.message || "Failed to create user"
   }
 }
 

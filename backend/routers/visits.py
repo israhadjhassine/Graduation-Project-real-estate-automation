@@ -1,8 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
 from typing import List
 import models, schemas, database, auth
+from repositories.visit_repository import VisitRepository
+from repositories.inquiry_repository import InquiryRepository
+from repositories.property_repository import PropertyRepository
 
 router = APIRouter(
     tags=["Visits & Scheduling"]
@@ -26,10 +29,7 @@ def book_visit(
         status="scheduled",
         reminder_sent=False
     )
-    db.add(new_visit)
-    db.commit()
-    db.refresh(new_visit)
-    return new_visit
+    return VisitRepository.save(db, new_visit)
 
 @router.get("/visits/upcoming", response_model=List[schemas.VisitResponse])
 def get_upcoming_visits(
@@ -40,12 +40,7 @@ def get_upcoming_visits(
     window_start = now
     window_end = now + timedelta(minutes=60)
     
-    return db.query(models.Visit).filter(
-        models.Visit.status == 'scheduled',
-        models.Visit.reminder_sent == False,
-        models.Visit.visit_date >= window_start,
-        models.Visit.visit_date <= window_end
-    ).all()
+    return VisitRepository.get_upcoming(db, window_start, window_end)
 
 @router.put("/visits/{visit_id}/reminder-sent")
 def mark_reminder_sent(
@@ -53,11 +48,11 @@ def mark_reminder_sent(
     db: Session = Depends(database.get_db)
 ):
     """Marks a visit as notified."""
-    visit = db.query(models.Visit).filter(models.Visit.id == visit_id).first()
+    visit = VisitRepository.get_by_id(db, visit_id)
     if not visit:
         raise HTTPException(status_code=404, detail="Visit not found")
     visit.reminder_sent = True
-    db.commit()
+    VisitRepository.commit(db)
     return {"message": "Reminder marked as sent"}
 
 @router.get("/agent/inquiries")
@@ -67,29 +62,20 @@ def get_agent_inquiries(
 ):
     """
     Returns pending transaction requests for approval.
-    - Admins: See all pending requests.
-    - Head Agents: See requests for their properties OR from their team.
-    - Agents: See only their own submitted requests.
     """
-    query = db.query(models.TransactionRequest).options(
-        joinedload(models.TransactionRequest.property),
-        joinedload(models.TransactionRequest.agent),
-        joinedload(models.TransactionRequest.client)
-    ).filter(models.TransactionRequest.status == "pending")
+    sub_agent_ids = None
+    owner_id = None
+    agent_id = None
 
-    if current_user.role == "head_agent":
-        # Get IDs of sub-agents managed by this head agent
+    if current_user.role == "admin":
+        pass # All
+    elif current_user.role == "head_agent":
+        owner_id = current_user.id
         sub_agent_ids = [u.id for u in db.query(models.User.id).filter(models.User.manager_id == current_user.id).all()]
-        
-        # Explicitly join on the relationship to avoid any ambiguity
-        query = query.join(models.TransactionRequest.property).filter(
-            (models.Property.owner_id == current_user.id) | 
-            (models.TransactionRequest.agent_id.in_(sub_agent_ids))
-        )
-    elif current_user.role == "agent":
-        query = query.filter(models.TransactionRequest.agent_id == current_user.id)
-    
-    requests = query.order_by(models.TransactionRequest.created_at.desc()).all()
+    else:
+        agent_id = current_user.id
+
+    requests = InquiryRepository.get_pending_detailed(db, agent_id=agent_id, sub_agent_ids=sub_agent_ids, owner_id=owner_id)
 
     result = []
     for r in requests:
@@ -129,17 +115,13 @@ def update_inquiry_status(
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.RoleChecker(["head_agent", "admin"]))
 ):
-    """
-    Handles Approval/Rejection of a TransactionRequest.
-    - status 'replied' -> Approved
-    - status 'closed' -> Rejected
-    """
-    req = db.query(models.TransactionRequest).filter(models.TransactionRequest.id == inquiry_id).first()
+    """Handles Approval/Rejection of a TransactionRequest."""
+    req = InquiryRepository.get_by_id(db, inquiry_id)
     if not req:
         raise HTTPException(status_code=404, detail="Transaction request not found")
     
     # Check if user is authorized to approve/reject
-    prop = db.query(models.Property).filter(models.Property.id == req.property_id).first()
+    prop = PropertyRepository.get_by_id(db, req.property_id)
     requester = db.query(models.User).filter(models.User.id == req.agent_id).first()
     
     is_admin = current_user.role == "admin"
@@ -151,24 +133,20 @@ def update_inquiry_status(
 
     if status == "replied": # APPROVE
         req.status = "approved"
-        
-        # Finalize Property
         prop.status = "sold" if req.type == "Sale" else "rented"
         prop.buyer_id = req.client_id
         if req.type == "Rent":
             prop.rent_start_date = req.rent_start_date
             prop.rent_end_date = req.rent_end_date
         
-        # Generate Report
         finalize_transaction(db, prop, req.type, background_tasks)
-        db.commit()
+        InquiryRepository.commit(db)
         return {"message": "Request approved and transaction finalized."}
     
     elif status == "closed": # REJECT
         req.status = "rejected"
-        # Revert property status back to available
         prop.status = "available"
-        db.commit()
+        InquiryRepository.commit(db)
         return {"message": "Request rejected and property marked available again."}
     
     else:
@@ -181,25 +159,13 @@ def get_agent_visits_list(
 ):
     """Simple list of visits for the current agent."""
     if current_user.role == "admin":
-        return db.query(models.Visit).options(
-            joinedload(models.Visit.property),
-            joinedload(models.Visit.client),
-            joinedload(models.Visit.agent)
-        ).all()
+        return VisitRepository.get_all_detailed(db)
     elif current_user.role == "head_agent":
         managed_user_ids_query = db.query(models.User.id).filter(models.User.manager_id == current_user.id).all()
         allowed_agent_ids = [current_user.id] + [uid[0] for uid in managed_user_ids_query]
-        return db.query(models.Visit).options(
-            joinedload(models.Visit.property),
-            joinedload(models.Visit.client),
-            joinedload(models.Visit.agent)
-        ).filter(models.Visit.agent_id.in_(allowed_agent_ids)).order_by(models.Visit.visit_date.asc()).all()
+        return VisitRepository.get_all_detailed(db, agent_ids=allowed_agent_ids)
     
-    return db.query(models.Visit).options(
-        joinedload(models.Visit.property),
-        joinedload(models.Visit.client),
-        joinedload(models.Visit.agent)
-    ).filter(models.Visit.agent_id == current_user.id).order_by(models.Visit.visit_date.asc()).all()
+    return VisitRepository.get_all_detailed(db, agent_ids=[current_user.id])
 
 @router.put("/agent/visits/{visit_id}/status")
 def update_visit_status(
@@ -209,7 +175,7 @@ def update_visit_status(
     current_user: models.User = Depends(auth.RoleChecker(["agent", "head_agent", "admin"]))
 ):
     """Updates a visit status."""
-    vis = db.query(models.Visit).options(joinedload(models.Visit.property).joinedload(models.Property.owner)).filter(models.Visit.id == visit_id).first()
+    vis = VisitRepository.get_with_property_and_owner(db, visit_id)
     if not vis:
         raise HTTPException(status_code=404, detail="Visit not found")
         
@@ -223,7 +189,7 @@ def update_visit_status(
         raise HTTPException(status_code=403, detail="Not authorized to update this visit")
 
     vis.status = status
-    db.commit()
+    VisitRepository.commit(db)
     return {"message": "Visit status updated"}
 
 @router.get("/agency/clients", response_model=List[schemas.User])
@@ -232,4 +198,4 @@ def get_clients_list(
     current_user: models.User = Depends(auth.RoleChecker(["agent", "head_agent", "admin"]))
 ):
     """Returns all registered clients."""
-    return db.query(models.User).filter(models.User.role == "client").all()
+    return VisitRepository.list_clients(db)

@@ -62,10 +62,6 @@
       </div>
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-xs font-bold text-primary-400 uppercase tracking-widest mb-3">Built Area (m²)</label>
-          <input v-model="form.built_area" type="number" :disabled="readOnly" class="form-input" />
-        </div>
-        <div>
           <label class="block text-xs font-bold text-primary-400 uppercase tracking-widest mb-3">Postal Code</label>
           <input v-model="form.postal_code" type="text" :disabled="readOnly" placeholder="2070" class="form-input" />
         </div>
