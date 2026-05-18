@@ -4,6 +4,22 @@
       <!-- Head Agent Header -->
       <AgencyHeader @list-new="showModal = true" />
 
+      <!-- Calendar Alert if not configured -->
+      <div v-if="auth.user && !auth.user.google_calendar_id" class="mb-8 p-6 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm animate-pulse">
+        <div class="flex items-start gap-4">
+          <div class="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center text-white shrink-0">
+            <LucideCalendarOff class="w-6 h-6" />
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-amber-950">Google Calendar Not Connected</h3>
+            <p class="text-xs text-amber-600 mt-1">Please provide your Google Calendar ID so the AI Smart Agent can schedule visits on your behalf.</p>
+          </div>
+        </div>
+        <NuxtLink to="/dashboard/profile" class="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-black rounded-xl text-xs font-bold transition-all shadow-md shadow-amber-600/10 text-center shrink-0">
+          Connect Calendar
+        </NuxtLink>
+      </div>
+
       <!-- Quick Stats -->
       <AgencyStats :properties-count="properties.length" :staff-count="staff.length" />
 
@@ -116,7 +132,7 @@ import {
   LucidePlus, LucideImage, LucideEdit, LucideTrash2,
   LucideUserPlus, LucideX, LucideCheckCircle2,
   LucideMessageSquare, LucideFileText, LucideDownload, LucidePieChart,
-  LucideCalendar
+  LucideCalendar, LucideCalendarOff
 } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/auth'
 import { useAssetUrl } from '~/composables/useAssetUrl'

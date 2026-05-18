@@ -1,18 +1,38 @@
 <template>
-  <div class="card-premium p-0 overflow-hidden">
-    <table class="w-full text-left">
-      <thead>
-        <tr class="bg-primary-50">
-          <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Property</th>
-          <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Status</th>
-          <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Head Agent</th>
-          <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Assigned Agent</th>
-          <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Price</th>
-          <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Actions</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-primary-50">
-        <tr v-for="prop in properties" :key="prop.id" @click="$emit('view-property', prop)" class="hover:bg-primary-50/50 transition-colors cursor-pointer group">
+  <div class="space-y-4">
+    <!-- Filters Bar -->
+    <div class="flex justify-end">
+      <div class="relative w-full md:w-64">
+        <LucideFilter class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
+        <select 
+          v-model="statusFilter"
+          class="w-full pl-11 pr-4 py-2.5 bg-white border border-primary-100 rounded-2xl text-xs focus:ring-2 focus:ring-primary-900/10 focus:border-primary-900 outline-none transition-all font-medium text-primary-950 shadow-sm appearance-none cursor-pointer"
+        >
+          <option value="all">All Statuses</option>
+          <option value="available">Available</option>
+          <option value="pending_sold">Pending Sale</option>
+          <option value="pending_rent">Pending Rent</option>
+          <option value="sold">Sold</option>
+          <option value="rented">Currently Rented</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Table Container -->
+    <div class="card-premium p-0 overflow-hidden">
+      <table class="w-full text-left">
+        <thead>
+          <tr class="bg-primary-50">
+            <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Property</th>
+            <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Status</th>
+            <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Head Agent</th>
+            <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Assigned Agent</th>
+            <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Price</th>
+            <th class="px-6 py-4 text-[10px] font-bold text-primary-400 uppercase tracking-widest">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-primary-50">
+          <tr v-for="prop in filteredProperties" :key="prop.id" @click="$emit('view-property', prop)" class="hover:bg-primary-50/50 transition-colors cursor-pointer group">
           <td class="px-6 py-4">
             <div class="flex items-center gap-4">
                <div class="w-12 h-12 rounded-xl overflow-hidden bg-primary-100 flex-shrink-0">
@@ -80,25 +100,27 @@
               </div>
           </td>
         </tr>
-        <tr v-if="!properties.length">
+        <tr v-if="!filteredProperties.length">
           <td colspan="6" class="px-6 py-12 text-center text-primary-500">
             <LucideHome class="w-12 h-12 mx-auto text-primary-200 mb-3" />
-            <p>No properties found for this manager.</p>
+            <p>No matching properties found.</p>
           </td>
         </tr>
       </tbody>
     </table>
   </div>
+</div>
 </template>
 
 <script setup lang="ts">
+import { ref, computed } from 'vue'
 import { 
   LucideImage, LucideEdit, LucideTrash2, 
-  LucideEye, LucideHome 
+  LucideEye, LucideHome, LucideFilter
 } from 'lucide-vue-next'
 import { useAssetUrl } from '~/composables/useAssetUrl'
 
-defineProps<{
+const props = defineProps<{
   properties: any[]
   staff: any[]
   currentUserId: number | undefined
@@ -113,6 +135,15 @@ defineEmits([
 ])
 
 const { getPublicUrl } = useAssetUrl()
+
+const statusFilter = ref('all')
+
+const filteredProperties = computed(() => {
+  return props.properties.filter(prop => {
+    if (statusFilter.value === 'all') return true
+    return prop.status === statusFilter.value
+  })
+})
 
 const formatPrice = (price: number) => {
   return new Intl.NumberFormat('fr-TN').format(price)

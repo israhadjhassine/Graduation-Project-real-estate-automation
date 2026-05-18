@@ -20,7 +20,7 @@
    - 6.1 [Backend — FastAPI Service Layer](#61-backend--fastapi-service-layer)
    - 6.2 [Database Design — PostgreSQL + pgvector](#62-database-design--postgresql--pgvector)
    - 6.3 [AI & Semantic Search Pipeline](#63-ai--semantic-search-pipeline)
-   - 6.4 [Frontend — Nuxt 3 Web Application](#64-frontend--nuxt-3-web-application)
+   - 6.4 [Frontend — Nuxt 4 Web Application](#64-frontend--nuxt-4-web-application)
    - 6.5 [Automation Layer — n8n Workflows](#65-automation-layer--n8n-workflows)
    - 6.6 [Cloud Image Management — ImageKit](#66-cloud-image-management--imagekit)
    - 6.7 [DevOps — Docker Containerization](#67-devops--docker-containerization)
@@ -70,7 +70,7 @@ The project was designed to solve each of these problems through a single, unifi
 | 4 | Real-time client engagement via messaging apps | Telegram bot with AI agent (RAG) |
 | 5 | Calendar synchronization for agent availability | Google Calendar OAuth2 integration via n8n |
 | 6 | Transaction tracking and report generation | Automated email reports and approval workflow |
-| 7 | Role-based multi-stakeholder platform | 4-role RBAC: Admin, Head Agent, Sub-Agent, Visitor |
+| 7 | Role-based multi-stakeholder platform | 4-role RBAC: Admin, Head Agent, Sub-Agent, Client (with anonymous Visitor) |
 
 ---
 
@@ -91,7 +91,7 @@ Phase 3: Backend API Development
   → FastAPI routers, RBAC, property CRUD, semantic search
 
 Phase 4: Frontend Development
-  → Nuxt 3 UI, role-based dashboards, component library
+  → Nuxt 4 UI, role-based dashboards, component library
 
 Phase 5: AI & Automation Integration
   → Gemini embeddings, RAG pipeline, n8n workflows
@@ -135,12 +135,12 @@ The critical decision was to use **pgvector** — an open-source PostgreSQL exte
 - Cosine similarity search (`<=>` operator) is used to find semantically similar properties.
 - The embedding dimension is **768**, matching the `nomic-embed-text` model used via Ollama.
 
-### 4.3 Frontend Framework: Nuxt 3 (Vue.js)
+### 4.3 Frontend Framework: Nuxt 4 (Vue.js)
 
-**Chosen over**: Next.js (React), plain Vue.js SPA, Angular.
+Chosen over: Next.js (React), plain Vue.js SPA, Angular.
 
-- **Server-Side Rendering (SSR)** is critical for a real estate platform, as SEO drives organic traffic to property listings.
-- **File-system routing** in Nuxt 3 maps directly to the application's URL structure.
+- Server-Side Rendering (SSR) is critical for a real estate platform, as SEO drives organic traffic to property listings.
+- File-system routing in Nuxt 4 maps directly to the application's URL structure.
 - **Pinia** state management provides a clean, type-safe global store for authentication state.
 - **TailwindCSS** enables rapid development of a premium, responsive UI system.
 
@@ -175,7 +175,7 @@ The platform follows a **Containerized Micro-Architecture** pattern. All service
 │                    Docker Network (Bridge)                  │
 │                                                            │
 │  ┌──────────┐    ┌──────────────┐    ┌─────────────────┐  │
-│  │  Nuxt 3  │───▶│   FastAPI    │───▶│  PostgreSQL      │  │
+│  │  Nuxt 4  │───▶│   FastAPI    │───▶│  PostgreSQL      │  │
 │  │ Frontend │    │   Backend    │    │  + pgvector      │  │
 │  │ :3000    │    │   :8000      │    │  :5432           │  │
 │  └──────────┘    └──────┬───────┘    └─────────────────┘  │
@@ -203,7 +203,7 @@ The platform follows a **Containerized Micro-Architecture** pattern. All service
 
 | Service | Container Name | Technology | Exposed Port |
 |---|---|---|---|
-| `frontend` | `nuxt_ui` | Nuxt 3 / Vue 3 / TypeScript | 3000 |
+| `frontend` | `nuxt_ui` | Nuxt 4 / Vue 3 / TypeScript | 3000 |
 | `backend` | `FastAPI_backend` | FastAPI / Python 3.11 | 8000 |
 | `postgres` | `real_estate_db` | PostgreSQL 16 + pgvector | 5432 |
 | `n8n` | `n8n_automation` | n8n self-hosted | 5678 |
@@ -240,7 +240,7 @@ The four defined roles and their permissions:
 
 | Role | Permissions |
 |---|---|
-| `visitor` | Browse properties, use AI search, book visits |
+| `client` | Browse properties, semantic AI search, personal profile, book visits |
 | `sub_agent` | Manage assigned visits and inquiries |
 | `head_agent` | Create/edit listings, manage sub-agents, approve transactions |
 | `admin` | Full platform access, user management, statistics |
@@ -348,9 +348,9 @@ The critical RAG constraint — "answer *only* from this context" — prevents t
 
 ---
 
-### 6.4 Frontend — Nuxt 3 Web Application
+### 6.4 Frontend — Nuxt 4 Web Application
 
-The frontend was built as a multi-role, premium-design web application using **Nuxt 3** with **TypeScript** and **TailwindCSS**.
+The frontend was built as a multi-role, premium-design web application using **Nuxt 4** with **TypeScript** and **TailwindCSS**.
 
 #### 6.4.1 Page Architecture
 
@@ -545,7 +545,7 @@ All planned features from the initial project checklist were successfully implem
 | Module | Status | Notes |
 |---|---|---|
 | JWT Authentication & User Registration | Complete | pbkdf2_sha256 hashing, 60-min token expiry |
-| RBAC (4 roles) | Complete | `RoleChecker` dependency enforced on all protected routes |
+| RBAC (4 registered roles) | Complete | `RoleChecker` dependency enforced on all protected routes |
 | Property CRUD with Multi-Image Upload | Complete | ImageKit CDN integration, batch upload endpoint |
 | AI Semantic Search (pgvector) | Complete | 768-dim cosine similarity search via Ollama |
 | RAG Property Q&A Assistant | Complete | Gemini 1.5 Pro, property-scoped context |
@@ -576,15 +576,235 @@ All planned features from the initial project checklist were successfully implem
 
 ## 9. UML Documentation
 
-### 9.1 Key User Roles (Use Case Summary)
+### 9.1 Complete UML Use Case Subsystems
 
-| Actor | Primary Use Cases |
-|---|---|
-| **Visitor** | Browse properties, use AI semantic search, view property on map, ask AI assistant, inquire via Telegram |
-| **Sub-Agent** | Manage visit requests, confirm visits, update client inquiry status |
-| **Head Agent** | Create/edit property listings, upload images, manage sub-agents, approve transactions |
-| **Administrator** | Manage all users, view platform statistics, access all properties |
-| **Telegram Bot** | Search properties, schedule visits, send reminders (automated actor) |
+To model the Elite Estate platform from a pure user interaction and business perspective, the use cases are structured into six distinct, modular subsystem diagrams. This ensures absolute clarity, clean rendering, and proper academic validation.
+
+#### 9.1.1 Actor Hierarchy and Generalization
+
+The system features five primary human actors. To maintain a clean and standardized model, two inheritance relationships are defined:
+1.  **Visitor <|-- Client**: The registered `Client` inherits all public capabilities of the guest `Visitor` (browsing, maps, basic searches, registration) and unlocks personalized features (AI semantic search, scheduling, Telegram interactions).
+2.  **Agent <|-- Head Agent**: The `Head Agent` inherits all listing agent duties (viewing schedules, updating visit status, requesting transactions) and extends them to agency management (creating listings, assigning staff, approving transactions).
+
+#### 9.1.2 UML Relationship Rules
+
+*   **`<<include>>` (Mandatory Subflows)**: Used where a parent use case strictly requires the execution of a child use case (e.g., `Login` always includes `JWT Authentication` and `Role Authorization`; `Create Property` always includes `Upload Images` and `Add Features`).
+*   **`<<extend>>` (Optional/Conditional Flows)**: Used where a child use case extends the behavior of a parent use case under specific conditions (e.g., `Update Visit Status` is extended by `Cancel Visit` or `Complete Visit`).
+
+---
+
+#### 9.1.3 Diagram 1: Global System Overview
+Provides a high-level overview of the platform's major subsystem domains and entry points for each actor.
+
+```mermaid
+graph TD
+    Visitor((Visitor))
+    Client((Client))
+    Agent((Agent))
+    HeadAgent((Head Agent))
+    Admin((Admin))
+
+    Client --|> Visitor
+    HeadAgent --|> Agent
+
+    subgraph Elite Estate Platform
+        Auth[("Authentication & Authorization Subsystem")]
+        Prop[("Property Management Subsystem")]
+        Visit[("Visit Management Subsystem")]
+        Trans[("Transaction Subsystem")]
+        AdminSub[("Analytics & Administration Subsystem")]
+    end
+
+    Visitor --> Auth
+    Visitor --> Prop
+    Client --> Visit
+    Agent --> Visit
+    Agent --> Trans
+    HeadAgent --> Prop
+    HeadAgent --> AdminSub
+    Admin --> AdminSub
+    Admin --> Prop
+```
+
+---
+
+#### 9.1.4 Diagram 2: Authentication & Authorization
+Models secure onboarding, authentication, session termination, and mandatory security checks.
+
+```mermaid
+graph TB
+    Visitor((Visitor))
+    Client((Client))
+    Agent((Agent))
+    HeadAgent((Head Agent))
+    Admin((Admin))
+
+    Client --|> Visitor
+    HeadAgent --|> Agent
+
+    subgraph Authentication & Authorization
+        UC_Reg(["Register Account"])
+        UC_Login(["Login to Platform"])
+        UC_Logout(["Logout"])
+        UC_JWT(["JWT Authentication"])
+        UC_AuthZ(["Role Authorization"])
+    end
+
+    Visitor --> UC_Reg
+    Visitor --> UC_Login
+    Client --> UC_Logout
+    Agent --> UC_Logout
+    Admin --> UC_Logout
+
+    UC_Login -. "<<include>>" .-> UC_JWT
+    UC_Login -. "<<include>>" .-> UC_AuthZ
+```
+
+---
+
+#### 9.1.5 Diagram 3: Property Management
+Models listings, search capabilities, semantic lookups, and asset management.
+
+```mermaid
+graph TB
+    Visitor((Visitor))
+    Client((Client))
+    Agent((Agent))
+    HeadAgent((Head Agent))
+    Admin((Admin))
+
+    Client --|> Visitor
+    HeadAgent --|> Agent
+
+    subgraph Property Management Subsystem
+        UC_Browse(["Browse listings"])
+        UC_Search(["Search properties"])
+        UC_Semantic(["Semantic natural-language search"])
+        UC_Details(["View property details & map"])
+        UC_Create(["Create property listing"])
+        UC_Edit(["Edit property listing"])
+        UC_Delete(["Delete property listing"])
+        UC_Assign(["Assign property to Agent"])
+        UC_Upload(["Upload property images"])
+        UC_Features(["Add amenities / features"])
+    end
+
+    Visitor --> UC_Browse
+    Visitor --> UC_Search
+    Visitor --> UC_Details
+    Client --> UC_Semantic
+    Agent --> UC_Details
+    HeadAgent --> UC_Create
+    HeadAgent --> UC_Edit
+    HeadAgent --> UC_Delete
+    HeadAgent --> UC_Assign
+    Admin --> UC_Browse
+    Admin --> UC_Details
+    Admin --> UC_Delete
+
+    UC_Create -. "<<include>>" .-> UC_Upload
+    UC_Create -. "<<include>>" .-> UC_Features
+    UC_Search -. "<<extend>>" .-> UC_Semantic
+```
+
+---
+
+#### 9.1.6 Diagram 4: Visit Management
+Outlines schedule viewing, booking appointments, status updates, and reminder dispatches.
+
+```mermaid
+graph TB
+    Client((Client))
+    Agent((Agent))
+    HeadAgent((Head Agent))
+
+    HeadAgent --|> Agent
+
+    subgraph Visit Management Subsystem
+        UC_Schedule(["Schedule Visit"])
+        UC_ViewSchedule(["View Visit Schedule"])
+        UC_UpdateStatus(["Update Visit Status"])
+        UC_Cancel(["Cancel Visit"])
+        UC_Complete(["Complete Visit"])
+        UC_Reminder(["Send Visit Reminder"])
+    end
+
+    Client --> UC_Schedule
+    Client --> UC_ViewSchedule
+    Agent --> UC_ViewSchedule
+    Agent --> UC_UpdateStatus
+
+    UC_UpdateStatus -. "<<extend>>" .-> UC_Cancel
+    UC_UpdateStatus -. "<<extend>>" .-> UC_Complete
+    UC_Schedule -. "<<include>>" .-> UC_Reminder
+```
+
+---
+
+#### 9.1.7 Diagram 5: Transaction System
+Tracks transaction requests, manager approval/rejection flows, and PDF report compilation.
+
+```mermaid
+graph TB
+    Client((Client))
+    Agent((Agent))
+    HeadAgent((Head Agent))
+    Admin((Admin))
+
+    HeadAgent --|> Agent
+
+    subgraph Transaction Subsystem
+        UC_ReqSale(["Request Sale"])
+        UC_ReqRent(["Request Rent"])
+        UC_Approve(["Approve Transaction"])
+        UC_Reject(["Reject Transaction"])
+        UC_GenReport(["Generate Transaction Report"])
+        UC_DownPDF(["Download PDF Report"])
+    end
+
+    Client --> UC_ReqSale
+    Client --> UC_ReqRent
+    Agent --> UC_ReqSale
+    Agent --> UC_ReqRent
+    HeadAgent --> UC_Approve
+    HeadAgent --> UC_Reject
+    HeadAgent --> UC_GenReport
+    Admin --> UC_DownPDF
+
+    UC_Approve -. "<<include>>" .-> UC_GenReport
+    UC_GenReport -. "<<include>>" .-> UC_DownPDF
+```
+
+---
+
+#### 9.1.8 Diagram 6: Analytics & Administration
+Models the full platform oversight, user activation, dashboard metrics, and report reviews.
+
+```mermaid
+graph TB
+    HeadAgent((Head Agent))
+    Admin((Admin))
+
+    subgraph Analytics & Administration Subsystem
+        UC_Analytics(["View Analytics Dashboard"])
+        UC_ManageUsers(["Manage Users"])
+        UC_ToggleStatus(["Activate/Deactivate Accounts"])
+        UC_ViewReports(["View Platform Reports"])
+        UC_DownReports(["Download PDF Reports"])
+        UC_Stats(["Monitor Platform Statistics"])
+    end
+
+    HeadAgent --> UC_Analytics
+    Admin --> UC_ManageUsers
+    Admin --> UC_ViewReports
+    Admin --> UC_DownReports
+    Admin --> UC_Stats
+
+    UC_ManageUsers -. "<<extend>>" .-> UC_ToggleStatus
+    UC_ViewReports -. "<<include>>" .-> UC_DownReports
+```
+
+---
 
 ### 9.2 Core Data Model Summary
 

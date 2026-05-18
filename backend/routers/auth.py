@@ -71,7 +71,7 @@ def update_profile(
     
     if user_update.phone_number: 
         current_user.phone_number = user_update.phone_number
-    if user_update.google_calendar_id: 
+    if user_update.google_calendar_id is not None: 
         current_user.google_calendar_id = user_update.google_calendar_id
     
     UserRepository.commit(db)
@@ -212,3 +212,83 @@ def get_head_agents(
 ):
     """Returns all Head Agents."""
     return UserRepository.get_head_agents(db)
+
+@router.post("/auth/telegram/generate-code", response_model=schemas.TelegramCodeResponse)
+def generate_telegram_code(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    """Generates a secure 6-digit pairing code for the logged-in user."""
+    import random
+    from datetime import datetime, timedelta
+
+    # Delete any existing pairing code for this user
+    db.query(models.TelegramPairingCode).filter(models.TelegramPairingCode.user_id == current_user.id).delete()
+    
+    # Generate unique 6-digit code
+    code = f"{random.randint(100000, 999999)}"
+    # Ensure uniqueness in the pairing code table
+    while db.query(models.TelegramPairingCode).filter(models.TelegramPairingCode.code == code).first():
+        code = f"{random.randint(100000, 999999)}"
+        
+    expires_at = datetime.utcnow() + timedelta(minutes=10)
+    pairing_code = models.TelegramPairingCode(
+        user_id=current_user.id,
+        code=code,
+        expires_at=expires_at
+    )
+    
+    db.add(pairing_code)
+    db.commit()
+    
+    return {
+        "code": code,
+        "expires_in_seconds": 600
+    }
+
+@router.post("/auth/telegram/pair", response_model=schemas.TelegramPairingSuccessResponse)
+def pair_telegram_account(
+    payload: schemas.TelegramPairRequest,
+    db: Session = Depends(database.get_db)
+):
+    """Links telegram_chat_id to user associated with the pairing code. (Called by n8n bot workflow)"""
+    from datetime import datetime
+
+    pairing_record = db.query(models.TelegramPairingCode).filter(models.TelegramPairingCode.code == payload.code).first()
+    if not pairing_record:
+        raise HTTPException(status_code=400, detail="Invalid pairing code.")
+        
+    if pairing_record.expires_at < datetime.utcnow():
+        db.delete(pairing_record)
+        db.commit()
+        raise HTTPException(status_code=400, detail="Pairing code has expired.")
+        
+    user = db.query(models.User).filter(models.User.id == pairing_record.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User associated with code not found.")
+        
+    # Unlink any other user who already has this telegram_chat_id to prevent unique constraint failures
+    existing_linked_users = db.query(models.User).filter(models.User.telegram_chat_id == payload.telegram_chat_id).all()
+    for elu in existing_linked_users:
+        elu.telegram_chat_id = None
+        
+    user.telegram_chat_id = payload.telegram_chat_id
+    db.delete(pairing_record)
+    db.commit()
+    db.refresh(user)
+    
+    return {
+        "status": "success",
+        "user_name": user.full_name,
+        "email": user.email
+    }
+
+@router.post("/auth/telegram/disconnect")
+def disconnect_telegram_account(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    """Unlinks telegram_chat_id from the authenticated user."""
+    current_user.telegram_chat_id = None
+    db.commit()
+    return {"message": "Telegram account disconnected successfully."}

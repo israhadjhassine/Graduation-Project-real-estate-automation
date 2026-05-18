@@ -13,8 +13,8 @@ from datetime import datetime
 
 def seed_db():
     print("🚀 Starting Database Seeding...")
-    # models.Base.metadata.drop_all(bind=engine)
-    # models.Base.metadata.create_all(bind=engine)
+    models.Base.metadata.drop_all(bind=engine)
+    models.Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     
     try:

@@ -6,23 +6,23 @@ This document details the functionalities available to each user role in the Eli
 
 ## 1. Visitor (Anonymous/Public)
 The public interface for anyone browsing the platform.
-*   **Property Browsing**: View all properties marked as "available".
-*   **Advanced Search**: 
-    *   **Semantic Search**: Search for properties using natural language (powered by AI embeddings).
-    *   **Filtered Search**: Filter by location, price, property type, and specific amenities.
-*   **AI Property Assistant (RAG)**: Ask specific questions about any property (e.g., "Is the neighborhood quiet?") and get answers based on the property's description.
-*   **Map Integration**: View property locations on Google Maps.
-*   **Registration**: Create a new account to become a Client.
+*   **Property Browsing**: View all available properties.
+*   **Basic Filtered Search**: Filter listings by location, price range, property type, and specific features/amenities.
+*   **Map Integration**: View property locations on the interactive Leaflet map.
+*   **Registration**: Create a new account to unlock personalized AI features and scheduling services.
 
 ---
 
 ## 2. Client (Registered User)
-A standard user who interacts with the agency.
-*   **Profile Management**: Update personal info (name, phone, email) and change password.
-*   **Property Ownership**: If a client owns a property listed with the agency:
+An authenticated user who has joined the Elite Estate platform.
+*   **Profile Management**: Update personal info (name, phone, email) and change password securely.
+*   **Smart AI Search**: Search for properties using natural language (semantic search powered by Ollama embeddings).
+*   **AI Property Assistant (RAG)**: Ask specific questions about any property (e.g., "Is the neighborhood quiet?") and get context-grounded responses.
+*   **Visit Booking**: Schedule visit appointments for specific properties directly synced with the assigned agent's Google Calendar.
+*   **Telegram Bot Assistant**: Interact with the AI bot to search properties, schedule visits, and receive automated reminders (leveraging persistent chat memory).
+*   **Property Notifications**: If a client lists a property or is buying/renting one:
     *   View status updates for their property.
     *   Receive automated email reports when their property is sold or rented.
-*   **Booking History**: (Planned/Contextual) View history of visits or transaction requests.
 
 ---
 

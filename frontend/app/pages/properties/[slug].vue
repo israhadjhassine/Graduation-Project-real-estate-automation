@@ -207,6 +207,12 @@ const handleTelegramInquiry = () => {
     return
   }
 
+  // Check if client has linked their Telegram account
+  if (!auth.user.telegram_chat_id) {
+    navigateTo('/profile?tab=telegram')
+    return
+  }
+
   // Construct the Telegram link with the property slug as context
   const botUsername = config.public.telegramBotName || 'Pfe_rea_bot'
   const slugContext = property.value.slug

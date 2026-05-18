@@ -25,9 +25,10 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     phone_number = Column(String(50), nullable=True)
     hashed_password = Column(String(255), nullable=False)
-    role = Column(String(20), default="visitor") # visitor, client, agent, head_agent, admin
+    role = Column(String(20), default="client") # client, agent, head_agent, admin
     is_active = Column(Boolean, default=True)
     google_calendar_id = Column(String(255), nullable=True)
+    telegram_chat_id = Column(String(50), unique=True, nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     
     manager_id = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
@@ -134,6 +135,17 @@ class Visit(Base):
     property = relationship("Property")
     client = relationship("User", foreign_keys=[client_id])
     agent = relationship("User", foreign_keys=[agent_id])
+
+class TelegramPairingCode(Base):
+    __tablename__ = "telegram_pairing_codes"
+
+    id = Column(BigInteger, primary_key=True, index=True)
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
+    code = Column(String(6), unique=True, nullable=False)
+    expires_at = Column(TIMESTAMP, nullable=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
+    user = relationship("User")
 
 class Report(Base):
     __tablename__ = "reports"

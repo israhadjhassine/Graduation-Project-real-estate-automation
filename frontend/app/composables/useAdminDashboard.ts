@@ -37,7 +37,7 @@ export const useAdminDashboard = () => {
       const matchesStatus = userStatusFilter.value === 'all' || 
         (userStatusFilter.value === 'active' ? u.is_active : !u.is_active)
         
-      const isStaff = u.role !== 'visitor'
+      const isStaff = u.role !== 'client'
         
       return matchesSearch && matchesRole && matchesStatus && isStaff
     })

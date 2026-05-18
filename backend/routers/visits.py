@@ -20,9 +20,16 @@ def book_visit(
     # Convert to UTC to match original behavior
     visit_date_utc = payload.visit_date.astimezone(timezone.utc)
     
+    # Dynamically resolve client identity if telegram_chat_id is linked to a registered web user
+    client_id = None
+    if payload.client_telegram_id:
+        user = db.query(models.User).filter(models.User.telegram_chat_id == str(payload.client_telegram_id)).first()
+        if user:
+            client_id = user.id
+            
     new_visit = models.Visit(
         property_id=payload.property_id,
-        client_id=None,
+        client_id=client_id,
         agent_id=payload.agent_id,
         visit_date=visit_date_utc,
         telegram_chat_id=payload.client_telegram_id,
@@ -31,6 +38,66 @@ def book_visit(
     )
     return VisitRepository.save(db, new_visit)
 
+@router.put("/visits/update",response_model=schemas.VisitResponse)
+def update_visit(
+    payload:schemas.VisitUpdateDB,
+    db:Session=Depends(database.get_db)
+):
+    """ resheduel a visit """
+    original_date_utc=payload.original_visit_date.astimezone(timezone.utc)
+    new_date_utc=payload.new_visit_date.astimezone(timezone.utc)
+    visit=VisitRepository.find_scheduled_visit(
+        db=db,
+        telegram_chat_id=payload.client_telegram_id ,
+        property_id=payload.property_id,
+        visit_date=original_date_utc,
+    )
+    if not visit:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="no visit found",
+        )
+    visit.visit_date=new_date_utc
+    visit.status="scheduled"
+    visit.reminder_sent=False
+    VisitRepository.commit(db)
+    db.refresh(visit)
+    return visit
+
+@router.post("/visits/cancel")
+def cancel_visit(
+    payload:schemas.VisitCancelDB,
+    db:Session=Depends(database.get_db)
+):
+    """
+    cancel a visit
+    """
+    visit_date_utc = payload.visit_date.astimezone(timezone.utc) 
+    # retrieve it from the database 
+    visit = VisitRepository.find_scheduled_visit(
+        db=db,
+        telegram_chat_id=payload.client_telegram_id, 
+        property_id=payload.property_id,
+        visit_date=visit_date_utc 
+    )
+    if not visit:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="no visit found" 
+        )
+        
+    visit.status = "cancelled"
+    VisitRepository.commit(db)
+    return {
+        "status": "success", 
+        "message": "Visit marked as cancelled successfully"
+    }
+    
+
+
+
+
+    
 @router.get("/visits/upcoming", response_model=List[schemas.VisitResponse])
 def get_upcoming_visits(
     db: Session = Depends(database.get_db)

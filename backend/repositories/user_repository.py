@@ -32,7 +32,7 @@ class UserRepository:
 
     @staticmethod
     def get_all_staff(db: Session) -> List[models.User]:
-        return db.query(models.User).filter(models.User.role != "visitor").all()
+        return db.query(models.User).filter(models.User.role != "client").all()
 
     @staticmethod
     def get_head_agents(db: Session) -> List[models.User]:

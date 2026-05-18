@@ -49,3 +49,17 @@ class VisitRepository:
     @staticmethod
     def commit(db: Session):
         db.commit()
+
+    @staticmethod
+    def find_scheduled_visit(
+        db:Session,
+        telegram_chat_id:str,
+        property_id:int,
+        visit_date:datetime,
+    )->Optional[models.Visit]:
+        return db.query(models.Visit).filter(
+            models.Visit.telegram_chat_id ==telegram_chat_id,
+            models.Visit.property_id == property_id,
+            models.Visit.visit_date == visit_date,
+            models.Visit.status == "scheduled", 
+        ).first()

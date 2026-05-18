@@ -62,7 +62,6 @@ const roleLabel = computed(() => {
     admin: 'Admin',
     head_agent: 'Head Agent',
     agent: 'Sub-Agent',
-    visitor: 'Client',
     client: 'Client'
   }
   return map[auth.user?.role] || auth.user?.role

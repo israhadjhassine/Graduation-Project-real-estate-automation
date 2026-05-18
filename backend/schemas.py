@@ -12,7 +12,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
-    role: Optional[str] = "visitor"
+    role: Optional[str] = "client"
     manager_id: Optional[int] = None
 
 class UserUpdate(BaseModel):
@@ -20,6 +20,7 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     phone_number: Optional[str] = None
     google_calendar_id: Optional[str] = None
+    telegram_chat_id: Optional[str] = None
 
 class PasswordUpdate(BaseModel):
     current_password: str
@@ -36,6 +37,8 @@ class User(UserBase):
     is_active: bool
     created_at: datetime
     manager_id: Optional[int] = None
+    google_calendar_id: Optional[str] = None
+    telegram_chat_id: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -238,3 +241,28 @@ class TransactionRequest(TransactionRequestBase):
 
     class Config:
         from_attributes = True
+
+# --- Telegram Pairing ---
+class TelegramCodeResponse(BaseModel):
+    code: str
+    expires_in_seconds: int
+
+class TelegramPairRequest(BaseModel):
+    code: str
+    telegram_chat_id: str
+
+class TelegramPairingSuccessResponse(BaseModel):
+    status: str
+    user_name: str
+    email: str
+
+class VisitUpdateDB (BaseModel):
+    client_telegram_id:str
+    property_id:int
+    original_visit_date:datetime
+    new_visit_date:datetime
+
+class VisitCancelDB (BaseModel):
+    client_telegram_id:str
+    property_id:int
+    visit_date:datetime

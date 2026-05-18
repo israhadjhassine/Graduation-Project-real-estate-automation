@@ -5,8 +5,9 @@ interface User {
     id: number
     email: string
     full_name: string
-    role: 'admin' | 'head_agent' | 'agent' | 'visitor'
+    role: 'admin' | 'head_agent' | 'agent' | 'client'
     agency_id?: number
+    google_calendar_id?: string
 }
 
 interface AuthState {
@@ -27,7 +28,7 @@ export const useAuthStore = defineStore('auth', {
         isAdmin: (state) => state.user?.role === 'admin',
         isHeadAgent: (state) => state.user?.role === 'head_agent',
         isAgent: (state) => state.user?.role === 'agent',
-        isVisitor: (state) => state.user?.role === 'visitor',
+        isClient: (state) => state.user?.role === 'client',
 
         authenticatedHomeLink: (state) => {
             if (state.user?.role === 'admin') return '/admin'
@@ -38,7 +39,7 @@ export const useAuthStore = defineStore('auth', {
 
         profileLink: (state) => {
             if (!state.user) return '/login'
-            if (state.user.role === 'visitor') return '/profile'
+            if (state.user.role === 'client') return '/profile'
             return '/dashboard/profile'
         }
     },

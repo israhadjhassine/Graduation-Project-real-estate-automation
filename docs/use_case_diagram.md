@@ -1,15 +1,17 @@
-# UML Architecture Documentation
+# Elite Estate UML Use Case Diagrams
 
-This document outlines the system architecture for the AI-Driven Real Estate Automation Platform using UML diagrams.
-
-## 1. Use Case Diagrams (Subsystem Architecture)
-
-To maintain maximum clarity, modularity, and readability for the final PFE academic report, the Elite Estate system's use cases are separated into **six specialized business subsystem diagrams**.
+This document contains the complete, modular UML Use Case specifications for the Elite Estate real estate automation project. The platform's use cases are separated into **six distinct subsystem diagrams** to maintain readability, clarity, and standardized UML modeling.
 
 ---
 
-### Diagram 1: Global System Overview
-Provides a bird's-eye view of all platform entry points, major domains, and base actor associations.
+## Actor Generalization (Hierarchy)
+*   `Visitor <|-- Client`: Registered clients inherit all guest capabilities (browsing, search, maps) and unlock personal services (AI semantic search, scheduling visits, Telegram Q&A).
+*   `Agent <|-- HeadAgent`: The Head Agent inherits all sub-agent visit and transaction request processing duties, extending them to listing properties, uploading assets, and assigning properties to agents.
+
+---
+
+## 1. Global System Overview
+Provides a high-level overview of the major platform domains and entry points for each actor.
 
 ```mermaid
 graph TD
@@ -19,7 +21,6 @@ graph TD
     HeadAgent((Head Agent))
     Admin((Admin))
 
-    %% Actor inheritance
     Client --|> Visitor
     HeadAgent --|> Agent
 
@@ -33,23 +34,19 @@ graph TD
 
     Visitor --> Auth
     Visitor --> Prop
-
     Client --> Visit
-
     Agent --> Visit
     Agent --> Trans
-
     HeadAgent --> Prop
     HeadAgent --> AdminSub
-
     Admin --> AdminSub
     Admin --> Prop
 ```
 
 ---
 
-### Diagram 2: Authentication & Authorization
-Illustrates the user register/login operations and base verification layers.
+## 2. Authentication & Authorization Subsystem
+Models secure onboarding, authentication, session termination, and mandatory security checks.
 
 ```mermaid
 graph TB
@@ -59,7 +56,6 @@ graph TB
     HeadAgent((Head Agent))
     Admin((Admin))
 
-    %% Generalization
     Client --|> Visitor
     HeadAgent --|> Agent
 
@@ -73,7 +69,6 @@ graph TB
 
     Visitor --> UC_Reg
     Visitor --> UC_Login
-
     Client --> UC_Logout
     Agent --> UC_Logout
     Admin --> UC_Logout
@@ -84,8 +79,8 @@ graph TB
 
 ---
 
-### Diagram 3: Property Management
-Models creation, edits, features, and searching capabilities.
+## 3. Property Management Subsystem
+Models listings, search capabilities, semantic lookups, and asset management.
 
 ```mermaid
 graph TB
@@ -95,7 +90,6 @@ graph TB
     HeadAgent((Head Agent))
     Admin((Admin))
 
-    %% Generalization
     Client --|> Visitor
     HeadAgent --|> Agent
 
@@ -112,28 +106,19 @@ graph TB
         UC_Features(["Add amenities / features"])
     end
 
-    %% Visitor and Client flows
     Visitor --> UC_Browse
     Visitor --> UC_Search
     Visitor --> UC_Details
-
     Client --> UC_Semantic
-
-    %% Agent flows
     Agent --> UC_Details
-
-    %% Head Agent flows
     HeadAgent --> UC_Create
     HeadAgent --> UC_Edit
     HeadAgent --> UC_Delete
     HeadAgent --> UC_Assign
-
-    %% Admin flows
     Admin --> UC_Browse
     Admin --> UC_Details
     Admin --> UC_Delete
 
-    %% Relationships
     UC_Create -. "<<include>>" .-> UC_Upload
     UC_Create -. "<<include>>" .-> UC_Features
     UC_Search -. "<<extend>>" .-> UC_Semantic
@@ -141,8 +126,8 @@ graph TB
 
 ---
 
-### Diagram 4: Visit Management
-Outlines visit schedules, status transitions, and reminder automation.
+## 4. Visit Management Subsystem
+Outlines schedule viewing, booking appointments, status updates, and reminder dispatches.
 
 ```mermaid
 graph TB
@@ -150,7 +135,6 @@ graph TB
     Agent((Agent))
     HeadAgent((Head Agent))
 
-    %% Generalization
     HeadAgent --|> Agent
 
     subgraph Visit Management Subsystem
@@ -164,21 +148,18 @@ graph TB
 
     Client --> UC_Schedule
     Client --> UC_ViewSchedule
-
     Agent --> UC_ViewSchedule
     Agent --> UC_UpdateStatus
 
     UC_UpdateStatus -. "<<extend>>" .-> UC_Cancel
     UC_UpdateStatus -. "<<extend>>" .-> UC_Complete
-    
-    %% System automated interaction
     UC_Schedule -. "<<include>>" .-> UC_Reminder
 ```
 
 ---
 
-### Diagram 5: Transaction System
-Tracks requests, approvals, and report generations.
+## 5. Transaction Subsystem
+Tracks transaction requests, manager approval/rejection flows, and PDF report compilation.
 
 ```mermaid
 graph TB
@@ -187,7 +168,6 @@ graph TB
     HeadAgent((Head Agent))
     Admin((Admin))
 
-    %% Generalization
     HeadAgent --|> Agent
 
     subgraph Transaction Subsystem
@@ -201,14 +181,11 @@ graph TB
 
     Client --> UC_ReqSale
     Client --> UC_ReqRent
-
     Agent --> UC_ReqSale
     Agent --> UC_ReqRent
-
     HeadAgent --> UC_Approve
     HeadAgent --> UC_Reject
     HeadAgent --> UC_GenReport
-
     Admin --> UC_DownPDF
 
     UC_Approve -. "<<include>>" .-> UC_GenReport
@@ -217,8 +194,8 @@ graph TB
 
 ---
 
-### Diagram 6: Analytics & Administration
-Provides comprehensive view into platform settings and KPI details.
+## 6. Analytics & Administration Subsystem
+Models the full platform oversight, user activation, dashboard metrics, and report reviews.
 
 ```mermaid
 graph TB
@@ -235,7 +212,6 @@ graph TB
     end
 
     HeadAgent --> UC_Analytics
-
     Admin --> UC_ManageUsers
     Admin --> UC_ViewReports
     Admin --> UC_DownReports
@@ -244,80 +220,3 @@ graph TB
     UC_ManageUsers -. "<<extend>>" .-> UC_ToggleStatus
     UC_ViewReports -. "<<include>>" .-> UC_DownReports
 ```
-
----
-
-## 2. Class Diagram (Backend Models)
-
-```mermaid
-classDiagram
-    direction TB
-    class Agency {
-        +BigInt id
-        +String name
-        +String license_number
-    }
-
-    class User {
-        +BigInt id
-        +String full_name
-        +String email
-        +String role
-        +Boolean is_active
-        +String google_calendar_id
-    }
-
-    class Property {
-        +BigInt id
-        +String title
-        +Numeric price
-        +String property_type
-        +Vector description_vector
-        +BigInt agency_id
-        +BigInt owner_id
-        +BigInt agent_id
-    }
-
-    class PropertyImage {
-        +BigInt id
-        +String image_url
-        +Boolean is_primary
-    }
-
-    class Feature {
-        +BigInt id
-        +String name
-    }
-
-    class Visit {
-        +BigInt id
-        +Timestamp visit_date
-        +String status
-        +Boolean reminder_sent
-        +BigInt property_id
-        +BigInt client_id
-        +BigInt agent_id
-    }
-
-    class Report {
-        +BigInt id
-        +String title
-        +String content_summary
-        +String file_path
-    }
-
-    Agency "1" -- "*" User : has_members
-    Agency "1" -- "*" Property : manages
-    User "1" -- "*" Property : owned_properties (Head Agent)
-    User "1" -- "*" Property : assigned_properties (Sub-Agent)
-    Property "1" -- "*" PropertyImage : has_gallery
-    Property "1" -- "*" Visit : has_visits
-    Property "*" -- "*" Feature : includes
-    User "1" -- "*" Visit : client_visits (Client)
-    User "1" -- "*" Visit : agent_visits (Sub-Agent)
-```
-
-## 3. Workflow: Property Upload (Head Agent)
-1. **Input**: Head Agent uploads property data and images.
-2. **AI Action**: Gemini creates the embedding vector.
-3. **Storage**: Data and Images are saved.
