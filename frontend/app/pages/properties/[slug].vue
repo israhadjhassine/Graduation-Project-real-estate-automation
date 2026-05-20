@@ -1,19 +1,6 @@
 <template>
   <div v-if="property" class="max-w-7xl mx-auto px-6 py-12">
-    <!-- Breadcrumbs & Actions -->
-    <div class="flex items-center justify-between mb-8">
-      <NuxtLink to="/" class="flex items-center gap-2 text-primary-400 hover:text-primary-950 transition-colors font-medium">
-        <LucideChevronLeft class="w-4 h-4" /> Back to Search
-      </NuxtLink>
-      <div class="flex gap-4">
-        <button class="w-10 h-10 rounded-full border border-primary-200 flex items-center justify-center hover:bg-white transition-all">
-          <LucideShare2 class="w-4 h-4 text-primary-600" />
-        </button>
-        <button class="w-10 h-10 rounded-full border border-primary-200 flex items-center justify-center hover:bg-white transition-all">
-          <LucideHeart class="w-4 h-4 text-primary-600" />
-        </button>
-      </div>
-    </div>
+    
 
     <div class="grid lg:grid-cols-3 gap-12">
       <!-- Main Content -->

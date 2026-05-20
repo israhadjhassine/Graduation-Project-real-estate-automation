@@ -817,6 +817,7 @@ Property (1) ──────────── (*) Visit
 User (1) ──────────────── (*) Visit              [as client]
 User (1) ──────────────── (*) Visit              [as agent]
 User (1) ──────────────── (0..1) User            [manager — self-referential]
+User (1) ──────────────── (0..1) TelegramPairingCode [for telegram linking]
 ```
 
 ### 9.3 Critical Workflow: Property Listing with AI Embedding

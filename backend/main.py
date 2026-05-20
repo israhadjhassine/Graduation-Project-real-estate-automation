@@ -40,7 +40,8 @@ app.include_router(statistics.router)
 @app.get("/")
 async def root():
     return {
+        
         "status": "online",
         "message": "Modular Real Estate API is running with 1:1 Parity",
-        "version": "2.0.0"
+        "version": "2.0.0",
     }

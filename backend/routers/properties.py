@@ -436,11 +436,22 @@ def rag_search(
         features_list = [f.name for f in prop.features]
         agent_name = prop.agent.full_name if prop.agent else "Not Assigned"
         rag_prop = schemas.RAGProperty(
-            id=prop.id, agent_id=prop.agent_id, agent_name=agent_name, title=prop.title,
-            property_type=prop.property_type, listing_type=prop.listing_type, price=prop.price,
-            currency=prop.currency, city=prop.city, area=prop.area, bedrooms=prop.bedrooms,
-            bathrooms=prop.bathrooms, features=features_list, description=prop.description,
-            latitude=prop.latitude, longitude=prop.longitude, google_maps_url=maps_url,
+            id=prop.id, 
+            agent_id=prop.agent_id, 
+            agent_name=agent_name, 
+            title=prop.title,
+            property_type=prop.property_type, 
+            listing_type=prop.listing_type, 
+            price=prop.price,
+            currency=prop.currency, 
+            city=prop.city, area=prop.area, 
+            bedrooms=prop.bedrooms,
+            bathrooms=prop.bathrooms, 
+            features=features_list, 
+            description=prop.description,
+            latitude=prop.latitude, 
+            longitude=prop.longitude, 
+            google_maps_url=maps_url,
             agent_calendar_id=prop.agent.google_calendar_id if prop.agent else None
         )
         rag_properties.append(rag_prop)
