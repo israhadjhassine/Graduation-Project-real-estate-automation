@@ -1,0 +1,108 @@
+@startuml
+autonumber
+
+actor Client
+boundary Telegram
+boundary GoogleCalendar
+control SmartAgent
+control visits
+entity userModel
+entity visitModel
+
+alt Schedule Visit 
+    Client -> Telegram : /start schedule_prop123
+    activate Telegram
+    
+    Telegram -> SmartAgent : schedule_request(chat_id, property_id)
+    activate SmartAgent
+    
+    SmartAgent -> GoogleCalendar : check_availability(agent_id, date)
+    activate GoogleCalendar
+    GoogleCalendar --> SmartAgent : available_slots
+    deactivate GoogleCalendar
+    
+    SmartAgent -> GoogleCalendar : create_event(agent_id, date)
+    activate GoogleCalendar
+    GoogleCalendar --> SmartAgent : returns_true()
+    deactivate GoogleCalendar
+    
+    SmartAgent -> visits : book_visit(property_id, agent_id, date, chat_id)
+    activate visits
+    
+    visits -> userModel : get_by_telegram_chat_id(chat_id)
+    activate userModel
+    userModel --> visits : user
+    deactivate userModel
+    
+    visits -> visitModel : save_visit(property_id, agent_id, date, client_id, chat_id)
+    activate visitModel
+    visitModel --> visits : returns_true()
+    deactivate visitModel
+    
+    visits --> SmartAgent : returns_true()
+    deactivate visits
+    
+    SmartAgent --> Telegram : booking_confirmation_msg
+    deactivate SmartAgent
+    deactivate Telegram
+    
+else Reschedule Visit 
+    Client -> Telegram : /reschedule
+    activate Telegram
+    
+    Telegram -> SmartAgent : reschedule_request(chat_id, property_id, new_date)
+    activate SmartAgent
+    
+    SmartAgent -> GoogleCalendar : check_availability(agent_id, new_date)
+    activate GoogleCalendar
+    GoogleCalendar --> SmartAgent : available_slots
+    deactivate GoogleCalendar
+    
+    SmartAgent -> GoogleCalendar : update_event(event_id, new_date)
+    activate GoogleCalendar
+    GoogleCalendar --> SmartAgent : returns_true()
+    deactivate GoogleCalendar
+    
+    SmartAgent -> visits : update_visit(property_id, chat_id, original_date, new_date)
+    activate visits
+    
+    visits -> visitModel : update_visit(property_id, chat_id, original_date, new_date)
+    activate visitModel
+    visitModel --> visits : returns_true()
+    deactivate visitModel
+    
+    visits --> SmartAgent : returns_true()
+    deactivate visits
+    
+    SmartAgent --> Telegram : rescheduling_confirmation_msg
+    deactivate SmartAgent
+    deactivate Telegram
+    
+else Cancel Visit 
+    Client -> Telegram : /cancel
+    activate Telegram
+    
+    Telegram -> SmartAgent : cancel_request(chat_id, property_id, date)
+    activate SmartAgent
+    
+    SmartAgent -> GoogleCalendar : delete_event(event_id)
+    activate GoogleCalendar
+    GoogleCalendar --> SmartAgent : returns_true()
+    deactivate GoogleCalendar
+    
+    SmartAgent -> visits : cancel_visit(property_id, chat_id, date)
+    activate visits
+    
+    visits -> visitModel : cancel_visit(property_id, chat_id, date)
+    activate visitModel
+    visitModel --> visits : returns_true()
+    deactivate visitModel
+    
+    visits --> SmartAgent : returns_true()
+    deactivate visits
+    
+    SmartAgent --> Telegram : cancelling_confirmation_msg
+    deactivate SmartAgent
+    deactivate Telegram
+end
+@enduml

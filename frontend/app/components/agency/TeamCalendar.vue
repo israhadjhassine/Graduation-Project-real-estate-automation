@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200">
       <div class="flex items-center gap-6">
-        <h2 class="text-xl font-bold text-gray-800 shrink-0">Team Schedule</h2>
+        <h2 class="text-xl font-bold text-gray-800 shrink-0">{{ title }}</h2>
         
         <!-- Navigation Controls -->
         <div class="flex items-center bg-gray-100 rounded-lg p-1 gap-1">
@@ -46,7 +46,7 @@
       </div>
 
       <!-- Agent Filter Dropdown -->
-      <div class="relative agent-filter-dropdown">
+      <div v-if="showAgentFilter" class="relative agent-filter-dropdown">
         <button 
           @click="isAgentFilterOpen = !isAgentFilterOpen"
           class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:border-blue-400 transition-all text-sm font-semibold text-gray-700 shadow-sm"
@@ -176,6 +176,14 @@ const props = defineProps({
   agents: {
     type: Array,
     default: () => []
+  },
+  showAgentFilter: {
+    type: Boolean,
+    default: true
+  },
+  title: {
+    type: String,
+    default: 'Team Schedule'
   }
 })
 
@@ -297,7 +305,7 @@ const dailyVisits = computed(() => {
                       vDate.getMonth() === selectedMonth.value &&
                       vDate.getDate() === selectedDay.value
     
-    const isAgentSelected = (v.agent && selectedAgents.value.includes(String(v.agent.id)))
+    const isAgentSelected = !props.showAgentFilter || (v.agent && selectedAgents.value.includes(String(v.agent.id)))
 
     return isSameDay && isAgentSelected
   }).sort((a, b) => new Date(a.visit_date).getTime() - new Date(b.visit_date).getTime())

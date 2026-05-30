@@ -20,7 +20,7 @@ def seed_visit():
         sonia = db.query(User).filter(User.email == 's.dridi@elite.tn').first()
         
         # 3. Setup Client
-        client = db.query(User).filter(User.email == 'client@test.com').first()
+        client = db.query(User).filter(User.email == 'ikaryo.chenji6@gmail.com').first()
 
         if not (ocean_breeze and ahmed and blue_horizon and sonia and client):
             print("❌ Could not find all required properties, agents, or client.")

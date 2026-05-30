@@ -1,0 +1,73 @@
+@startuml
+autonumber
+
+actor "User" as ActorUser
+
+boundary LoginPage
+control AuthController
+entity UserModel
+boundary DashboardAdmin
+boundary DashboardSubAgent
+boundary DashboardHeadAgent
+boundary Homepage
+
+ActorUser -> LoginPage : handleLogin()
+activate LoginPage
+
+LoginPage -> AuthController : login(email, password)
+activate AuthController
+
+AuthController -> UserModel : get_by_email(email)
+activate UserModel
+UserModel --> AuthController : user
+deactivate UserModel
+
+AuthController -> AuthController : verify_password(password, hashed_password)
+
+alt credentials_valid
+
+    alt is_active == true
+    
+        AuthController -> AuthController : create_access_token()
+        AuthController --> LoginPage : jwt_token
+        deactivate AuthController
+        
+        alt role == 'admin'
+            LoginPage -> DashboardAdmin : navigateTo('/admin')
+            activate DashboardAdmin
+            deactivate DashboardAdmin
+        else role == 'head_agent'
+            LoginPage -> DashboardHeadAgent : navigateTo('/agency')
+            activate DashboardHeadAgent
+            deactivate DashboardHeadAgent
+        else role == 'agent'
+            LoginPage -> DashboardSubAgent : navigateTo('/agent')
+            activate DashboardSubAgent
+            deactivate DashboardSubAgent
+        else role == 'client'
+            LoginPage -> Homepage : navigateTo('/')
+            activate Homepage
+            deactivate Homepage
+        end
+        deactivate LoginPage
+        
+    else is_active == false
+    
+        AuthController --> LoginPage : returns_false()
+        deactivate AuthController
+        LoginPage -> LoginPage : alert("Account deactivated")
+        deactivate LoginPage
+        
+    end
+
+else invalid_credentials
+
+    AuthController --> LoginPage : returns_false()
+    deactivate AuthController
+    LoginPage -> LoginPage : alert("Incorrect email or password")
+    deactivate LoginPage
+
+end
+
+@enduml
+

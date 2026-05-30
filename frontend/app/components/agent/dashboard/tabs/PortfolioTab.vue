@@ -22,6 +22,8 @@
           <option value="available">Available</option>
           <option value="pending_sold">Pending Sale Approval</option>
           <option value="pending_rent">Pending Rent Approval</option>
+          <option value="approved_sold">Approved Sale</option>
+          <option value="approved_rent">Approved Rent</option>
           <option value="sold">Sold</option>
           <option value="rented">Rented</option>
         </select>
@@ -51,9 +53,13 @@
           <td class="px-6 py-4">
              <span :class="[
                'px-2 py-1 text-[10px] font-bold rounded-lg uppercase',
-               prop.status === 'sold' ? 'bg-purple-100 text-purple-700' : prop.status === 'pending_sold' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+               prop.status === 'sold' ? 'bg-purple-100 text-purple-700' :
+               prop.status === 'rented' ? 'bg-indigo-100 text-indigo-700' :
+               prop.status === 'pending_sold' || prop.status === 'pending_rent' ? 'bg-amber-100 text-amber-700' :
+               prop.status === 'approved_sold' || prop.status === 'approved_rent' ? 'bg-emerald-100 text-emerald-700 animate-pulse' :
+               'bg-green-100 text-green-700'
              ]">
-                {{ prop.status }}
+                {{ prop.status === 'approved_sold' || prop.status === 'approved_rent' ? 'Approved' : prop.status }}
              </span>
           </td>
           <td class="px-6 py-4 text-right" @click.stop>
@@ -76,6 +82,22 @@
               <span v-else-if="prop.status === 'pending_sold' || prop.status === 'pending_rent'" class="px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-lg uppercase animate-pulse">
                 Approval Pending
               </span>
+              <template v-else-if="prop.status === 'approved_sold' || prop.status === 'approved_rent'">
+                <div class="flex items-center justify-end gap-2">
+                  <button 
+                    @click="$emit('finalize-transaction', prop.id, 'complete')"
+                    class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold uppercase transition-all shadow-sm"
+                  >
+                    Complete
+                  </button>
+                  <button 
+                    @click="$emit('finalize-transaction', prop.id, 'cancel')"
+                    class="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-[10px] font-bold uppercase transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </template>
               <span v-else class="text-[10px] font-bold text-primary-300 uppercase italic">Goal Reached</span>
           </td>
         </tr>
@@ -99,7 +121,7 @@ const props = defineProps<{
   myProperties: any[]
 }>()
 
-defineEmits(['view-property', 'open-sale-modal', 'open-rent-modal'])
+defineEmits(['view-property', 'open-sale-modal', 'open-rent-modal', 'finalize-transaction'])
 
 const searchQuery = ref('')
 const statusFilter = ref('all')

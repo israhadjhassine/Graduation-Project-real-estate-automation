@@ -1,0 +1,87 @@
+@startuml
+autonumber
+
+actor SubAgent
+boundary VisitManagementPage
+control VisitsController
+boundary GoogleCalendar
+entity visitModel
+
+alt View AI-Booked Appointments
+    SubAgent -> VisitManagementPage : viewVisits()
+    activate VisitManagementPage
+    
+    VisitManagementPage -> VisitsController : get_agent_visits_list(agent_id)
+    activate VisitsController
+    
+    VisitsController -> visitModel : find_by_agent_id(agent_id)
+    activate visitModel
+    visitModel --> VisitsController : visits_list
+    deactivate visitModel
+    
+    VisitsController --> VisitManagementPage : visits_list
+    deactivate VisitsController
+    
+    VisitManagementPage -> VisitManagementPage : renderVisits()
+    deactivate VisitManagementPage
+
+else Sync with Google Calendar
+    SubAgent -> VisitManagementPage : clickSyncGoogleCalendar()
+    activate VisitManagementPage
+    
+    VisitManagementPage -> VisitsController : sync_visits_with_google_calendar(agent_id)
+    activate VisitsController
+    
+    VisitsController -> GoogleCalendar : fetch_agent_events(agent_id)
+    activate GoogleCalendar
+    GoogleCalendar --> VisitsController : events_list
+    deactivate GoogleCalendar
+    
+    VisitsController -> visitModel : bulk_update_visits(events_list)
+    activate visitModel
+    visitModel --> VisitsController : returns_true()
+    deactivate visitModel
+    
+    VisitsController --> VisitManagementPage : returns_true()
+    deactivate VisitsController
+    
+    VisitManagementPage -> VisitManagementPage : renderVisits()
+    deactivate VisitManagementPage
+
+else Filter Visits
+    SubAgent -> VisitManagementPage : filterVisits(status, date_range)
+    activate VisitManagementPage
+    
+    VisitManagementPage -> VisitsController : get_filtered_visits(agent_id, status, date_range)
+    activate VisitsController
+    
+    VisitsController -> visitModel : find_by_filters(agent_id, status, date_range)
+    activate visitModel
+    visitModel --> VisitsController : filtered_visits
+    deactivate visitModel
+    
+    VisitsController --> VisitManagementPage : filtered_visits
+    deactivate VisitsController
+    
+    VisitManagementPage -> VisitManagementPage : renderVisits()
+    deactivate VisitManagementPage
+
+else Update Visit Status
+    SubAgent -> VisitManagementPage : clickUpdateStatus(visit_id, status)
+    activate VisitManagementPage
+    
+    VisitManagementPage -> VisitsController : update_visit_status(visit_id, status)
+    activate VisitsController
+    
+    VisitsController -> visitModel : update_status(visit_id, status)
+    activate visitModel
+    visitModel --> VisitsController : returns_true()
+    deactivate visitModel
+    
+    VisitsController --> VisitManagementPage : returns_true()
+    deactivate VisitsController
+    
+    VisitManagementPage -> VisitManagementPage : showSuccessMessage()
+    deactivate VisitManagementPage
+end
+@enduml

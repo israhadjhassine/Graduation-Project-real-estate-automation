@@ -1,0 +1,73 @@
+@startuml
+autonumber
+
+actor Client
+boundary ProfilePage
+boundary Telegram
+control auth
+entity telegramPairingCodeModel 
+entity userModel
+
+Client -> ProfilePage : generatePairingCode()
+activate ProfilePage
+
+ProfilePage -> auth : generate_telegram_code()
+activate auth
+
+auth -> telegramPairingCodeModel : save_pairing_code(user_id, code)
+activate telegramPairingCodeModel
+telegramPairingCodeModel --> auth : pairing_code
+deactivate telegramPairingCodeModel
+
+auth --> ProfilePage : pairing_code
+deactivate auth
+ProfilePage -> Telegram : openTelegramBot()
+deactivate ProfilePage
+
+Client -> Telegram : /start pair_592108
+activate Telegram
+
+Telegram -> auth : pair_telegram_account(code, chat_id)
+activate auth
+
+auth -> telegramPairingCodeModel : get_by_code(code)
+activate telegramPairingCodeModel
+telegramPairingCodeModel --> auth : pairing_record
+deactivate telegramPairingCodeModel
+
+alt invalid_code
+    auth --> Telegram : returns_false()
+    deactivate auth
+    Telegram -> Telegram : showInvalidCodeMessage()
+    deactivate Telegram
+else valid_code
+    auth -> userModel : get_by_telegram_chat_id(chat_id)
+    activate userModel
+    userModel --> auth : existing_user
+    deactivate userModel
+    
+     opt existing_user_found
+        auth -> userModel : unlink_telegram_chat_id(existing_user_id)
+        activate userModel
+        deactivate userModel
+    end
+    
+    auth -> userModel : link_telegram_chat_id(user_id, chat_id)
+    activate userModel
+    deactivate userModel
+    
+    auth -> telegramPairingCodeModel : delete_pairing_record(pairing_record_id)
+    activate telegramPairingCodeModel
+    deactivate telegramPairingCodeModel
+    
+    auth --> Telegram : returns_true()
+    deactivate auth
+    Telegram -> Telegram : showSuccessMessage()
+    deactivate Telegram
+end
+
+@enduml
+
+
+
+

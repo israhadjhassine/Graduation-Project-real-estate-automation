@@ -51,6 +51,7 @@
           @view-property="viewProperty" 
           @open-sale-modal="openSaleModal" 
           @open-rent-modal="openRentModal" 
+          @finalize-transaction="handleFinalizeTransaction"
         />
       </div>
       <div v-show="activeTab === 'visits'">
@@ -63,6 +64,12 @@
           :visits="visits"
           @view-details="viewVisitDetails"
           @update-status="updateVisitStatus"
+        />
+      </div>
+      <div v-show="activeTab === 'calendar'">
+        <CalendarTab 
+          :visits="visits"
+          @view-visit="viewVisitDetails"
         />
       </div>
 
@@ -119,6 +126,7 @@ import RentRequestModal from '~/components/agent/dashboard/modals/RentRequestMod
 import { useAuthStore } from '~/stores/auth'
 import { useAlert } from '~/composables/useAlert'
 import { useAgentDashboard } from '~/composables/useAgentDashboard'
+import { usePropertyService } from '~/services/propertyService'
 
 import AgentHeader from '~/components/agent/dashboard/AgentHeader.vue'
 import AgentStats from '~/components/agent/dashboard/AgentStats.vue'
@@ -126,12 +134,14 @@ import AgentTabs from '~/components/agent/dashboard/AgentTabs.vue'
 import VisitsTab from '~/components/agent/dashboard/tabs/VisitsTab.vue'
 import PortfolioTab from '~/components/agent/dashboard/tabs/PortfolioTab.vue'
 import AgentAnalyticsTab from '~/components/agent/dashboard/tabs/AgentAnalyticsTab.vue'
+import CalendarTab from '~/components/agent/dashboard/tabs/CalendarTab.vue'
 
 definePageMeta({ layout: 'dashboard' })
 
 const auth = useAuthStore()
 const alert = useAlert()
 const activeTab = ref('visits')
+const propertyService = usePropertyService()
 
 const {
   visits, myProperties, clients, statistics, searchQuery, locationQuery,
@@ -140,6 +150,32 @@ const {
   propertyStatusChartData, monthlyVisitsChartData,
   fetchData, submitSaleRequest: doSubmitSaleRequest, submitRentRequest: doSubmitRentRequest, updateVisitStatus
 } = useAgentDashboard()
+
+const handleFinalizeTransaction = async (propertyId, action) => {
+  const confirmTitle = action === 'complete' ? 'Complete Transaction?' : 'Cancel Transaction Request?'
+  const confirmMsg = action === 'complete' 
+    ? "This will mark the property as sold/rented, generate the PDF report, and cancel other scheduled visits." 
+    : "Are you sure you want to cancel this transaction request?"
+  const confirmBtn = action === 'complete' ? 'Complete' : 'Cancel Request'
+    
+  const result = await alert.confirm(confirmTitle, confirmMsg, confirmBtn)
+  if (!result.isConfirmed) return
+  
+  try {
+    const res = await propertyService.finalizeTransaction(propertyId, action)
+    alert.success(
+      action === 'complete' ? "Transaction Finalized" : "Request Cancelled",
+      res.message || (action === 'complete' ? "The property status has been updated and reports generated." : "The property is now available.")
+    )
+    fetchData()
+  } catch (e) {
+    console.error("Failed to finalize transaction", e)
+    alert.error(
+      "Action Failed",
+      e.response?.data?.detail || "An error occurred while processing the request."
+    )
+  }
+}
 
 const showDetailsModal = ref(false)
 const selectedProperty = ref(null)

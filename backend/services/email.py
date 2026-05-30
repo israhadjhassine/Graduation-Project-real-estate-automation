@@ -1,11 +1,47 @@
 import smtplib
 import os
 import traceback
+import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 from datetime import datetime
+
+def _send_email_message(to_email: str, msg: MIMEMultipart) -> bool:
+    """Helper to send an email message with retries and port fallback (587 -> 465)."""
+    smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+    smtp_port = int(os.getenv("SMTP_PORT", 587))
+    smtp_user = os.getenv("SMTP_USER", "")
+    smtp_password = os.getenv("SMTP_PASSWORD", "")
+    
+    max_retries = 3
+    for attempt in range(1, max_retries + 1):
+        try:
+            # Attempt 1: Standard SMTP (port 587 / STARTTLS)
+            try:
+                with smtplib.SMTP(smtp_server, smtp_port, timeout=10) as server:
+                    server.ehlo()
+                    server.starttls()
+                    server.ehlo()
+                    server.login(smtp_user, smtp_password)
+                    server.sendmail(smtp_user, to_email, msg.as_string())
+                return True
+            except Exception as inner_e:
+                # Attempt 2: Fallback to SSL (port 465)
+                with smtplib.SMTP_SSL(smtp_server, 465, timeout=10) as server:
+                    server.ehlo()
+                    server.login(smtp_user, smtp_password)
+                    server.sendmail(smtp_user, to_email, msg.as_string())
+                return True
+        except Exception as e:
+            print(f"[EMAIL WARNING] Attempt {attempt} failed sending to {to_email}: {e}", flush=True)
+            if attempt < max_retries:
+                time.sleep(2)  # brief pause before retrying
+            else:
+                print(f"[EMAIL ERROR] All {max_retries} attempts failed to send to {to_email}", flush=True)
+                raise e
+    return False
 
 def send_transaction_request_email(
     head_agent_email: str,
@@ -21,11 +57,7 @@ def send_transaction_request_email(
     rent_end: str = None,
 ):
     """Sends an HTML email to the Head Agent notifying them of a pending transaction request."""
-    smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-    smtp_port = int(os.getenv("SMTP_PORT", 587))
-    smtp_user = os.getenv("SMTP_USER", "")
-    smtp_password = os.getenv("SMTP_PASSWORD", "")
-    email_from = os.getenv("EMAIL_FROM", smtp_user)
+    email_from = os.getenv("EMAIL_FROM", os.getenv("SMTP_USER", ""))
 
     try:
         subject = f"⏳ Approval Required: {tx_type} Request for '{property_title}'"
@@ -62,7 +94,7 @@ def send_transaction_request_email(
                    <td style="background:linear-gradient(135deg,#1e293b,#334155);padding:32px 40px;">
                     <p style="margin:0;color:#94a3b8;font-size:12px;letter-spacing:2px;text-transform:uppercase;">Elite Estate Platform</p>
                     <h1 style="margin:8px 0 0;color:#ffffff;font-size:22px;font-weight:700;">Transaction Approval Needed</h1>
-                  </td>
+                   </td>
                 </tr>
                 <tr>
                   <td style="padding:36px 40px;">
@@ -119,28 +151,15 @@ def send_transaction_request_email(
         msg["To"] = head_agent_email
         msg.attach(MIMEText(html, "html"))
 
-        try:
-            with smtplib.SMTP(smtp_server, smtp_port, timeout=10) as server:
-                server.ehlo(); server.starttls(); server.ehlo()
-                server.login(smtp_user, smtp_password)
-                server.sendmail(smtp_user, head_agent_email, msg.as_string())
-        except Exception:
-            with smtplib.SMTP_SSL(smtp_server, 465, timeout=10) as server:
-                server.ehlo()
-                server.login(smtp_user, smtp_password)
-                server.sendmail(smtp_user, head_agent_email, msg.as_string())
-
+        _send_email_message(head_agent_email, msg)
         print(f"[EMAIL] ✅ Sent {tx_type} request notification to {head_agent_email}", flush=True)
     except Exception as e:
         print(f"[EMAIL ERROR] Failed to send notification email: {e}", flush=True)
         traceback.print_exc()
 
 def send_admin_report_email(admin_email: str, admin_name: str, property_title: str, tx_type: str, pdf_path: str):
-    smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-    smtp_port = int(os.getenv("SMTP_PORT", 587))
-    smtp_user = os.getenv("SMTP_USER", "")
-    smtp_password = os.getenv("SMTP_PASSWORD", "")
-    email_from = os.getenv("EMAIL_FROM", smtp_user)
+    """Sends finalized transaction report with PDF attachment to administrators."""
+    email_from = os.getenv("EMAIL_FROM", os.getenv("SMTP_USER", ""))
 
     try:
         subject = f"📑 New Transaction Finalized: {property_title} ({tx_type})"
@@ -196,28 +215,15 @@ def send_admin_report_email(admin_email: str, admin_name: str, property_title: s
                 part.add_header("Content-Disposition", f"attachment; filename={os.path.basename(pdf_path)}")
                 msg.attach(part)
 
-        try:
-            with smtplib.SMTP(smtp_server, smtp_port, timeout=10) as server:
-                server.ehlo(); server.starttls(); server.ehlo()
-                server.login(smtp_user, smtp_password)
-                server.sendmail(smtp_user, admin_email, msg.as_string())
-        except Exception:
-            with smtplib.SMTP_SSL(smtp_server, 465, timeout=10) as server:
-                server.ehlo()
-                server.login(smtp_user, smtp_password)
-                server.sendmail(smtp_user, admin_email, msg.as_string())
+        _send_email_message(admin_email, msg)
         print(f"[EMAIL] ✅ Report sent to Admin: {admin_email}", flush=True)
     except Exception as e:
         print(f"[EMAIL ERROR] Failed to send Admin report email: {e}", flush=True)
         traceback.print_exc()
 
 def send_account_status_email(user_email: str, user_name: str, is_active: bool, manager_name: str):
-    smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-    smtp_port = int(os.getenv("SMTP_PORT", 587))
-    smtp_user = os.getenv("SMTP_USER", "")
-    smtp_password = os.getenv("SMTP_PASSWORD", "")
-    email_from = os.getenv("EMAIL_FROM", smtp_user)
-
+    """Notifies a user when their account status changes (activated/deactivated)."""
+    email_from = os.getenv("EMAIL_FROM", os.getenv("SMTP_USER", ""))
     status_text = "ACTIVATED" if is_active else "DEACTIVATED"
     status_color = "#16a34a" if is_active else "#dc2626"
     action_description = "You now have full access to your dashboard." if is_active else "Your access to the platform has been temporarily restricted."
@@ -268,12 +274,7 @@ def send_account_status_email(user_email: str, user_name: str, is_active: bool, 
         msg["To"] = user_email
         msg.attach(MIMEText(html, "html"))
 
-        try:
-            with smtplib.SMTP(smtp_server, smtp_port, timeout=10) as server:
-                server.ehlo(); server.starttls(); server.ehlo(); server.login(smtp_user, smtp_password); server.sendmail(smtp_user, user_email, msg.as_string())
-        except Exception:
-            with smtplib.SMTP_SSL(smtp_server, 465, timeout=10) as server:
-                server.ehlo(); server.login(smtp_user, smtp_password); server.sendmail(smtp_user, user_email, msg.as_string())
+        _send_email_message(user_email, msg)
         print(f"[EMAIL] ✅ Account {status_text} email sent to {user_email}", flush=True)
     except Exception as e:
         print(f"[EMAIL ERROR] {e}", flush=True)
@@ -286,11 +287,7 @@ def send_transaction_rejection_email(
     manager_name: str
 ):
     """Notifies a sub-agent that their sale/rent request was rejected."""
-    smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-    smtp_port = int(os.getenv("SMTP_PORT", 587))
-    smtp_user = os.getenv("SMTP_USER", "")
-    smtp_password = os.getenv("SMTP_PASSWORD", "")
-    email_from = os.getenv("EMAIL_FROM", smtp_user)
+    email_from = os.getenv("EMAIL_FROM", os.getenv("SMTP_USER", ""))
 
     try:
         subject = f"❌ Request Rejected: {property_title}"
@@ -310,12 +307,16 @@ def send_transaction_rejection_email(
           </td></tr></table>
         </body></html>
         """
-        msg = MIMEMultipart(); msg["Subject"] = subject; msg["From"] = email_from; msg["To"] = sub_agent_email
+        msg = MIMEMultipart()
+        msg["Subject"] = subject
+        msg["From"] = email_from
+        msg["To"] = sub_agent_email
         msg.attach(MIMEText(html, "html"))
-        with smtplib.SMTP(smtp_server, smtp_port, timeout=10) as server:
-            server.ehlo(); server.starttls(); server.ehlo(); server.login(smtp_user, smtp_password); server.sendmail(smtp_user, sub_agent_email, msg.as_string())
+
+        _send_email_message(sub_agent_email, msg)
         print(f"[EMAIL] ❌ Rejection email sent to {sub_agent_email}", flush=True)
-    except Exception as e: print(f"[EMAIL ERROR] {e}", flush=True)
+    except Exception as e:
+        print(f"[EMAIL ERROR] {e}", flush=True)
 
 def send_client_transaction_success_email(
     client_email: str,
@@ -325,13 +326,8 @@ def send_client_transaction_success_email(
     property_price: str,
     property_location: str
 ):
-    """Congratulates a client on their new property!"""
-    smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-    smtp_port = int(os.getenv("SMTP_PORT", 587))
-    smtp_user = os.getenv("SMTP_USER", "")
-    smtp_password = os.getenv("SMTP_PASSWORD", "")
-    email_from = os.getenv("EMAIL_FROM", smtp_user)
-
+    """Congratulates a client on their new property listing purchase/rent!"""
+    email_from = os.getenv("EMAIL_FROM", os.getenv("SMTP_USER", ""))
     action_verb = "Purchased" if tx_type == "Sale" else "Rented"
     congrats_msg = "Welcome to your new home!" if tx_type == "Sale" else "Enjoy your new stay!"
 
@@ -358,12 +354,17 @@ def send_client_transaction_success_email(
           </td></tr></table>
         </body></html>
         """
-        msg = MIMEMultipart(); msg["Subject"] = subject; msg["From"] = email_from; msg["To"] = client_email
+        msg = MIMEMultipart()
+        msg["Subject"] = subject
+        msg["From"] = email_from
+        msg["To"] = client_email
         msg.attach(MIMEText(html, "html"))
-        with smtplib.SMTP(smtp_server, smtp_port, timeout=10) as server:
-            server.ehlo(); server.starttls(); server.ehlo(); server.login(smtp_user, smtp_password); server.sendmail(smtp_user, client_email, msg.as_string())
+
+        _send_email_message(client_email, msg)
         print(f"[EMAIL] 🎉 Client success email sent to {client_email}", flush=True)
-    except Exception as e: print(f"[EMAIL ERROR] {e}", flush=True)
+    except Exception as e:
+        print(f"[EMAIL ERROR] {e}", flush=True)
+
 def send_property_assignment_email(
     agent_email: str,
     agent_name: str,
@@ -372,11 +373,7 @@ def send_property_assignment_email(
     head_agent_name: str
 ):
     """Notifies a sub-agent that they have been assigned to a property."""
-    smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-    smtp_port = int(os.getenv("SMTP_PORT", 587))
-    smtp_user = os.getenv("SMTP_USER", "")
-    smtp_password = os.getenv("SMTP_PASSWORD", "")
-    email_from = os.getenv("EMAIL_FROM", smtp_user)
+    email_from = os.getenv("EMAIL_FROM", os.getenv("SMTP_USER", ""))
 
     try:
         subject = f"🏠 New Assignment: {property_title}"
@@ -439,12 +436,7 @@ def send_property_assignment_email(
         msg["To"] = agent_email
         msg.attach(MIMEText(html, "html"))
 
-        try:
-            with smtplib.SMTP(smtp_server, smtp_port, timeout=10) as server:
-                server.ehlo(); server.starttls(); server.ehlo(); server.login(smtp_user, smtp_password); server.sendmail(smtp_user, agent_email, msg.as_string())
-        except Exception:
-            with smtplib.SMTP_SSL(smtp_server, 465, timeout=10) as server:
-                server.ehlo(); server.login(smtp_user, smtp_password); server.sendmail(smtp_user, agent_email, msg.as_string())
+        _send_email_message(agent_email, msg)
         print(f"[EMAIL] ✅ Assignment notification sent to {agent_email}", flush=True)
     except Exception as e:
         print(f"[EMAIL ERROR] {e}", flush=True)

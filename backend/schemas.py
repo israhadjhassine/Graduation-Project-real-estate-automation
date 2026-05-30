@@ -242,6 +242,9 @@ class TransactionRequest(TransactionRequestBase):
     class Config:
         from_attributes = True
 
+class TransactionFinalize(BaseModel):
+    action: str # "complete" or "cancel"
+
 # --- Telegram Pairing ---
 class TelegramCodeResponse(BaseModel):
     code: str

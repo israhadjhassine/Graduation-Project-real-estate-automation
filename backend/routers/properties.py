@@ -179,7 +179,7 @@ def update_property_status(
         if not (is_admin or is_owner or is_manager or is_assigned):
             raise HTTPException(status_code=403, detail="You are not authorized to update this property status")
     
-    if new_status not in ["available", "sold", "rented", "pending_sold", "pending_rent"]:
+    if new_status not in ["available", "sold", "rented", "pending_sold", "pending_rent", "approved_sold", "approved_rent"]:
         raise HTTPException(status_code=400, detail="Invalid status value")
     
     if new_status == "rented":
@@ -216,10 +216,26 @@ def request_property_transaction(
     if prop.agent_id != current_user.id and prop.owner_id != current_user.id and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="You are not assigned to this property")
 
-    # Check if a pending request already exists
-    existing = PropertyRepository.get_pending_transaction_request(db, property_id)
+    # Check if a pending or approved request already exists
+    existing = db.query(models.TransactionRequest).filter(
+        models.TransactionRequest.property_id == property_id,
+        models.TransactionRequest.status.in_(["pending", "approved"])
+    ).first()
     if existing:
-        raise HTTPException(status_code=400, detail="A pending transaction request already exists for this property")
+        raise HTTPException(status_code=400, detail="An active transaction request already exists for this property")
+
+    # Check if there is a visit for this property, client, and agent with status "finished"
+    visit = db.query(models.Visit).filter(
+        models.Visit.property_id == property_id,
+        models.Visit.client_id == request_in.client_id,
+        models.Visit.agent_id == current_user.id,
+        models.Visit.status == "finished"
+    ).first()
+    if not visit:
+        raise HTTPException(
+            status_code=400,
+            detail="You must have a completed (finished) visit with this client for this property before requesting a transaction."
+        )
 
     new_request = models.TransactionRequest(
         property_id=property_id,
@@ -238,6 +254,60 @@ def request_property_transaction(
     
     PropertyRepository.commit(db)
     return {"message": "Transaction request submitted for head agent approval."}
+
+@router.post("/properties/{property_id}/finalize-transaction")
+def finalize_property_transaction(
+    property_id: int,
+    payload: schemas.TransactionFinalize,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["agent", "head_agent", "admin"]))
+):
+    """Allows Sub-Agents to finalize (complete or cancel) an approved transaction request."""
+    prop = PropertyRepository.get_by_id(db, property_id)
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found")
+        
+    # Verify agent is assigned to this property, is the owner, or is admin
+    if prop.agent_id != current_user.id and prop.owner_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="You are not authorized to finalize this transaction")
+
+    # Find the approved transaction request for this property
+    req = db.query(models.TransactionRequest).filter(
+        models.TransactionRequest.property_id == property_id,
+        models.TransactionRequest.status == "approved"
+    ).first()
+    if not req:
+        raise HTTPException(status_code=400, detail="No approved transaction request found for this property")
+
+    if payload.action == "complete":
+        # Finalize the transaction
+        req.status = "completed"
+        prop.buyer_id = req.client_id
+        if req.type == "Rent":
+            prop.rent_start_date = req.rent_start_date
+            prop.rent_end_date = req.rent_end_date
+            
+        # Cancel all other scheduled visits for this property
+        db.query(models.Visit).filter(
+            models.Visit.property_id == property_id,
+            models.Visit.status == "scheduled"
+        ).update({"status": "cancelled"})
+            
+        # Call finalize_transaction (which sets prop.status, creates report, sends emails)
+        finalize_transaction(db, prop, req.type, background_tasks)
+        db.commit()
+        return {"message": f"Transaction completed successfully. Property status set to {prop.status}."}
+        
+    elif payload.action == "cancel":
+        # Revert request and property status
+        req.status = "cancelled"
+        prop.status = "available"
+        db.commit()
+        return {"message": "Transaction request cancelled. Property is now available."}
+        
+    else:
+        raise HTTPException(status_code=400, detail="Invalid action. Must be 'complete' or 'cancel'.")
 
 @router.post("/properties/{property_id}/images", response_model=List[schemas.PropertyImage])
 async def upload_property_images(
@@ -367,6 +437,7 @@ def semantic_search(
 ):
     """Strict Semantic Search - No keyword fallback."""
     search_text = payload.query if (payload and payload.query) else query
+    f_ids = payload.feature_ids if (payload and payload.feature_ids) else feature_ids
     
     q = PropertyRepository.get_query(db).options(
         joinedload(models.Property.images),
@@ -381,24 +452,25 @@ def semantic_search(
         q = q.filter(models.Property.price >= min_price)
     if max_price:
         q = q.filter(models.Property.price <= max_price)
+    if f_ids:
+        for fid in f_ids:
+            q = q.filter(models.Property.features.any(models.Feature.id == fid))
         
     if search_text:
-        query_embedding = ai.get_query_embedding(search_text)
-        if not query_embedding:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
-                detail="Semantic search service (Ollama) is temporarily unavailable."
+        from sqlalchemy import or_
+        q = q.filter(
+            or_(
+                models.Property.title.ilike(f"%{search_text}%"),
+                models.Property.description.ilike(f"%{search_text}%")
             )
+        )
         
-        # Strict rank by semantic similarity
-        q = q.order_by(models.Property.description_vector.l2_distance(query_embedding))
+    if sort_price == 'asc':
+        q = q.order_by(models.Property.price.asc())
+    elif sort_price == 'desc':
+        q = q.order_by(models.Property.price.desc())
     else:
-        if sort_price == 'asc':
-            q = q.order_by(models.Property.price.asc())
-        elif sort_price == 'desc':
-            q = q.order_by(models.Property.price.desc())
-        else:
-            q = q.order_by(models.Property.created_at.desc())
+        q = q.order_by(models.Property.created_at.desc())
 
     return q.limit(40).all()
 

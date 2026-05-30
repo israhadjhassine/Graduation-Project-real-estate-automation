@@ -13,7 +13,11 @@ class VisitRepository:
 
     @staticmethod
     def get_upcoming(db: Session, window_start: datetime, window_end: datetime) -> List[models.Visit]:
-        return db.query(models.Visit).filter(
+        return db.query(models.Visit).options(
+            joinedload(models.Visit.client),
+            joinedload(models.Visit.property),
+            joinedload(models.Visit.agent)
+        ).filter(
             models.Visit.status == 'scheduled',
             models.Visit.reminder_sent == False,
             models.Visit.visit_date >= window_start,

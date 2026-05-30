@@ -1,8 +1,20 @@
 <template>
   <div class="space-y-4">
     <!-- Filters Bar -->
-    <div class="flex justify-end">
-      <div class="relative w-full md:w-64">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="relative">
+        <LucideUser class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
+        <select 
+          v-model="agentFilter"
+          class="w-full pl-11 pr-4 py-2.5 bg-white border border-primary-100 rounded-2xl text-xs focus:ring-2 focus:ring-primary-900/10 focus:border-primary-900 outline-none transition-all font-medium text-primary-950 shadow-sm appearance-none cursor-pointer"
+        >
+          <option value="all">All Agents</option>
+          <option value="unassigned">Unassigned</option>
+          <option v-for="agent in staff" :key="agent.id" :value="agent.id">{{ agent.full_name }}</option>
+        </select>
+      </div>
+
+      <div class="relative">
         <LucideFilter class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400" />
         <select 
           v-model="statusFilter"
@@ -116,7 +128,7 @@
 import { ref, computed } from 'vue'
 import { 
   LucideImage, LucideEdit, LucideTrash2, 
-  LucideEye, LucideHome, LucideFilter
+  LucideEye, LucideHome, LucideFilter, LucideUser
 } from 'lucide-vue-next'
 import { useAssetUrl } from '~/composables/useAssetUrl'
 
@@ -137,11 +149,20 @@ defineEmits([
 const { getPublicUrl } = useAssetUrl()
 
 const statusFilter = ref('all')
+const agentFilter = ref('all')
 
 const filteredProperties = computed(() => {
   return props.properties.filter(prop => {
-    if (statusFilter.value === 'all') return true
-    return prop.status === statusFilter.value
+    const matchesStatus = statusFilter.value === 'all' || prop.status === statusFilter.value
+    
+    let matchesAgent = true
+    if (agentFilter.value === 'unassigned') {
+      matchesAgent = !prop.agent_id
+    } else if (agentFilter.value !== 'all') {
+      matchesAgent = prop.agent_id == agentFilter.value
+    }
+    
+    return matchesStatus && matchesAgent
   })
 })
 

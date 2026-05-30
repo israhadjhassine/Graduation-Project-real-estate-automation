@@ -34,6 +34,10 @@ export const usePropertyService = () => {
             return api.post(`/properties/${id}/request-transaction`, data)
         },
 
+        async finalizeTransaction(id: number | string, action: 'complete' | 'cancel') {
+            return api.post(`/properties/${id}/finalize-transaction`, { action })
+        },
+
         async uploadImages(propertyId: number | string, files: File[]) {
             const formData = new FormData()
             files.forEach(file => {

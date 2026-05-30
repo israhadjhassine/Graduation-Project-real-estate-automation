@@ -7,6 +7,12 @@
       <LucideCalendar class="w-4 h-4 inline-block mr-2" /> Property Visits
     </button>
     <button 
+      @click="$emit('update:activeTab', 'calendar')" 
+      :class="['px-5 py-3 text-sm font-bold transition-all whitespace-nowrap border-b-2', activeTab === 'calendar' ? 'border-primary-950 text-primary-950' : 'border-transparent text-primary-400 hover:text-primary-600']"
+    >
+      <LucideCalendar class="w-4 h-4 inline-block mr-2" /> Calendar
+    </button>
+    <button 
       @click="$emit('update:activeTab', 'properties')" 
       :class="['px-5 py-3 text-sm font-bold transition-all whitespace-nowrap border-b-2', activeTab === 'properties' ? 'border-primary-950 text-primary-950' : 'border-transparent text-primary-400 hover:text-primary-600']"
     >

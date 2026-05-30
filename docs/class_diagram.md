@@ -139,9 +139,10 @@ classDiagram
     class PropertyStatus {
         <<enumeration>>
         available
+        pending_sold
+        pending_rent
         sold
         rented
-        pending
     }
 
     class ListingType {

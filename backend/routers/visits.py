@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from typing import List
 import models, schemas, database, auth
 from repositories.visit_repository import VisitRepository
@@ -19,6 +20,15 @@ def book_visit(
     """Called by n8n after a Google Calendar event is successfully created."""
     # Convert to UTC to match original behavior
     visit_date_utc = payload.visit_date.astimezone(timezone.utc)
+    
+    # Restrict bookings to weekdays (Monday-Friday) only
+    tunis_tz = ZoneInfo("Africa/Tunis")
+    visit_tunis = visit_date_utc.replace(tzinfo=timezone.utc).astimezone(tunis_tz)
+    if visit_tunis.weekday() in (5, 6):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Visits cannot be booked on Saturdays or Sundays."
+        )
     
     # Dynamically resolve client identity if telegram_chat_id is linked to a registered web user
     client_id = None
@@ -46,6 +56,16 @@ def update_visit(
     """ resheduel a visit """
     original_date_utc=payload.original_visit_date.astimezone(timezone.utc)
     new_date_utc=payload.new_visit_date.astimezone(timezone.utc)
+    
+    # Restrict updates/rescheduling to weekdays (Monday-Friday) only
+    tunis_tz = ZoneInfo("Africa/Tunis")
+    new_date_tunis = new_date_utc.replace(tzinfo=timezone.utc).astimezone(tunis_tz)
+    if new_date_tunis.weekday() in (5, 6):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Visits cannot be rescheduled to Saturdays or Sundays."
+        )
+        
     visit=VisitRepository.find_scheduled_visit(
         db=db,
         telegram_chat_id=payload.client_telegram_id ,
@@ -98,14 +118,111 @@ def cancel_visit(
 
 
     
-@router.get("/visits/upcoming", response_model=List[schemas.VisitResponse])
+@router.get("/visits/agent-availability")
+def check_agent_availability(
+    agent_id: int,
+    requested_date: str,
+    db: Session = Depends(database.get_db)
+):
+    """
+    Checks if a sub-agent is available at a requested date/time based on their scheduled visits in the DB.
+    Returns whether they are available, and a list of 5 upcoming available time slots (in Tunis time, UTC+1).
+    """
+    # 1. Parse requested date/time
+    tunis_tz = ZoneInfo("Africa/Tunis")
+    try:
+        parsed_date = datetime.fromisoformat(requested_date.replace("Z", "+00:00"))
+    except ValueError:
+        try:
+            # Fallback to date only: assume 06:00 local Tunis time
+            parsed_date = datetime.strptime(requested_date, "%Y-%m-%d")
+            parsed_date = parsed_date.replace(hour=6, minute=0, second=0, tzinfo=tunis_tz)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD or ISO 8601 format.")
+            
+    # 2. Standardize parsed_date to naive UTC
+    if parsed_date.tzinfo is not None:
+        parsed_date_utc = parsed_date.astimezone(timezone.utc).replace(tzinfo=None)
+    else:
+        # If naive, treat it as Africa/Tunis local time, then convert to UTC
+        parsed_date_tz = parsed_date.replace(tzinfo=tunis_tz)
+        parsed_date_utc = parsed_date_tz.astimezone(timezone.utc).replace(tzinfo=None)
+        
+    # 3. Ensure the start date is not in the past relative to UTC 'now'
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    if parsed_date_utc < now_utc:
+        parsed_date_utc = now_utc
+        
+    # 4. Fetch all scheduled visits for this agent
+    visits = db.query(models.Visit).filter(
+        models.Visit.agent_id == agent_id,
+        models.Visit.status == "scheduled"
+    ).all()
+    
+    # 5. Check if the specific requested slot is available
+    is_available = True
+    requested_tunis = parsed_date_utc.replace(tzinfo=timezone.utc).astimezone(tunis_tz)
+    
+    # Working hours constraint: 06:00 to 23:00 Tunis time (starts must be between 06:00 and 22:00 inclusive)
+    # Also restrict availability to weekdays (Monday-Friday) only
+    if not (6 <= requested_tunis.hour <= 22) or requested_tunis.weekday() in (5, 6):
+        is_available = False
+    else:
+        for visit in visits:
+            diff = abs((parsed_date_utc - visit.visit_date).total_seconds())
+            if diff < 3600:
+                is_available = False
+                break
+            
+    # 6. Find 5 available slots starting from parsed_date_utc
+    available_slots = []
+    current_time_utc = parsed_date_utc
+    # Round to clean hour if minutes/seconds/microseconds exist
+    if current_time_utc.minute > 0 or current_time_utc.second > 0 or current_time_utc.microsecond > 0:
+        current_time_utc = current_time_utc.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+        
+    checked_slots = 0
+    # Search up to 1 week (168 hours) to prevent infinite loops
+    while len(available_slots) < 5 and checked_slots < 168:
+        # Convert slot time in UTC to Tunis time (Africa/Tunis)
+        tunis_time = current_time_utc.replace(tzinfo=timezone.utc).astimezone(tunis_tz)
+        hour = tunis_time.hour
+        
+        # Candidate slot must be within working hours and NOT on Saturday (5) or Sunday (6)
+        if 6 <= hour <= 22 and tunis_time.weekday() not in (5, 6):
+            conflict = False
+            for visit in visits:
+                diff = abs((current_time_utc - visit.visit_date).total_seconds())
+                if diff < 3600:
+                    conflict = True
+                    break
+            if not conflict:
+                available_slots.append(tunis_time.isoformat(timespec='seconds'))
+                
+        current_time_utc += timedelta(hours=1)
+        checked_slots += 1
+        
+    return {
+        "agent_id": agent_id,
+        "is_available": is_available,
+        "available_slots": available_slots
+    }
+
+
+@router.get("/visits/upcoming", response_model=List[schemas.VisitDetailResponse])
 def get_upcoming_visits(
     db: Session = Depends(database.get_db)
 ):
-    """Returns visits scheduled within the next window (40-50 min) as per original logic."""
+    """Returns visits scheduled within a short window for testing."""
     now = datetime.now(timezone.utc).replace(tzinfo=None) # naive for compare
-    window_start = now
-    window_end = now + timedelta(minutes=60)
+    
+    # Old logic (40-50 min window):
+    # window_start = now + timedelta(minutes=40)
+    # window_end = now + timedelta(minutes=50)
+    
+    # Testing logic: wider window (e.g., 24 hours) for easier testing
+    window_start = now - timedelta(minutes=10)  # include slightly past visits to avoid race conditions
+    window_end = now + timedelta(hours=24)
     
     return VisitRepository.get_upcoming(db, window_start, window_end)
 
@@ -200,15 +317,9 @@ def update_inquiry_status(
 
     if status == "replied": # APPROVE
         req.status = "approved"
-        prop.status = "sold" if req.type == "Sale" else "rented"
-        prop.buyer_id = req.client_id
-        if req.type == "Rent":
-            prop.rent_start_date = req.rent_start_date
-            prop.rent_end_date = req.rent_end_date
-        
-        finalize_transaction(db, prop, req.type, background_tasks)
+        prop.status = "approved_sold" if req.type == "Sale" else "approved_rent"
         InquiryRepository.commit(db)
-        return {"message": "Request approved and transaction finalized."}
+        return {"message": "Request approved. Sub-agent can now finalize the transaction."}
     
     elif status == "closed": # REJECT
         req.status = "rejected"

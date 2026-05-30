@@ -1,0 +1,61 @@
+@startuml
+autonumber
+
+actor Client
+boundary PropertyDetailsPage
+boundary Telegram
+control SmartAgent
+control PropertyController
+entity propertyModel
+entity pgvector
+
+Client -> PropertyDetailsPage : handleTelegramInquiry()
+activate PropertyDetailsPage
+
+alt authenticated == false
+    PropertyDetailsPage -> PropertyDetailsPage : alert(error_msg)
+    deactivate PropertyDetailsPage
+else telegram_paired == false
+    PropertyDetailsPage -> PropertyDetailsPage : navigateTo(page)
+    deactivate PropertyDetailsPage
+else authenticated == true && telegram_paired == true
+    PropertyDetailsPage -> Telegram : openTelegramBot(start_command)
+    deactivate PropertyDetailsPage
+    
+    activate Telegram
+    
+    Telegram -> SmartAgent : send_query(chat_id, query)
+    activate SmartAgent
+    
+    SmartAgent -> PropertyController : rag_search(query)
+    activate PropertyController
+    
+    alt ollama_unavailable
+        PropertyController --> SmartAgent : returns_false()
+        deactivate PropertyController
+        SmartAgent --> Telegram : returns_false()
+        deactivate SmartAgent
+        Telegram -> Telegram : showErrorMessage(error_msg)
+        deactivate Telegram
+    else search_successful
+        PropertyController -> propertyModel : get_properties()
+        activate propertyModel
+        propertyModel -> pgvector : searchWith_l2_distance(embedding)
+        activate pgvector
+        pgvector --> propertyModel : results
+        deactivate pgvector
+        propertyModel --> PropertyController : results
+        deactivate propertyModel
+        
+        PropertyController --> SmartAgent : response
+        deactivate PropertyController
+        
+        SmartAgent --> Telegram : response_text
+        deactivate SmartAgent
+        
+        deactivate Telegram
+    end
+end
+@enduml
+
+

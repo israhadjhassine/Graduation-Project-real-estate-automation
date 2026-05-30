@@ -1,0 +1,161 @@
+@startuml
+autonumber
+
+actor HeadAgent
+boundary PropertyManagementPage
+boundary PropertyModal
+control PropertyController
+control GeolocationService
+control StorageService
+entity propertyModel
+
+alt View Properties
+    HeadAgent -> PropertyManagementPage : viewProperties()
+    activate PropertyManagementPage
+    
+    PropertyManagementPage -> PropertyController : get_agent_properties(agent_id)
+    activate PropertyController
+    
+    PropertyController -> propertyModel : find_by_agent_id(agent_id)
+    activate propertyModel
+    propertyModel --> PropertyController : properties_list
+    deactivate propertyModel
+    
+    PropertyController --> PropertyManagementPage : properties_list
+    deactivate PropertyController
+    
+    PropertyManagementPage -> PropertyManagementPage : renderPropertiesList()
+    deactivate PropertyManagementPage
+
+else Filter/Search Properties
+    HeadAgent -> PropertyManagementPage : searchProperties(name, status)
+    activate PropertyManagementPage
+    
+    PropertyManagementPage -> PropertyController : search_agent_properties(agent_id, name, status)
+    activate PropertyController
+    
+    PropertyController -> propertyModel : find_by_query(agent_id, name, status)
+    activate propertyModel
+    propertyModel --> PropertyController : filtered_properties
+    deactivate propertyModel
+    
+    PropertyController --> PropertyManagementPage : filtered_properties
+    deactivate PropertyController
+    
+    PropertyManagementPage -> PropertyManagementPage : renderPropertiesList()
+    deactivate PropertyManagementPage
+
+else Add New Property
+    HeadAgent -> PropertyManagementPage : clickAddProperty()
+    activate PropertyManagementPage
+    
+    PropertyManagementPage -> PropertyModal : openAddModal()
+    activate PropertyModal
+    PropertyManagementPage <-- PropertyModal : returns_true()
+    deactivate PropertyManagementPage
+    
+    HeadAgent -> PropertyModal : submitPropertyData(property_data, address, images)
+    
+    PropertyModal -> PropertyController : create_property(property_data, address, images)
+    activate PropertyController
+    
+    PropertyController -> GeolocationService : get_coordinates(address)
+    activate GeolocationService
+    GeolocationService --> PropertyController : coordinates
+    deactivate GeolocationService
+    
+    PropertyController -> StorageService : upload_images(images)
+    activate StorageService
+    StorageService --> PropertyController : image_urls
+    deactivate StorageService
+    
+    PropertyController -> propertyModel : save_property(property_data, coordinates, image_urls)
+    activate propertyModel
+    propertyModel --> PropertyController : returns_true()
+    deactivate propertyModel
+    
+    PropertyController --> PropertyModal : returns_true()
+    deactivate PropertyController
+    
+    PropertyModal -> PropertyModal : showSuccessAndClose()
+    deactivate PropertyModal
+
+else Edit Property Details
+    HeadAgent -> PropertyManagementPage : clickEditProperty(property_id)
+    activate PropertyManagementPage
+    
+    PropertyManagementPage -> PropertyModal : openEditModal(property_id)
+    activate PropertyModal
+    PropertyManagementPage <-- PropertyModal : returns_true()
+    deactivate PropertyManagementPage
+    
+    HeadAgent -> PropertyModal : updatePropertyData(property_id, updated_data, new_address, new_images, deleted_image_ids)
+    
+    PropertyModal -> PropertyController : update_property(property_id, updated_data, new_address, new_images, deleted_image_ids)
+    activate PropertyController
+    
+    opt address_changed
+        PropertyController -> GeolocationService : get_coordinates(new_address)
+        activate GeolocationService
+        GeolocationService --> PropertyController : coordinates
+        deactivate GeolocationService
+    end
+    
+    opt new_images_uploaded
+        PropertyController -> StorageService : upload_images(new_images)
+        activate StorageService
+        StorageService --> PropertyController : image_urls
+        deactivate StorageService
+    end
+    
+    opt images_deleted
+        PropertyController -> StorageService : delete_image(deleted_image_ids)
+        activate StorageService
+        StorageService --> PropertyController : returns_true()
+        deactivate StorageService
+    end
+    
+    PropertyController -> propertyModel : update_property_fields(property_id, updated_data, coordinates, image_urls, deleted_image_ids)
+    activate propertyModel
+    propertyModel --> PropertyController : returns_true()
+    deactivate propertyModel
+    
+    PropertyController --> PropertyModal : returns_true()
+    deactivate PropertyController
+    
+    PropertyModal -> PropertyModal : showSuccessAndClose()
+    deactivate PropertyModal
+
+else Delete Property Listing
+    HeadAgent -> PropertyManagementPage : clickDeleteProperty(property_id)
+    activate PropertyManagementPage
+    
+    PropertyManagementPage -> PropertyManagementPage : showConfirmationDialog()
+    
+    alt confirm_deletion
+        PropertyManagementPage -> PropertyController : delete_property(property_id)
+        activate PropertyController
+        
+        opt property_has_images
+            PropertyController -> StorageService : delete_all_images(property_id)
+            activate StorageService
+            StorageService --> PropertyController : returns_true()
+            deactivate StorageService
+        end
+        
+        PropertyController -> propertyModel : remove_property(property_id)
+        activate propertyModel
+        propertyModel --> PropertyController : returns_true()
+        deactivate propertyModel
+        
+        PropertyController --> PropertyManagementPage : returns_true()
+        deactivate PropertyController
+        
+        PropertyManagementPage -> PropertyManagementPage : showSuccessMessage()
+        deactivate PropertyManagementPage
+    else cancel_deletion
+        PropertyManagementPage -> PropertyManagementPage : closeDialog()
+        deactivate PropertyManagementPage
+    end
+end
+@enduml
