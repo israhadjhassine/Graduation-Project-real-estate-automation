@@ -7,7 +7,6 @@ interface User {
     full_name: string
     role: 'admin' | 'head_agent' | 'agent' | 'client'
     agency_id?: number
-    google_calendar_id?: string
 }
 
 interface AuthState {

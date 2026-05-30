@@ -71,8 +71,6 @@ def update_profile(
     
     if user_update.phone_number: 
         current_user.phone_number = user_update.phone_number
-    if user_update.google_calendar_id is not None: 
-        current_user.google_calendar_id = user_update.google_calendar_id
     
     UserRepository.commit(db)
     UserRepository.refresh(db, current_user)
@@ -92,19 +90,6 @@ def update_password(
     UserRepository.commit(db)
     return {"message": "Password updated successfully"}
 
-@router.get("/agents/{agent_id}/calendar")
-def get_agent_calendar(agent_id: int, db: Session = Depends(database.get_db)):
-    """Returns agent calendar ID."""
-    agent = UserRepository.get_agent_by_id(db, agent_id)
-    if not agent: 
-        raise HTTPException(status_code=404, detail="Agent not found")
-    
-    return {
-        "agent_id": agent.id,
-        "full_name": agent.full_name,
-        "google_calendar_id": agent.google_calendar_id,
-        "email": agent.email
-    }
 
 @router.get("/agency/staff", response_model=List[schemas.User])
 def get_team_staff(

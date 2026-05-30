@@ -46,11 +46,7 @@
                 <label class="block text-xs font-bold text-primary-400 uppercase tracking-widest mb-2">Phone Number</label>
                 <input v-model="profileForm.phone_number" type="tel" class="w-full bg-primary-50 border border-primary-100 rounded-xl px-4 py-3 text-sm focus:border-accent-500 outline-none" />
               </div>
-              <div>
-                <label class="block text-xs font-bold text-primary-400 uppercase tracking-widest mb-2">Google Calendar ID</label>
-                <input v-model="profileForm.google_calendar_id" type="text" placeholder="e.g. primary or email@gmail.com" class="w-full bg-primary-50 border border-primary-100 rounded-xl px-4 py-3 text-sm focus:border-accent-500 outline-none" />
-                <p class="text-[10px] text-primary-400 mt-1">This calendar ID is used by the AI assistant to automate scheduling and book visits.</p>
-              </div>
+
               
               <div v-if="message" :class="['p-3 rounded-xl text-xs font-medium', isError ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600']">
                 {{ message }}
@@ -112,8 +108,7 @@ const isError = ref(false)
 const profileForm = ref({
   full_name: auth.user?.full_name || '',
   email: auth.user?.email || '',
-  phone_number: auth.user?.phone_number || '',
-  google_calendar_id: auth.user?.google_calendar_id || ''
+  phone_number: auth.user?.phone_number || ''
 })
 
 const passForm = ref({

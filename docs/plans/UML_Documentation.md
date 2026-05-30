@@ -260,7 +260,6 @@ classDiagram
         +String hashed_password
         +String role
         +Boolean is_active
-        +String google_calendar_id
         +String telegram_chat_id
         +TIMESTAMP created_at
         +BigInteger manager_id

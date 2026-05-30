@@ -523,8 +523,7 @@ def rag_search(
             description=prop.description,
             latitude=prop.latitude, 
             longitude=prop.longitude, 
-            google_maps_url=maps_url,
-            agent_calendar_id=prop.agent.google_calendar_id if prop.agent else None
+            google_maps_url=maps_url
         )
         rag_properties.append(rag_prop)
         context_parts.append(

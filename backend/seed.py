@@ -44,7 +44,6 @@ def seed_db():
             email="killer.chebbi@gmail.com", 
             full_name="Ahmed Trabelsi", 
             role="agent", 
-            google_calendar_id="68f19bf32d864818eaae2b335012dab02672fa7b902b340c81aaad5c6f9bc632@group.calendar.google.com",
             hashed_password=auth.get_password_hash("agentpassword"), 
             manager_id=head1.id
         )

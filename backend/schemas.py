@@ -19,7 +19,6 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     email: Optional[EmailStr] = None
     phone_number: Optional[str] = None
-    google_calendar_id: Optional[str] = None
     telegram_chat_id: Optional[str] = None
 
 class PasswordUpdate(BaseModel):
@@ -37,7 +36,6 @@ class User(UserBase):
     is_active: bool
     created_at: datetime
     manager_id: Optional[int] = None
-    google_calendar_id: Optional[str] = None
     telegram_chat_id: Optional[str] = None
 
     class Config:
@@ -185,7 +183,6 @@ class VisitCreate(BaseModel):
     client_email: Optional[str] = None
     agent_id: Optional[int] = None
     visit_date: datetime
-    google_calendar_event_id: Optional[str] = None
 
 class SemanticSearchQuery(BaseModel):
     query: Optional[str] = None
@@ -209,7 +206,6 @@ class RAGProperty(BaseModel):
     latitude: Optional[Decimal] = None
     longitude: Optional[Decimal] = None
     google_maps_url: Optional[str] = None
-    agent_calendar_id: Optional[str] = None
 
 class RAGSearchResponse(BaseModel):
     context: str

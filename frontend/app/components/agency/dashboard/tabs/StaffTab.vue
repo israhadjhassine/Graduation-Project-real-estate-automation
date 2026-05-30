@@ -37,7 +37,6 @@
             <th class="px-6 py-4 text-xs font-bold text-primary-600">Sub-Agent Name</th>
             <th class="px-6 py-4 text-xs font-bold text-primary-600">Email Address</th>
             <th class="px-6 py-4 text-xs font-bold text-primary-600">Phone Number</th>
-            <th class="px-6 py-4 text-xs font-bold text-primary-600">Google Calendar ID</th>
             <th class="px-6 py-4 text-xs font-bold text-primary-600">Assigned Properties</th>
             <th class="px-6 py-4 text-xs font-bold text-primary-600">Status</th>
             <th class="px-6 py-4 text-xs font-bold text-primary-600 text-right">Actions</th>
@@ -55,20 +54,7 @@
             </td>
             <td class="px-6 py-4 text-sm text-primary-600">{{ agent.email }}</td>
             <td class="px-6 py-4 text-sm text-primary-600">{{ agent.phone_number || 'N/A' }}</td>
-            <td class="px-6 py-4 text-sm text-primary-600">
-              <button 
-                v-if="agent.google_calendar_id" 
-                @click="copyToClipboard(agent.google_calendar_id, agent.id)" 
-                class="flex items-center gap-2 px-3 py-1.5 bg-primary-50 hover:bg-accent-50 border border-primary-100 hover:border-accent-200 rounded-xl text-xs font-semibold text-primary-700 hover:text-accent-700 transition-all shadow-sm active:scale-95 duration-150"
-                title="Click to copy Google Calendar ID"
-              >
-                <span class="font-medium text-[11px]">{{ copiedId === agent.id ? 'Copied!' : 'Click to copy' }}</span>
-                <component :is="copiedId === agent.id ? LucideCheck : LucideCopy" class="w-3.5 h-3.5" />
-              </button>
-              <span v-else class="px-2 py-1 bg-amber-50 text-amber-700 text-[10px] font-bold rounded-lg border border-amber-200">
-                ⚠️ Missing Calendar
-              </span>
-            </td>
+
             <td class="px-6 py-4">
               <span class="px-3 py-1 bg-primary-100 text-primary-700 text-[10px] font-bold rounded-lg uppercase">
                 {{ properties.filter(p => p.agent_id === agent.id).length }} Listings
@@ -95,7 +81,7 @@
             </td>
           </tr>
           <tr v-if="!filteredStaff.length">
-            <td colspan="7" class="px-6 py-12 text-center text-primary-500">
+            <td colspan="6" class="px-6 py-12 text-center text-primary-500">
               <LucideUsers class="w-12 h-12 mx-auto text-primary-200 mb-3" />
               <p>No matching Sub-Agents found.</p>
             </td>
@@ -108,7 +94,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { LucideUsers, LucideCopy, LucideCheck, LucideSearch, LucideFilter } from 'lucide-vue-next'
+import { LucideUsers, LucideSearch, LucideFilter } from 'lucide-vue-next'
 
 const props = defineProps<{
   staff: any[]
@@ -119,8 +105,6 @@ defineEmits(['toggle-status'])
 
 const searchQuery = ref('')
 const statusFilter = ref('all')
-
-const copiedId = ref<number | null>(null)
 
 const filteredStaff = computed(() => {
   return props.staff.filter(agent => {
@@ -140,17 +124,4 @@ const filteredStaff = computed(() => {
     return matchesSearch && matchesStatus
   })
 })
-
-const copyToClipboard = (text: string, id: number) => {
-  navigator.clipboard.writeText(text).then(() => {
-    copiedId.value = id
-    setTimeout(() => {
-      if (copiedId.value === id) {
-        copiedId.value = null
-      }
-    }, 2000)
-  }).catch(err => {
-    console.error('Failed to copy text: ', err)
-  })
-}
 </script>

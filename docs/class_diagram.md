@@ -26,7 +26,6 @@ classDiagram
         +String phone_number
         +String hashed_password
         +Boolean is_active
-        +String google_calendar_id
         +String telegram_chat_id
         +TIMESTAMP created_at
         +register(fullName, email, password) User

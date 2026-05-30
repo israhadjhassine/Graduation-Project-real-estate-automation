@@ -276,7 +276,7 @@ The database schema contains **6 primary tables** and **1 association table**:
 
 | Table | Description |
 |---|---|
-| `users` | All platform users, with `role`, `manager_id` (self-referential FK for hierarchy), and `google_calendar_id` |
+| `users` | All platform users, with `role`, and `manager_id` (self-referential FK for hierarchy) |
 | `properties` | Full property data: type, price, location, dimensions, status, and `description_vector` (Vector 768) |
 | `property_images` | One-to-many property gallery, stored as absolute ImageKit CDN URLs |
 | `features` | Amenity tags (Pool, Elevator, Garden, etc.) |

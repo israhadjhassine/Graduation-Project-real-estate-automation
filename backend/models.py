@@ -27,7 +27,6 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     role = Column(String(20), default="client") # client, agent, head_agent, admin
     is_active = Column(Boolean, default=True)
-    google_calendar_id = Column(String(255), nullable=True)
     telegram_chat_id = Column(String(50), unique=True, nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     
