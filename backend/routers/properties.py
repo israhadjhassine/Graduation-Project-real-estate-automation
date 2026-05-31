@@ -34,7 +34,7 @@ def create_property(
     if property_in.feature_ids:
         new_property.features = PropertyRepository.get_features_by_ids(db, property_in.feature_ids)
     
-    new_property.description_vector = ai.get_embedding(new_property.description)
+    new_property.description_vector = ai.generate_property_embedding(new_property)
     return PropertyRepository.save(db, new_property)
 
 @router.get("/properties/{property_id}", response_model=schemas.Property)
@@ -67,18 +67,23 @@ def update_property(
         
     update_data = property_in.dict(exclude_unset=True, exclude={"feature_ids"})
     
-    # Check if description changed for AI re-embedding
-    description_changed = "description" in update_data and update_data["description"] != prop.description
+    # Recalculate embedding if any search-relevant field is updated
+    search_fields = {
+        "title", "description", "property_type", "listing_type", "price",
+        "currency", "area", "bedrooms", "bathrooms", "kitchens", "living_rooms",
+        "country", "state", "city", "neighborhood", "address"
+    }
+    search_changed = any(field in update_data for field in search_fields) or (property_in.feature_ids is not None)
     
     # Apply updates
     for key, value in update_data.items():
         setattr(prop, key, value)
-    
-    if description_changed:
-        prop.description_vector = ai.get_embedding(prop.description)
         
     if property_in.feature_ids is not None:
         prop.features = PropertyRepository.get_features_by_ids(db, property_in.feature_ids)
+        
+    if search_changed:
+        prop.description_vector = ai.generate_property_embedding(prop)
         
     PropertyRepository.commit(db)
     PropertyRepository.refresh(db, prop)

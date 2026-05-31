@@ -1,12 +1,13 @@
 @startuml
 autonumber
 
-actor Client
-boundary ProfilePage
-boundary Telegram
-control auth
-entity telegramPairingCodeModel 
-entity userModel
+actor ":Client" as Client
+boundary ":ProfilePage" as ProfilePage
+boundary ":Telegram" as Telegram
+boundary ":SmartAgent" as SmartAgent
+control ":auth" as auth
+entity ":telegramPairingCodeModel" as telegramPairingCodeModel
+entity ":userModel" as userModel
 
 Client -> ProfilePage : generatePairingCode()
 activate ProfilePage
@@ -16,58 +17,49 @@ activate auth
 
 auth -> telegramPairingCodeModel : save_pairing_code(user_id, code)
 activate telegramPairingCodeModel
-telegramPairingCodeModel --> auth : pairing_code
+telegramPairingCodeModel --> auth : returns (code)
 deactivate telegramPairingCodeModel
 
-auth --> ProfilePage : pairing_code
+auth --> ProfilePage : returns (code)
 deactivate auth
-ProfilePage -> Telegram : openTelegramBot()
+ProfilePage -> Telegram : openTelegramBot("/start pair_592108")
 deactivate ProfilePage
 
-Client -> Telegram : /start pair_592108
+
 activate Telegram
 
-Telegram -> auth : pair_telegram_account(code, chat_id)
+Telegram -> SmartAgent : pair_telegram(code, chat_id)
+activate SmartAgent
+
+SmartAgent -> auth : pair_telegram_account(code, chat_id)
 activate auth
 
 auth -> telegramPairingCodeModel : get_by_code(code)
 activate telegramPairingCodeModel
-telegramPairingCodeModel --> auth : pairing_record
+telegramPairingCodeModel --> auth : returns(pairing_record)
 deactivate telegramPairingCodeModel
 
 alt invalid_code
-    auth --> Telegram : returns_false()
-    deactivate auth
-    Telegram -> Telegram : showInvalidCodeMessage()
-    deactivate Telegram
+    auth --> SmartAgent : returns_false()
+    SmartAgent --> Telegram : InvalidCodeMessage("invalid_code")
+    
 else valid_code
     auth -> userModel : get_by_telegram_chat_id(chat_id)
     activate userModel
     userModel --> auth : existing_user
-    deactivate userModel
-    
-     opt existing_user_found
-        auth -> userModel : unlink_telegram_chat_id(existing_user_id)
-        activate userModel
-        deactivate userModel
-    end
-    
+  
     auth -> userModel : link_telegram_chat_id(user_id, chat_id)
-    activate userModel
+ 
     deactivate userModel
     
     auth -> telegramPairingCodeModel : delete_pairing_record(pairing_record_id)
-    activate telegramPairingCodeModel
-    deactivate telegramPairingCodeModel
-    
-    auth --> Telegram : returns_true()
+    auth -> auth : pairing_success()
+    auth --> SmartAgent : returns_true()
     deactivate auth
-    Telegram -> Telegram : showSuccessMessage()
+    
+    SmartAgent --> Telegram : showSuccessMessage(txt)
+    deactivate SmartAgent
     deactivate Telegram
 end
 
 @enduml
-
-
-
-

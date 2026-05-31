@@ -1,0 +1,19 @@
+@startuml
+autonumber
+actor ":HeadAgent" as HeadAgent
+boundary ":PropertyManagementPage" as PropertyManagementPage
+control ":PropertyController" as PropertyController
+entity ":propertyModel" as propertyModel
+HeadAgent -> PropertyManagementPage : viewProperties()
+activate PropertyManagementPage
+PropertyManagementPage -> PropertyController : get_agent_properties(agent_id)
+activate PropertyController
+PropertyController -> propertyModel : find_by_agent_id(agent_id)
+activate propertyModel
+propertyModel --> PropertyController : returns(properties_list)
+deactivate propertyModel
+PropertyController --> PropertyManagementPage : returns(properties_list)
+deactivate PropertyController
+PropertyManagementPage -> PropertyManagementPage : renderPropertiesList()
+deactivate PropertyManagementPage
+@enduml

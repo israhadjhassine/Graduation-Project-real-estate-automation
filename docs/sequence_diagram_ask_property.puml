@@ -1,24 +1,22 @@
 @startuml
 autonumber
 
-actor Client
-boundary PropertyDetailsPage
-boundary Telegram
-control SmartAgent
-control PropertyController
-entity propertyModel
-entity pgvector
+actor ":Client" as Client
+boundary ":PropertyDetailsPage" as PropertyDetailsPage
+boundary ":Telegram" as Telegram
+control ":SmartAgent" as SmartAgent
+control ":PropertyController" as PropertyController
+control ":OllamaEmbeddingModel" as OllamaEmbeddingModel
+entity ":propertyModel" as propertyModel
+entity ":pgvector" as pgvector
 
 Client -> PropertyDetailsPage : handleTelegramInquiry()
 activate PropertyDetailsPage
 
-alt authenticated == false
-    PropertyDetailsPage -> PropertyDetailsPage : alert(error_msg)
+alt telegram_paired == false
+    ref over Client, PropertyDetailsPage, SmartAgent : 	 telegram paire
     deactivate PropertyDetailsPage
-else telegram_paired == false
-    PropertyDetailsPage -> PropertyDetailsPage : navigateTo(page)
-    deactivate PropertyDetailsPage
-else authenticated == true && telegram_paired == true
+else telegram_paired == true
     PropertyDetailsPage -> Telegram : openTelegramBot(start_command)
     deactivate PropertyDetailsPage
     
@@ -30,32 +28,38 @@ else authenticated == true && telegram_paired == true
     SmartAgent -> PropertyController : rag_search(query)
     activate PropertyController
     
+    PropertyController -> OllamaEmbeddingModel : get_query_embedding(query)
+    activate OllamaEmbeddingModel
+    
     alt ollama_unavailable
-        PropertyController --> SmartAgent : returns_false()
+        OllamaEmbeddingModel --> PropertyController : returns_false()
+        
+        PropertyController --> SmartAgent : alert("ollama unavailbale")
         deactivate PropertyController
-        SmartAgent --> Telegram : returns_false()
+        SmartAgent --> Telegram : ErrorMessage("ollama unavailbale")
         deactivate SmartAgent
-        Telegram -> Telegram : showErrorMessage(error_msg)
         deactivate Telegram
-    else search_successful
-        PropertyController -> propertyModel : get_properties()
+    else embedding_generated
+        OllamaEmbeddingModel --> PropertyController : embedding
+        deactivate OllamaEmbeddingModel
+        
+        PropertyController -> propertyModel : get_properties(embedding)
         activate propertyModel
+        
         propertyModel -> pgvector : searchWith_l2_distance(embedding)
         activate pgvector
-        pgvector --> propertyModel : results
+        pgvector --> propertyModel : return_properties(embedding)
         deactivate pgvector
-        propertyModel --> PropertyController : results
+        
+        propertyModel --> PropertyController : return_properties(embedding)
         deactivate propertyModel
         
-        PropertyController --> SmartAgent : response
+        PropertyController --> SmartAgent : RAGresponse(context)
         deactivate PropertyController
         
-        SmartAgent --> Telegram : response_text
+        SmartAgent --> Telegram : response_message(text)
         deactivate SmartAgent
-        
         deactivate Telegram
     end
 end
 @enduml
-
-

@@ -1,0 +1,25 @@
+@startuml
+autonumber
+
+actor ":HeadAgent" as HeadAgent
+boundary ":PropertyManagementPage" as PropertyManagementPage
+control ":PropertyController" as PropertyController
+entity ":propertyModel" as propertyModel
+
+HeadAgent -> PropertyManagementPage : searchProperties(name, status)
+activate PropertyManagementPage
+
+PropertyManagementPage -> PropertyController : search_agent_properties( name, status)
+activate PropertyController
+
+PropertyController -> propertyModel : find_by_query(name, status)
+activate propertyModel
+propertyModel --> PropertyController :returns(filtered_properties)
+deactivate propertyModel
+
+PropertyController --> PropertyManagementPage : returns(filtered_properties)
+deactivate PropertyController
+
+PropertyManagementPage -> PropertyManagementPage : renderPropertiesList()
+deactivate PropertyManagementPage
+@enduml

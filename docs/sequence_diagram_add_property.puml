@@ -1,0 +1,45 @@
+@startuml
+autonumber
+
+actor ":HeadAgent" as HeadAgent
+boundary ":PropertyManagementPage" as PropertyManagementPage
+boundary ":PropertyAddModal" as PropertyModal
+control ":PropertyController" as PropertyController
+control ":StorageService" as StorageService
+control ":OllamaEmbeddingModel" as OllamaEmbeddingModel
+entity ":propertyModel" as propertyModel
+
+HeadAgent -> PropertyManagementPage : clickAddProperty()
+activate PropertyManagementPage
+
+PropertyManagementPage -> PropertyModal : openAddModal()
+activate PropertyModal
+PropertyManagementPage <-- PropertyModal : returns_true()
+deactivate PropertyManagementPage
+
+HeadAgent -> PropertyModal : submitPropertyData(property_data, coordinates, images)
+
+PropertyModal -> PropertyController : create_property(property_data, coordinates, images)
+activate PropertyController
+
+PropertyController -> OllamaEmbeddingModel : get_embedding(description)
+activate OllamaEmbeddingModel
+OllamaEmbeddingModel --> PropertyController : returns(embedding_description)
+deactivate OllamaEmbeddingModel
+
+PropertyController -> StorageService : upload_images(images)
+activate StorageService
+StorageService --> PropertyController : image_urls
+deactivate StorageService
+
+PropertyController -> propertyModel : save_property(property_data, coordinates, embedding_description, image_urls)
+activate propertyModel
+propertyModel --> PropertyController : returns_true()
+deactivate propertyModel
+
+PropertyController --> PropertyModal : returns_true()
+deactivate PropertyController
+
+PropertyModal -> PropertyModal : closeAndshowSuccess()
+deactivate PropertyModal
+@enduml

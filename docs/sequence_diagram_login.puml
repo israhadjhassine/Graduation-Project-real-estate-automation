@@ -6,66 +6,121 @@ actor "User" as ActorUser
 boundary LoginPage
 control AuthController
 entity UserModel
-boundary DashboardAdmin
-boundary DashboardSubAgent
-boundary DashboardHeadAgent
-boundary Homepage
+
 
 ActorUser -> LoginPage : handleLogin()
 activate LoginPage
 
-LoginPage -> AuthController : login(email, password)
+LoginPage -> AuthController : login(username, password)
 activate AuthController
 
-AuthController -> UserModel : get_by_email(email)
+AuthController -> UserModel : get_by_email(username, password)
 activate UserModel
-UserModel --> AuthController : user
+UserModel --> AuthController : return(user)
 deactivate UserModel
 
 AuthController -> AuthController : verify_password(password, hashed_password)
 
-alt credentials_valid
+alt  invalid_credentials
 
-    alt is_active == true
+    AuthController --> LoginPage : alert("Incorrect email or password")
+
+else credentials_valid
+    
+    alt user.is_active == false
+    
+        AuthController --> LoginPage : alert("Account deactivated")
+        
+
+    else user.is_active == true
     
         AuthController -> AuthController : create_access_token()
-        AuthController --> LoginPage : jwt_token
-        deactivate AuthController
-        
-        alt role == 'admin'
-            LoginPage -> DashboardAdmin : navigateTo('/admin')
-            activate DashboardAdmin
-            deactivate DashboardAdmin
-        else role == 'head_agent'
-            LoginPage -> DashboardHeadAgent : navigateTo('/agency')
-            activate DashboardHeadAgent
-            deactivate DashboardHeadAgent
-        else role == 'agent'
-            LoginPage -> DashboardSubAgent : navigateTo('/agent')
-            activate DashboardSubAgent
-            deactivate DashboardSubAgent
-        else role == 'client'
-            LoginPage -> Homepage : navigateTo('/')
-            activate Homepage
-            deactivate Homepage
+        AuthController --> LoginPage : recieve_jwt_token()
+
+        alt user.role == 'admin'
+            LoginPage -> LoginPage : navigateTo('/admin')
+            
+        else user.role == 'head_agent'
+            LoginPage -> LoginPage : navigateTo('/agency')
+            
+        else user.role == 'sub_agent'
+            LoginPage -> LoginPage : navigateTo('/agent')
+            
+        else user.role == 'client'
+            LoginPage -> LoginPage : navigateTo('/home_page')
+            
         end
-        deactivate LoginPage
-        
-    else is_active == false
-    
-        AuthController --> LoginPage : returns_false()
         deactivate AuthController
-        LoginPage -> LoginPage : alert("Account deactivated")
         deactivate LoginPage
         
     end
+    
+    
+    
 
-else invalid_credentials
+end
 
-    AuthController --> LoginPage : returns_false()
-    deactivate AuthController
-    LoginPage -> LoginPage : alert("Incorrect email or password")
-    deactivate LoginPage
+@enduml
+
+@startuml
+autonumber
+
+actor ":User" as ActorUser
+
+boundary ":LoginPage" as LoginPage
+control ":AuthController" as AuthController
+entity ":UserModel" as UserModel
+
+
+ActorUser -> LoginPage : handleLogin()
+activate LoginPage
+
+LoginPage -> AuthController : login(username, password)
+activate AuthController
+
+AuthController -> UserModel : get_by_email(username, password)
+activate UserModel
+UserModel --> AuthController : return(user)
+deactivate UserModel
+
+AuthController -> AuthController : verify_password(password, hashed_password)
+
+alt  invalid_credentials
+
+    AuthController --> LoginPage : alert("Incorrect email or password")
+
+else credentials_valid
+    
+    alt user.is_active == false
+    
+        AuthController --> LoginPage : alert("Account deactivated")
+        
+
+    else user.is_active == true
+    
+        AuthController -> AuthController : create_access_token()
+        AuthController --> LoginPage : recieve_jwt_token()
+
+        alt user.role == 'admin'
+            LoginPage -> LoginPage : navigateTo('/admin')
+            
+        else user.role == 'head_agent'
+            LoginPage -> LoginPage : navigateTo('/agency')
+            
+        else user.role == 'sub_agent'
+            LoginPage -> LoginPage : navigateTo('/agent')
+            
+        else user.role == 'client'
+            LoginPage -> LoginPage : navigateTo('/home_page')
+            
+        end
+        deactivate AuthController
+        deactivate LoginPage
+        
+    end
+    
+    
+    
 
 end
 

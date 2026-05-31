@@ -122,7 +122,7 @@ class Visit(Base):
     
     id = Column(BigInteger, primary_key=True, index=True)
     property_id = Column(BigInteger, ForeignKey("properties.id", ondelete="CASCADE"))
-    client_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"),nullable=True) #am going to remove nullable after testing with n8n
+    client_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"),nullable=True) 
     agent_id = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     visit_date = Column(TIMESTAMP, nullable=False)
     status = Column(String(50), default="scheduled") # scheduled, finished, cancelled

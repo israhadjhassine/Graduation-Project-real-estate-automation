@@ -1,0 +1,56 @@
+@startuml
+autonumber
+
+actor ":HeadAgent" as HeadAgent
+boundary ":PropertyManagementPage" as PropertyManagementPage
+boundary ":PropertyEditModal" as PropertyModal
+control ":PropertyController" as PropertyController
+control ":StorageService" as StorageService
+control ":OllamaEmbeddingModel" as OllamaEmbeddingModel
+entity ":propertyModel" as propertyModel
+
+HeadAgent -> PropertyManagementPage : clickEditProperty(property_id)
+activate PropertyManagementPage
+
+PropertyManagementPage -> PropertyModal : openEditModal(property_id)
+activate PropertyModal
+PropertyManagementPage <-- PropertyModal : returns_true()
+deactivate PropertyManagementPage
+
+HeadAgent -> PropertyModal : updatePropertyData(property_id, updated_data,new_cordinated , new_images, deleted_image_ids)
+
+PropertyModal -> PropertyController : update_property(property_id, updated_data,new_cordinated,new_images, deleted_image_ids)
+activate PropertyController
+
+opt description_changed
+    PropertyController -> OllamaEmbeddingModel : get_embedding(description)
+    activate OllamaEmbeddingModel
+    OllamaEmbeddingModel --> PropertyController : returns(embedding_description)
+    deactivate OllamaEmbeddingModel
+end
+
+opt new_images_uploaded
+    PropertyController -> StorageService : upload_images(new_images)
+    activate StorageService
+    StorageService --> PropertyController : image_urls
+    deactivate StorageService
+end
+
+opt images_deleted
+    PropertyController -> StorageService : delete_image(deleted_image_ids)
+    activate StorageService
+    StorageService --> PropertyController : returns_true()
+    deactivate StorageService
+end
+
+PropertyController -> propertyModel : update_property_fields(property_id, updated_data,new_cordinated , embedding_description, image_urls, deleted_image_ids)
+activate propertyModel
+propertyModel --> PropertyController : returns_true()
+deactivate propertyModel
+
+PropertyController --> PropertyModal : returns_true()
+deactivate PropertyController
+
+PropertyModal -> PropertyModal : closeAndshowSuccess()
+deactivate PropertyModal
+@enduml

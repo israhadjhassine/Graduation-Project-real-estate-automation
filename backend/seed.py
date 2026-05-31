@@ -550,7 +550,7 @@ def seed_db():
                 agent_id=user_map[p["agent_email"]],
                 owner_id=user_map[p["owner_email"]],
                 published_at=datetime.utcnow(),
-                description_vector=ai.get_embedding(p["description"])
+                description_vector=ai.generate_property_embedding(p)
             )
             
             for f_name in p["features"]:
