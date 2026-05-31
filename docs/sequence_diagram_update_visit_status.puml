@@ -1,0 +1,25 @@
+@startuml
+autonumber
+
+actor ":SubAgent" as SubAgent
+boundary ":VisitManagementPage" as VisitManagementPage
+control ":VisitsController" as VisitsController
+entity ":visitModel" as visitModel
+
+SubAgent -> VisitManagementPage : clickUpdateStatus(visit_id, status)
+activate VisitManagementPage
+
+VisitManagementPage -> VisitsController : update_visit_status(visit_id, status)
+activate VisitsController
+
+VisitsController -> visitModel : update_status(visit_id, status)
+activate visitModel
+visitModel --> VisitsController : returns_true()
+deactivate visitModel
+
+VisitsController --> VisitManagementPage : returns_true()
+deactivate VisitsController
+
+VisitManagementPage -> VisitManagementPage : showSuccessMessage()
+deactivate VisitManagementPage
+@enduml

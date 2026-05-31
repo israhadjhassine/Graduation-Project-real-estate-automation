@@ -1,0 +1,25 @@
+@startuml
+autonumber
+
+actor ":SubAgent" as SubAgent
+boundary ":VisitManagementPage" as VisitManagementPage
+control ":VisitsController" as VisitsController
+entity ":visitModel" as visitModel
+
+SubAgent -> VisitManagementPage : viewVisits()
+activate VisitManagementPage
+
+VisitManagementPage -> VisitsController : get_agent_visits_list(agent_id)
+activate VisitsController
+
+VisitsController -> visitModel : find_by_agent_id(agent_id)
+activate visitModel
+visitModel --> VisitsController : returns(visits_list)
+deactivate visitModel
+
+VisitsController --> VisitManagementPage : returns(visits_list)
+deactivate VisitsController
+
+VisitManagementPage -> VisitManagementPage : renderVisits()
+deactivate VisitManagementPage
+@enduml
