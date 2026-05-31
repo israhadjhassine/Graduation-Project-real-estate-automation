@@ -9,17 +9,23 @@ class InquiryRepository:
             joinedload(models.TransactionRequest.property),
             joinedload(models.TransactionRequest.agent),
             joinedload(models.TransactionRequest.client)
-        ).filter(models.TransactionRequest.status == "pending")
+        )
 
         if owner_id:
             # For Head Agents: their properties OR their team's requests
-            query = query.join(models.TransactionRequest.property).filter(
+            query = query.filter(models.TransactionRequest.status == "pending").join(models.TransactionRequest.property).filter(
                 (models.Property.owner_id == owner_id) | 
                 (models.TransactionRequest.agent_id.in_(sub_agent_ids or []))
             )
         elif agent_id:
-            # For Agents: only their own
-            query = query.filter(models.TransactionRequest.agent_id == agent_id)
+            # For Agents: only their own (pending and approved)
+            query = query.filter(
+                models.TransactionRequest.agent_id == agent_id,
+                models.TransactionRequest.status.in_(["pending", "approved"])
+            )
+        else:
+            # For Admin: all pending requests
+            query = query.filter(models.TransactionRequest.status == "pending")
             
         return query.order_by(models.TransactionRequest.created_at.desc()).all()
 

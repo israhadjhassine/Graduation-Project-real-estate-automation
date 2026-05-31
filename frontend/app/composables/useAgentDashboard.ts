@@ -12,6 +12,7 @@ export const useAgentDashboard = () => {
   const visits = ref<any[]>([])
   const myProperties = ref<any[]>([])
   const clients = ref<any[]>([])
+  const inquiries = ref<any[]>([])
   const statistics = ref<any>(null)
   
   // Filters State
@@ -114,14 +115,16 @@ export const useAgentDashboard = () => {
   const fetchData = async () => {
     loading.value = true
     try {
-      const [visitsRes, propsRes, clientsRes] = await Promise.all([
+      const [visitsRes, propsRes, clientsRes, inquiriesRes] = await Promise.all([
         agentService.getVisits(),
         agentService.getProperties(),
-        agencyService.getClients()
+        agencyService.getClients(),
+        agentService.getInquiries()
       ])
       visits.value = visitsRes.data
       myProperties.value = propsRes.data
       clients.value = clientsRes.data
+      inquiries.value = inquiriesRes.data || []
       
       // Fetch stats
       statsLoading.value = true
@@ -174,6 +177,7 @@ export const useAgentDashboard = () => {
     visits,
     myProperties,
     clients,
+    inquiries,
     statistics,
     searchQuery,
     locationQuery,

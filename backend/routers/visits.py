@@ -279,7 +279,7 @@ def get_agent_inquiries(
             "phone": client.phone_number if client else "",
             "subject": f"{r.type} Request: {prop.title if prop else 'Property'}",
             "message": msg,
-            "status": "new", # Compatibility field for UI
+            "status": r.status, # Use actual request status
             "property_id": r.property_id,
             "agent_id": r.agent_id,
             "client_id": r.client_id,

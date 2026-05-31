@@ -16,6 +16,9 @@ export const useAdminService = () => {
         async getReports() {
             return api.get('/admin/reports')
         },
+        async getVisits() {
+            return api.get('/agent/visits')
+        },
         async getStatistics() {
             return api.get('/statistics/admin')
         },

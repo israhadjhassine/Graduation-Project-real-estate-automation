@@ -6,6 +6,38 @@
 
 
 
+      <!-- Quick Alert for Pending Approvals -->
+      <div v-if="pendingInquiries.length > 0" class="mb-6 p-5 bg-gradient-to-r from-amber-50 to-orange-50/50 border border-amber-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+        <div class="flex items-start gap-4">
+          <div class="w-12 h-12 bg-amber-100/80 rounded-xl flex items-center justify-center text-amber-700 shrink-0 shadow-inner">
+            <LucideShieldAlert class="w-6 h-6" />
+          </div>
+          <div>
+            <h4 class="text-base font-bold text-amber-950">Awaiting Manager Approval</h4>
+            <p class="text-sm text-amber-800/90 mt-0.5">You have {{ pendingInquiries.length }} transaction request(s) pending review and approval by your Head Agent.</p>
+          </div>
+        </div>
+        <button @click="activeTab = 'properties'" class="btn-primary !bg-amber-600 hover:!bg-amber-700 !text-white text-xs font-semibold py-2.5 px-5 self-start sm:self-auto rounded-xl shadow-sm transition-all duration-200">
+          View Properties
+        </button>
+      </div>
+
+      <!-- Quick Alert for Approved Transactions -->
+      <div v-if="approvedInquiries.length > 0" class="mb-6 p-5 bg-gradient-to-r from-emerald-50 to-green-50/50 border border-emerald-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+        <div class="flex items-start gap-4">
+          <div class="w-12 h-12 bg-emerald-100/80 rounded-xl flex items-center justify-center text-emerald-700 shrink-0 shadow-inner">
+            <LucideCheckCircle2 class="w-6 h-6" />
+          </div>
+          <div>
+            <h4 class="text-base font-bold text-emerald-950">Transaction Approved</h4>
+            <p class="text-sm text-emerald-800/90 mt-0.5">Your manager has approved {{ approvedInquiries.length }} transaction request(s)! Please finalize (complete) or cancel them in your portfolio.</p>
+          </div>
+        </div>
+        <button @click="activeTab = 'properties'" class="btn-primary !bg-emerald-600 hover:!bg-emerald-700 !text-white text-xs font-semibold py-2.5 px-5 self-start sm:self-auto rounded-xl shadow-sm transition-all duration-200">
+          Finalize Now
+        </button>
+      </div>
+
       <!-- Quick Stats -->
       <AgentStats 
         :my-properties="myProperties" 
@@ -103,7 +135,8 @@ import {
   LucideHeadset, LucideHome, LucideCalendar, 
   LucideCheckCircle2, LucideXCircle, LucideX,
   LucideCheck, LucidePieChart, 
-  LucideSearch, LucideMapPin, LucideFilter, LucideEye
+  LucideSearch, LucideMapPin, LucideFilter, LucideEye,
+  LucideShieldAlert
 } from 'lucide-vue-next'
 import VisitDetailsModal from '~/components/agency/VisitDetailsModal.vue'
 
@@ -130,12 +163,15 @@ const activeTab = ref('visits')
 const propertyService = usePropertyService()
 
 const {
-  visits, myProperties, clients, statistics, searchQuery, locationQuery,
+  visits, myProperties, clients, inquiries, statistics, searchQuery, locationQuery,
   statusFilter, dateFilter, loading, statsLoading,
   upcomingVisits, finishedVisits, filteredVisits, visitChartData,
   propertyStatusChartData, monthlyVisitsChartData,
   fetchData, submitSaleRequest: doSubmitSaleRequest, submitRentRequest: doSubmitRentRequest, updateVisitStatus
 } = useAgentDashboard()
+
+const pendingInquiries = computed(() => (inquiries.value || []).filter(inq => inq.status === 'pending'))
+const approvedInquiries = computed(() => (inquiries.value || []).filter(inq => inq.status === 'approved'))
 
 const handleFinalizeTransaction = async (propertyId, action) => {
   const confirmTitle = action === 'complete' ? 'Complete Transaction?' : 'Cancel Transaction Request?'

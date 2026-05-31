@@ -27,6 +27,7 @@ export const useAgencyDashboard = () => {
   const rentedProperties = computed(() => properties.value.filter(p => p.status === 'rented'))
   const activeProperties = computed(() => properties.value.filter(p => !['sold', 'pending_sold'].includes(p.status)))
   const pendingSales = computed(() => properties.value.filter(p => ['pending_sold', 'pending_rent'].includes(p.status)))
+  const closedDealsCount = computed(() => soldProperties.value.length + rentedProperties.value.length)
 
   const propertyStatusChartData = computed(() => {
     if (!statistics.value || !statistics.value.property_statuses) return null
@@ -178,6 +179,7 @@ export const useAgencyDashboard = () => {
     pendingSales,
     propertyStatusChartData,
     agentPerformanceChartData,
+    closedDealsCount,
     // Methods
     fetchData,
     deleteProperty,

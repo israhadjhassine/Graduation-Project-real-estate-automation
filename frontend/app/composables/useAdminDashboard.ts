@@ -14,6 +14,7 @@ export const useAdminDashboard = () => {
   const users = ref<any[]>([])
   const properties = ref<any[]>([])
   const reports = ref<any[]>([])
+  const visits = ref<any[]>([])
   const statistics = ref<any>(null)
   
   const loading = ref(false)
@@ -99,22 +100,26 @@ export const useAdminDashboard = () => {
 
   const headAgents = computed(() => users.value.filter(u => u.role === 'head_agent'))
 
+  const closedDealsCount = computed(() => properties.value.filter(p => ['sold', 'rented'].includes(p.status)).length)
+
   // Methods
   const fetchData = async () => {
     loading.value = true
     statsLoading.value = true
     try {
-      const [usersRes, propsRes, reportsRes, statsRes] = await Promise.all([
+      const [usersRes, propsRes, reportsRes, statsRes, visitsRes] = await Promise.all([
         adminService.getUsers(),
         propertyService.getProperties(),
         adminService.getReports(),
-        adminService.getStatistics()
+        adminService.getStatistics(),
+        adminService.getVisits()
       ])
       
       users.value = usersRes.data || []
       properties.value = propsRes.data || []
       reports.value = reportsRes.data || []
       statistics.value = statsRes.data || null
+      visits.value = visitsRes.data || []
     } catch (e) {
       console.error("Failed to load admin data", e)
     } finally {
@@ -168,6 +173,7 @@ export const useAdminDashboard = () => {
     users,
     properties,
     reports,
+    visits,
     statistics,
     loading,
     statsLoading,
@@ -186,6 +192,7 @@ export const useAdminDashboard = () => {
     topAgentsChartData,
     propertyStatusChartData,
     headAgents,
+    closedDealsCount,
     
     // Methods
     fetchData,

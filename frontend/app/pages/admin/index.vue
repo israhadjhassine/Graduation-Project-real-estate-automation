@@ -10,7 +10,7 @@
       </div>
 
       <!-- Quick Stats -->
-      <div class="grid md:grid-cols-3 gap-6 mb-10">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
         <div class="card-premium border-l-4 border-l-primary-900 !rounded-lg">
           <div class="flex items-center gap-4">
             <div class="w-12 h-12 bg-primary-50 rounded-lg flex items-center justify-center">
@@ -43,6 +43,30 @@
             <div>
               <p class="text-[10px] font-bold text-primary-400 uppercase tracking-[0.2em]">Total Listings</p>
               <p class="text-2xl font-bold text-primary-950 mt-0.5">{{ properties.length }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-premium border-l-4 border-l-blue-600 !rounded-lg">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
+              <LucideCalendar class="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <p class="text-[10px] font-bold text-primary-400 uppercase tracking-[0.2em]">Scheduled Visits</p>
+              <p class="text-2xl font-bold text-primary-950 mt-0.5">{{ visits.length }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-premium border-l-4 border-l-orange-600 !rounded-lg">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center">
+              <LucideTrendingUp class="w-6 h-6 text-orange-600" />
+            </div>
+            <div>
+              <p class="text-[10px] font-bold text-primary-400 uppercase tracking-[0.2em]">Closed Deals</p>
+              <p class="text-2xl font-bold text-primary-950 mt-0.5">{{ closedDealsCount }}</p>
             </div>
           </div>
         </div>
@@ -394,7 +418,8 @@ import {
   LucideShieldAlert, LucideUsers, LucideBuilding2, 
   LucideHome, LucidePlus, LucideX, LucideEye,
   LucideFileText, LucideDownload, LucidePieChart,
-  LucideSearch, LucideFilter, LucideUserCheck, LucideMapPin
+  LucideSearch, LucideFilter, LucideUserCheck, LucideMapPin,
+  LucideCalendar, LucideTrendingUp
 } from 'lucide-vue-next'
 
 import { useAuthStore } from '~/stores/auth'
@@ -406,13 +431,13 @@ const auth = useAuthStore()
 
 // Domain Composable Orchestration
 const {
-  users, properties, reports, statistics,
+  users, properties, reports, statistics, visits,
   loading, statsLoading,
   userSearchQuery, userRoleFilter, userStatusFilter,
   propSearchQuery, propLocationQuery,
   filteredUsers, filteredProperties,
   userRolesChartData, topAgentsChartData, propertyStatusChartData,
-  headAgents,
+  headAgents, closedDealsCount,
   fetchData, createUser, toggleUserStatus, downloadReport
 } = useAdminDashboard()
 

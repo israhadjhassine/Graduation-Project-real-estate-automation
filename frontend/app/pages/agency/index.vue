@@ -6,8 +6,29 @@
 
 
 
+      <!-- Quick Alert for Pending Approvals -->
+      <div v-if="inquiries.length > 0" class="mb-8 p-5 bg-gradient-to-r from-amber-50 to-orange-50/50 border border-amber-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+        <div class="flex items-start gap-4">
+          <div class="w-12 h-12 bg-amber-100/80 rounded-xl flex items-center justify-center text-amber-700 shrink-0 shadow-inner">
+            <LucideShieldAlert class="w-6 h-6" />
+          </div>
+          <div>
+            <h4 class="text-base font-bold text-amber-950">Pending Approvals Required</h4>
+            <p class="text-sm text-amber-800/90 mt-0.5">There are {{ inquiries.length }} transaction request(s) awaiting your review and approval.</p>
+          </div>
+        </div>
+        <button @click="activeTab = 'inquiries'" class="btn-primary !bg-amber-600 hover:!bg-amber-700 !text-white text-xs font-semibold py-2.5 px-5 self-start sm:self-auto rounded-xl shadow-sm transition-all duration-200">
+          Review Approvals
+        </button>
+      </div>
+
       <!-- Quick Stats -->
-      <AgencyStats :properties-count="properties.length" :staff-count="staff.length" />
+      <AgencyStats 
+        :properties-count="properties.length" 
+        :staff-count="staff.length" 
+        :visits-count="visits.length"
+        :closed-deals-count="closedDealsCount"
+      />
 
       <!-- Navigation Tabs -->
       <AgencyTabs 
@@ -118,7 +139,7 @@ import {
   LucidePlus, LucideImage, LucideEdit, LucideTrash2,
   LucideUserPlus, LucideX, LucideCheckCircle2,
   LucideMessageSquare, LucideFileText, LucideDownload, LucidePieChart,
-  LucideCalendar
+  LucideCalendar, LucideShieldAlert
 } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/auth'
 import { useAssetUrl } from '~/composables/useAssetUrl'
@@ -145,7 +166,7 @@ const activeTab = ref('properties')
 const {
   properties, staff, inquiries, reports, clients, visits, loading, statistics,
   soldProperties, rentedProperties, activeProperties, pendingSales,
-  propertyStatusChartData, agentPerformanceChartData,
+  propertyStatusChartData, agentPerformanceChartData, closedDealsCount,
   fetchData, deleteProperty, assignAgent, updateInquiryStatus,
   toggleAgentStatus, downloadReport
 } = useAgencyDashboard()

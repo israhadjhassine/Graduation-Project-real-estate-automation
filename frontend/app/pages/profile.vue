@@ -98,10 +98,10 @@
             <div>
               <h3 class="font-bold text-green-800 text-base">Linked Successfully</h3>
               <p class="text-green-600 text-sm mt-1">Your account is connected to Telegram.</p>
-              <div class="mt-4 inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-green-200 rounded-xl text-xs font-bold text-green-700">
+              <!--<div class="mt-4 inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-green-200 rounded-xl text-xs font-bold text-green-700">
                 <span>Chat ID:</span>
                 <span class="font-mono text-green-800">{{ auth.user.telegram_chat_id }}</span>
-              </div>
+              </div>-->
             </div>
           </div>
 
