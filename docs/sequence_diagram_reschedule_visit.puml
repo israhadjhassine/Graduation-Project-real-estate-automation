@@ -6,18 +6,17 @@ boundary ":Telegram" as Telegram
 boundary ":SmartAgent" as SmartAgent
 control ":visits" as visits
 control ":security" as security
-entity ":userModel" as userModel
 entity ":visitModel" as visitModel
 
-Client -> Telegram : request_visit(property_id)
+Client -> Telegram : request_reschedule()
 activate Telegram
 
 Telegram -> SmartAgent : process_message(text)
 activate SmartAgent
 
-SmartAgent -> visits : check_agent_availability(agent_id, date)
+SmartAgent -> visits : check_agent_availability(agent_id, new_date)
 activate visits
-visits -> visitModel : find_agent_visits(agent_id, date)
+visits -> visitModel : find_agent_visits(agent_id, new_date)
 activate visitModel
 visitModel --> visits : returns(visits_list)
 deactivate visitModel
@@ -28,13 +27,13 @@ SmartAgent --> Telegram : show_available_slots(available_slots)
 deactivate SmartAgent
 deactivate Telegram
 
-Client -> Telegram : confirm_slot(slot)
+Client -> Telegram : confirm_new_slot(slot)
 activate Telegram
 
 Telegram -> SmartAgent : process_message(text)
 activate SmartAgent
 
-SmartAgent -> visits : book_visit(property_id, client_telegram_id, date, agent_id)
+SmartAgent -> visits : update_visit_db(original_visit_date, new_visit_date, property_id)
 activate visits
 
 visits -> security : encrypt_telegram_id(client_telegram_id)
@@ -42,12 +41,7 @@ activate security
 security --> visits : returns(encrypted_chat_id)
 deactivate security
 
-visits -> userModel : get_by_telegram_chat_id(encrypted_chat_id)
-activate userModel
-userModel --> visits : returns(user)
-deactivate userModel
-
-visits -> visitModel : save_visit(property_id, encrypted_chat_id, date, agent_id)
+visits -> visitModel : update_visit(original_visit_date, new_visit_date, property_id, encrypted_chat_id)
 activate visitModel
 visitModel --> visits : returns_true()
 deactivate visitModel
@@ -55,7 +49,7 @@ deactivate visitModel
 visits --> SmartAgent : returns_true()
 deactivate visits
 
-SmartAgent --> Telegram : booking_confirmation_msg
+SmartAgent --> Telegram : rescheduling_confirmation_msg
 deactivate SmartAgent
 deactivate Telegram
 @enduml

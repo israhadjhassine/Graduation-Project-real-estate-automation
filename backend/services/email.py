@@ -440,3 +440,18 @@ def send_property_assignment_email(
         print(f"[EMAIL] ✅ Assignment notification sent to {agent_email}", flush=True)
     except Exception as e:
         print(f"[EMAIL ERROR] {e}", flush=True)
+
+def send_html_email(to_email: str, subject: str, html_content: str) -> bool:
+    """Sends an arbitrary HTML email to a recipient."""
+    email_from = os.getenv("EMAIL_FROM", os.getenv("SMTP_USER", ""))
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = email_from
+        msg["To"] = to_email
+        msg.attach(MIMEText(html_content, "html"))
+        return _send_email_message(to_email, msg)
+    except Exception as e:
+        print(f"[EMAIL ERROR] Failed to send HTML email to {to_email}: {e}", flush=True)
+        traceback.print_exc()
+        return False

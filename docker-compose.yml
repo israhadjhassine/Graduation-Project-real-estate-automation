@@ -89,6 +89,7 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      - ./scripts:/app/scripts
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     depends_on:

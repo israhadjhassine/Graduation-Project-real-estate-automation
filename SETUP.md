@@ -58,7 +58,6 @@ We use **OpenRouter** for the AI Agent to keep it flexible and free for testing.
     - In the n8n **Smart Agent** workflow, choose the model: `google/gemini-2.0-flash-001`.
 2.  **Telegram**: Create a bot via [@BotFather](https://t.me/botfather) and copy the token.
 3.  **ImageKit.io**: Register a free account to handle property images.
-4.  **Google Calendar**: enable the Calendar API in [Google Cloud Console](https://console.cloud.google.com/) and create OAuth 2.0 Credentials.
 
 > [!NOTE]
 > You do **not** need a direct Google Gemini API key if you are using OpenRouter.

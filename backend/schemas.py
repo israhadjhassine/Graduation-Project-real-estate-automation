@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from typing import List, Optional
 from datetime import datetime
 from decimal import Decimal
@@ -37,6 +37,14 @@ class User(UserBase):
     created_at: datetime
     manager_id: Optional[int] = None
     telegram_chat_id: Optional[str] = None
+
+    @field_validator("telegram_chat_id", mode="before")
+    @classmethod
+    def decrypt_chat_id(cls, v):
+        if not v:
+            return v
+        from utils.security import decrypt_telegram_id
+        return decrypt_telegram_id(v)
 
     class Config:
         from_attributes = True
@@ -169,6 +177,14 @@ class VisitResponse(BaseModel):
     telegram_chat_id: Optional[str] = None
     created_at: datetime
     
+    @field_validator("telegram_chat_id", mode="before")
+    @classmethod
+    def decrypt_chat_id(cls, v):
+        if not v:
+            return v
+        from utils.security import decrypt_telegram_id
+        return decrypt_telegram_id(v)
+
     class Config:
         from_attributes = True
 
@@ -265,3 +281,8 @@ class VisitCancelDB (BaseModel):
     client_telegram_id:str
     property_id:int
     visit_date:datetime
+
+class EmailSendRequest(BaseModel):
+    to_email: EmailStr
+    subject: str
+    html_content: str

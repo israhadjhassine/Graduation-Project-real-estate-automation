@@ -22,10 +22,10 @@ HeadAgent -> PropertyModal : updatePropertyData(property_id, updated_data,new_co
 PropertyModal -> PropertyController : update_property(property_id, updated_data,new_cordinated,new_images, deleted_image_ids)
 activate PropertyController
 
-opt description_changed
-    PropertyController -> OllamaEmbeddingModel : get_embedding(description)
+opt propertie_data_changed
+    PropertyController -> OllamaEmbeddingModel : get_embedding(updated_data)
     activate OllamaEmbeddingModel
-    OllamaEmbeddingModel --> PropertyController : returns(embedding_description)
+    OllamaEmbeddingModel --> PropertyController : returns(updated_data)
     deactivate OllamaEmbeddingModel
 end
 

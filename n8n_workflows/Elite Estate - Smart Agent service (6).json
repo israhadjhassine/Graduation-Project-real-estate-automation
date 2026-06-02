@@ -43,7 +43,7 @@
     },
     {
       "parameters": {
-        "model": "google/gemini-2.0-flash-001",
+        "model": "deepseek/deepseek-v4-flash",
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
@@ -479,7 +479,7 @@
     "timeSavedMode": "fixed",
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "16ae0954-bb81-4a7a-a137-cde1a78310cc",
+  "versionId": "14acfef5-9c78-40d2-a65c-951e79160d63",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "d04c073b691b19605c03318f28dd5dbd9a3f2858f68df4a3b248acf9052573d4"

@@ -141,9 +141,16 @@ def finalize_transaction(db, prop, tx_type, background_tasks):
     prop.status = "sold" if tx_type == "Sale" else "rented"
     
     # 2. Update associated visit status to 'finished'
+    buyer_telegram_chat_id = None
+    if prop.buyer_id:
+        buyer = db.query(models.User).filter(models.User.id == prop.buyer_id).first()
+        if buyer:
+            buyer_telegram_chat_id = buyer.telegram_chat_id
+
     visit = db.query(models.Visit).filter(
         models.Visit.property_id == prop.id,
-        (models.Visit.client_id == prop.buyer_id) | (models.Visit.telegram_chat_id == str(prop.buyer_id)),
+        (models.Visit.client_id == prop.buyer_id) | 
+        ((models.Visit.telegram_chat_id == buyer_telegram_chat_id) & (models.Visit.telegram_chat_id.isnot(None))),
         models.Visit.status == "scheduled"
     ).order_by(models.Visit.visit_date.desc()).first()
     if visit:

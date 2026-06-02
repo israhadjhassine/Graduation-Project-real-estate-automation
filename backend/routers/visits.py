@@ -7,6 +7,7 @@ import models, schemas, database, auth
 from repositories.visit_repository import VisitRepository
 from repositories.inquiry_repository import InquiryRepository
 from repositories.property_repository import PropertyRepository
+from utils.security import encrypt_telegram_id, decrypt_telegram_id
 
 router = APIRouter(
     tags=["Visits & Scheduling"]
@@ -32,8 +33,10 @@ def book_visit(
     
     # Dynamically resolve client identity if telegram_chat_id is linked to a registered web user
     client_id = None
+    encrypted_chat_id = None
     if payload.client_telegram_id:
-        user = db.query(models.User).filter(models.User.telegram_chat_id == str(payload.client_telegram_id)).first()
+        encrypted_chat_id = encrypt_telegram_id(payload.client_telegram_id)
+        user = db.query(models.User).filter(models.User.telegram_chat_id == encrypted_chat_id).first()
         if user:
             client_id = user.id
             
@@ -42,7 +45,7 @@ def book_visit(
         client_id=client_id,
         agent_id=payload.agent_id,
         visit_date=visit_date_utc,
-        telegram_chat_id=payload.client_telegram_id,
+        telegram_chat_id=encrypted_chat_id,
         status="scheduled",
         reminder_sent=False
     )
@@ -66,9 +69,10 @@ def update_visit(
             detail="Visits cannot be rescheduled to Saturdays or Sundays."
         )
         
+    encrypted_chat_id = encrypt_telegram_id(payload.client_telegram_id)
     visit=VisitRepository.find_scheduled_visit(
         db=db,
-        telegram_chat_id=payload.client_telegram_id ,
+        telegram_chat_id=encrypted_chat_id,
         property_id=payload.property_id,
         visit_date=original_date_utc,
     )
@@ -94,9 +98,11 @@ def cancel_visit(
     """
     visit_date_utc = payload.visit_date.astimezone(timezone.utc) 
     # retrieve it from the database 
+    encrypted_chat_id = encrypt_telegram_id(payload.client_telegram_id)
+    # retrieve it from the database 
     visit = VisitRepository.find_scheduled_visit(
         db=db,
-        telegram_chat_id=payload.client_telegram_id, 
+        telegram_chat_id=encrypted_chat_id, 
         property_id=payload.property_id,
         visit_date=visit_date_utc 
     )
@@ -377,3 +383,18 @@ def get_clients_list(
 ):
     """Returns all registered clients."""
     return VisitRepository.list_clients(db)
+
+@router.post("/visits/send-reminder-email")
+def send_visit_reminder_email(
+    payload: schemas.EmailSendRequest,
+    background_tasks: BackgroundTasks
+):
+    """Sends a visit reminder HTML email to the specified agent."""
+    from services import email
+    background_tasks.add_task(
+        email.send_html_email,
+        to_email=payload.to_email,
+        subject=payload.subject,
+        html_content=payload.html_content
+    )
+    return {"status": "success", "message": "Email queued for delivery"}

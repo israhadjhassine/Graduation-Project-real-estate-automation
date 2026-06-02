@@ -22,9 +22,9 @@ HeadAgent -> PropertyModal : submitPropertyData(property_data, coordinates, imag
 PropertyModal -> PropertyController : create_property(property_data, coordinates, images)
 activate PropertyController
 
-PropertyController -> OllamaEmbeddingModel : get_embedding(description)
+PropertyController -> OllamaEmbeddingModel : get_embedding(property_data)
 activate OllamaEmbeddingModel
-OllamaEmbeddingModel --> PropertyController : returns(embedding_description)
+OllamaEmbeddingModel --> PropertyController : returns(property_data)
 deactivate OllamaEmbeddingModel
 
 PropertyController -> StorageService : upload_images(images)

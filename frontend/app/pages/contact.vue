@@ -48,20 +48,7 @@
               </div>
             </div>
 
-            <div class="mt-8 pt-8 border-t border-primary-50">
-              <h4 class="font-bold text-primary-950 mb-4">Follow Us</h4>
-              <div class="flex gap-4">
-                <a href="#" class="w-10 h-10 border border-primary-200 rounded-full flex items-center justify-center text-primary-600 hover:bg-primary-950 hover:text-white hover:border-primary-950 transition-all">
-                  <LucideFacebook class="w-4 h-4" />
-                </a>
-                <a href="#" class="w-10 h-10 border border-primary-200 rounded-full flex items-center justify-center text-primary-600 hover:bg-primary-950 hover:text-white hover:border-primary-950 transition-all">
-                  <LucideInstagram class="w-4 h-4" />
-                </a>
-                <a href="#" class="w-10 h-10 border border-primary-200 rounded-full flex items-center justify-center text-primary-600 hover:bg-primary-950 hover:text-white hover:border-primary-950 transition-all">
-                  <LucideLinkedin class="w-4 h-4" />
-                </a>
-              </div>
-            </div>
+            
           </div>
         </div>
 

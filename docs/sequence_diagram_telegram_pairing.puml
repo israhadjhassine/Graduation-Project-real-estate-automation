@@ -6,6 +6,7 @@ boundary ":ProfilePage" as ProfilePage
 boundary ":Telegram" as Telegram
 boundary ":SmartAgent" as SmartAgent
 control ":auth" as auth
+control ":security" as security
 entity ":telegramPairingCodeModel" as telegramPairingCodeModel
 entity ":userModel" as userModel
 
@@ -17,10 +18,10 @@ activate auth
 
 auth -> telegramPairingCodeModel : save_pairing_code(user_id, code)
 activate telegramPairingCodeModel
-telegramPairingCodeModel --> auth : returns (code)
+telegramPairingCodeModel --> auth : returns(code)
 deactivate telegramPairingCodeModel
 
-auth --> ProfilePage : returns (code)
+auth --> ProfilePage : returns(code)
 deactivate auth
 ProfilePage -> Telegram : openTelegramBot("/start pair_592108")
 deactivate ProfilePage
@@ -34,6 +35,11 @@ activate SmartAgent
 SmartAgent -> auth : pair_telegram_account(code, chat_id)
 activate auth
 
+auth -> security : encrypt_telegram_id(chat_id)
+activate security
+security --> auth : returns(encrypted_chat_id)
+deactivate security
+
 auth -> telegramPairingCodeModel : get_by_code(code)
 activate telegramPairingCodeModel
 telegramPairingCodeModel --> auth : returns(pairing_record)
@@ -44,11 +50,11 @@ alt invalid_code
     SmartAgent --> Telegram : InvalidCodeMessage("invalid_code")
     
 else valid_code
-    auth -> userModel : get_by_telegram_chat_id(chat_id)
+    auth -> userModel : get_by_telegram_chat_id(encrypted_chat_id)
     activate userModel
     userModel --> auth : existing_user
   
-    auth -> userModel : link_telegram_chat_id(user_id, chat_id)
+    auth -> userModel : link_telegram_chat_id(user_id, encrypted_chat_id)
  
     deactivate userModel
     

@@ -27,7 +27,7 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     role = Column(String(20), default="client") # client, agent, head_agent, admin
     is_active = Column(Boolean, default=True)
-    telegram_chat_id = Column(String(50), unique=True, nullable=True)
+    telegram_chat_id = Column(String(255), unique=True, nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     
     manager_id = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
@@ -127,7 +127,7 @@ class Visit(Base):
     visit_date = Column(TIMESTAMP, nullable=False)
     status = Column(String(50), default="scheduled") # scheduled, finished, cancelled
     reminder_sent = Column(Boolean, default=False)
-    telegram_chat_id = Column(String(50), nullable=True)
+    telegram_chat_id = Column(String(255), nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 

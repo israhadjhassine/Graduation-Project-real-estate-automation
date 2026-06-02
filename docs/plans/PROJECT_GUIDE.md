@@ -60,37 +60,12 @@ ImageKit handles property images via a global CDN.
     - `IMAGEKIT_PRIVATE_KEY`
     - `IMAGEKIT_URL_ENDPOINT` (e.g., `https://ik.imagekit.io/your_id/`)
 
-### 3.2 Google Cloud Console (Calendar API)
-Required for synchronizing property visits with agent calendars.
-1.  Go to [Google Cloud Console](https://console.cloud.google.com/).
-2.  **Create a Project**: Select "New Project" and give it a name.
-3.  **Enable API**: Search for "Google Calendar API" and click **Enable**.
-4.  **OAuth Consent Screen**:
-    - Go to **APIs & Services > OAuth consent screen**.
-    - Choose "External" and fill in the required app information and support email.
-5.  **Create Credentials**:
-    - Go to **APIs & Services > Credentials**.
-    - Click **Create Credentials > OAuth client ID**.
-    - Application type: **Web application**.
-    - **Authorized Redirect URIs**: Add `https://your-name.ngrok-free.app/rest/oauth2-callback`.
-6.  Copy the **Client ID** and **Client Secret** (you will use these in the next step).
-
-### 3.3 Connecting Google Calendar in n8n
-Once n8n is running, you must link it to your Google account.
-1.  Open your n8n editor (`https://your-name.ngrok-free.app`).
-2.  Open the **Smart Agent** or **Reminder** workflow.
-3.  Click on any **Google Calendar node**.
-4.  In the **Credential** dropdown, select **Create New Credential**.
-5.  Authentication Method: Select **OAuth2**.
-6.  Enter the **Client ID** and **Client Secret** from the Google Cloud Console.
-7.  Click **Sign in with Google** and authorize the application.
-
-### 3.4 OpenRouter (AI Agent)
+### 3.2 OpenRouter (AI Agent)
 1.  Sign up at [openrouter.ai](https://openrouter.ai/).
 2.  Create an API Key and add it to `.env` as `OPENROUTER_API_KEY`.
 3.  In the n8n **Smart Agent** workflow, ensure the model is set to `google/gemini-2.0-flash-001`.
 
-### 3.5 Telegram Bot
+### 3.3 Telegram Bot
 1.  Message [@BotFather](https://t.me/botfather) to create a new bot.
 2.  Copy the **API Token** into your `.env`.
 

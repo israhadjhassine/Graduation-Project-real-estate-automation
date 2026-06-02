@@ -20,6 +20,6 @@ deactivate visitModel
 VisitsController --> VisitManagementPage : returns_true()
 deactivate VisitsController
 
-VisitManagementPage -> VisitManagementPage : showSuccessMessage()
+VisitManagementPage -> VisitManagementPage : renderVisits()
 deactivate VisitManagementPage
 @enduml

@@ -5,6 +5,7 @@ from typing import List
 import models, schemas, database, auth
 from services import email
 from repositories.user_repository import UserRepository
+from utils.security import encrypt_telegram_id
 
 router = APIRouter(
     tags=["Authentication"]
@@ -89,6 +90,23 @@ def update_password(
     current_user.hashed_password = auth.get_password_hash(passwords.new_password)
     UserRepository.commit(db)
     return {"message": "Password updated successfully"}
+
+
+@router.get("/agents/{agent_id}/info")
+def get_agent_info(
+    agent_id: int,
+    db: Session = Depends(database.get_db)
+):
+    """Returns agent information (used by n8n reminder service)."""
+    agent = UserRepository.get_by_id(db, agent_id)
+    if not agent or agent.role == "client":
+        raise HTTPException(status_code=404, detail="Agent not found")
+    
+    return {
+        "id": agent.id,
+        "full_name": agent.full_name,
+        "email": agent.email
+    }
 
 
 @router.get("/agency/staff", response_model=List[schemas.User])
@@ -238,14 +256,44 @@ def pair_telegram_account(
 ):
     """Links telegram_chat_id to user associated with the pairing code. (Called by n8n bot workflow)"""
     from datetime import datetime
+    import re
 
-    pairing_record = db.query(models.TelegramPairingCode).filter(models.TelegramPairingCode.code == payload.code).first()
+    # Robustly clean the code
+    clean_code = payload.code.strip()
+    if "pair_" in clean_code:
+        clean_code = clean_code.split("pair_")[-1].strip()
+    
+    digits_match = re.search(r'\d{6}', clean_code)
+    if digits_match:
+        clean_code = digits_match.group(0)
+    else:
+        clean_code = payload.code  # fallback
+
+    # Encrypt the telegram_chat_id for database storage and lookup
+    encrypted_chat_id = encrypt_telegram_id(payload.telegram_chat_id)
+
+    pairing_record = db.query(models.TelegramPairingCode).filter(models.TelegramPairingCode.code == clean_code).first()
     if not pairing_record:
+        # Check if already paired to avoid errors on double-invocation/retries
+        existing_user = db.query(models.User).filter(models.User.telegram_chat_id == encrypted_chat_id).first()
+        if existing_user:
+            return {
+                "status": "success",
+                "user_name": existing_user.full_name,
+                "email": existing_user.email
+            }
         raise HTTPException(status_code=400, detail="Invalid pairing code.")
         
     if pairing_record.expires_at < datetime.utcnow():
         db.delete(pairing_record)
         db.commit()
+        existing_user = db.query(models.User).filter(models.User.telegram_chat_id == encrypted_chat_id).first()
+        if existing_user:
+            return {
+                "status": "success",
+                "user_name": existing_user.full_name,
+                "email": existing_user.email
+            }
         raise HTTPException(status_code=400, detail="Pairing code has expired.")
         
     user = db.query(models.User).filter(models.User.id == pairing_record.user_id).first()
@@ -253,11 +301,11 @@ def pair_telegram_account(
         raise HTTPException(status_code=404, detail="User associated with code not found.")
         
     # Unlink any other user who already has this telegram_chat_id to prevent unique constraint failures
-    existing_linked_users = db.query(models.User).filter(models.User.telegram_chat_id == payload.telegram_chat_id).all()
+    existing_linked_users = db.query(models.User).filter(models.User.telegram_chat_id == encrypted_chat_id).all()
     for elu in existing_linked_users:
         elu.telegram_chat_id = None
         
-    user.telegram_chat_id = payload.telegram_chat_id
+    user.telegram_chat_id = encrypted_chat_id
     db.delete(pairing_record)
     db.commit()
     db.refresh(user)

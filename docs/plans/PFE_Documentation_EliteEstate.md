@@ -289,7 +289,7 @@ The database schema contains **6 primary tables** and **1 association table**:
 
 2. **Vector Embedding Column**: The `description_vector` column (type `Vector(768)`) stores the AI-generated semantic embedding of each property's description. This column is the foundation of the platform's intelligent search capability.
 
-3. **Telegram Bridge on Visits**: The `telegram_chat_id` column on the `visits` table stores the Telegram user ID of the client. This allows the n8n reminder workflow to send a personalized Telegram message directly to the client before their scheduled visit.
+3. **Telegram Pairing & Encryption**: The `telegram_chat_id` column exists on both the `users` (unique index) and `visits` tables. To comply with user privacy regulations, this identifier is encrypted prior to database insertion. A deterministic AES-256-CBC encryption scheme (derived from `JWT_SECRET_KEY`) is implemented in the backend service. This allows direct database lookups (for pairing or mapping reminders) without exposing plaintext chat IDs in the storage layer.
 
 ---
 
@@ -421,7 +421,7 @@ Two production n8n workflows were built and are version-controlled as exported J
 
 #### 6.5.1 Workflow 1: Smart Agent Service (Telegram Bot)
 
-**File**: `Elite Estate - Smart Agent service.json`
+**File**: `Elite Estate - Smart Agent service (6).json`
 
 This is a sophisticated **AI agent** workflow triggered by any Telegram message sent to the bot.
 
@@ -429,53 +429,61 @@ This is a sophisticated **AI agent** workflow triggered by any Telegram message 
 ```
 Telegram Message Received (Webhook)
          ↓
-AI Agent Node (Gemini 1.5 Flash)
+AI Agent Node (DeepSeek-V4-Flash via OpenRouter)
          ↓ (uses tools)
-┌────────────────────────────────────────┐
-│ Tool 1: Search Properties              │
-│   → Queries FastAPI /search/rag        │
-│   → Returns structured property list  │
-│                                        │
-│ Tool 2: Get Property Details           │
-│   → Fetches full data for a property  │
-│                                        │
-│ Tool 3: Schedule a Visit               │
-│   → POSTs to FastAPI /visits          │
-│   → Creates a Google Calendar event   │
-│                                        │
-│ Tool 4: Get Available Agents           │
-│   → Fetches agent list with calendars │
-│                                        │
-│ Tool 5: PostgreSQL Chat Memory         │
-│   → Stores conversation history per   │
-│      Telegram user ID                 │
-│   → Enables multi-turn conversations  │
-└────────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│ Tool 0: pair_telegram                        │
+│   → Pairs web profile using 6-digit code    │
+│                                              │
+│ Tool 1: search_properties                    │
+│   → Queries FastAPI /search/rag              │
+│   → Returns RAG property context             │
+│                                              │
+│ Tool 2: check_agent_availability             │
+│   → Queries FastAPI /visits/agent-availability│
+│   → Returns 5 available time slots           │
+│                                              │
+│ Tool 3: book_visit                           │
+│   → POSTs to FastAPI /visits/book            │
+│   → Creates visit in DB                      │
+│                                              │
+│ Tool 4: update_visit_db                      │
+│   → PUTs to FastAPI /visits/update           │
+│   → Reschedules visit in DB                  │
+│                                              │
+│ Tool 5: cancel_visit_db                      │
+│   → POSTs to FastAPI /visits/cancel          │
+│   → Cancels visit in DB                      │
+└──────────────────────────────────────────────┘
          ↓
-Telegram Reply (formatted response)
+Postgres Memory (Stores conversation history per Telegram chat ID)
+         ↓
+Telegram Reply (HTML formatted response)
 ```
 
-**Key Technical Achievement**: The agent uses **persistent PostgreSQL memory**, meaning each Telegram user has their own conversation thread. A returning user can say "book the same property as last time" and the agent understands the context.
+**Key Technical Achievement**: The agent uses **persistent Postgres memory** (`n8n-nodes-langchain.memoryPostgresChat`), meaning each Telegram user has their own conversation thread. A returning user can say "book the same property as last time" and the agent understands the context.
 
 #### 6.5.2 Workflow 2: Meeting Reminder Service
 
-**File**: `Elite Estate - Meeting Reminder Service (7).json`
+**File**: `Elite Estate - Meeting Reminder Service (9).json`
 
-This is a **scheduled, polling workflow** that automatically sends visit reminders.
+This is a **scheduled, polling workflow** that automatically sends visit reminders to clients (via Telegram) and agents (via Email).
 
 **Logic**:
 ```
-Every Hour (CRON trigger)
+Every Minute (Schedule trigger)
          ↓
-Query FastAPI for visits scheduled in the next 24 hours
+Query FastAPI (/visits/upcoming) for visits in the next 24 hours
   WHERE reminder_sent = false
          ↓
 For each qualifying visit:
-  1. Send Telegram message to client (via their telegram_chat_id)
-  2. Patch FastAPI: set reminder_sent = true
+  1. Fetch Agent details (/agents/{id}/info)
+  2. Send Telegram reminder message to client (via their telegram_chat_id)
+  3. Send HTML reminder email to agent (via SMTP client)
+  4. PUT to FastAPI (/visits/{id}/reminder-sent) to set reminder_sent = true
          ↓
-Client receives: "Reminder: Your visit to [Property]
-is tomorrow at [Time]. Agent: [Name]."
+Client receives: Telegram notification (45-minute warning)
+Agent receives: Detailed Email (client name, contact info, and schedule)
 ```
 
 This ensures no appointment is ever missed without any manual effort from the agency staff.

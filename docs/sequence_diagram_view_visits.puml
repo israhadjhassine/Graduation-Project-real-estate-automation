@@ -22,4 +22,10 @@ deactivate VisitsController
 
 VisitManagementPage -> VisitManagementPage : renderVisits()
 deactivate VisitManagementPage
+
+SubAgent -> VisitManagementPage : searchAndFilterVisits(name, location, status, date_range)
+activate VisitManagementPage
+VisitManagementPage -> VisitManagementPage : filterVisitsLocally(name, location, status, date_range)
+VisitManagementPage -> VisitManagementPage : renderFilteredVisits()
+deactivate VisitManagementPage
 @enduml
