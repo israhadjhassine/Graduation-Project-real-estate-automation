@@ -69,7 +69,6 @@ def generate_transaction_report(db, prop, tx_type, save_path=None):
         ("Type", prop.property_type.value.capitalize() if hasattr(prop.property_type, 'value') else str(prop.property_type)),
         ("Area", f"{prop.area} sqm" if prop.area else "N/A"),
         ("Rooms", f"{prop.bedrooms} Bed / {prop.bathrooms} Bath"),
-        ("Location", prop.address or "N/A"),
         ("City/State", f"{prop.city}, {prop.state or ''}"),
         ("Country", prop.country)
     ]

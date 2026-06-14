@@ -43,7 +43,7 @@
         v-show="activeTab === 'analytics'"
         :stats-loading="statsLoading"
         :statistics="statistics"
-        :user-roles-chart-data="userRolesChartData"
+        :transaction-requests-pipeline-chart-data="transactionRequestsPipelineChartData"
         :top-agents-chart-data="topAgentsChartData"
         :property-status-chart-data="propertyStatusChartData"
       />
@@ -101,7 +101,7 @@ const {
   userSearchQuery, userRoleFilter, userStatusFilter,
   propSearchQuery, propLocationQuery,
   filteredUsers, filteredProperties,
-  userRolesChartData, topAgentsChartData, propertyStatusChartData,
+  transactionRequestsPipelineChartData, topAgentsChartData, propertyStatusChartData,
   headAgents, closedDealsCount,
   fetchData, createUser, toggleUserStatus, downloadReport
 } = useAdminDashboard()

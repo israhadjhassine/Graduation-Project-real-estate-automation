@@ -63,7 +63,7 @@ ImageKit handles property images via a global CDN.
 ### 3.2 OpenRouter (AI Agent)
 1.  Sign up at [openrouter.ai](https://openrouter.ai/).
 2.  Create an API Key and add it to `.env` as `OPENROUTER_API_KEY`.
-3.  In the n8n **Smart Agent** workflow, ensure the model is set to `google/gemini-2.0-flash-001`.
+3.  In the n8n **Smart Agent** workflow, ensure the model is set to `deepseek/deepseek-v4-flash` via OpenRouter.
 
 ### 3.3 Telegram Bot
 1.  Message [@BotFather](https://t.me/botfather) to create a new bot.
@@ -98,4 +98,3 @@ ImageKit handles property images via a global CDN.
 
 - **Ollama Error**: Run `ollama list` to verify `nomic-embed-text` is installed.
 - **Telegram Webhook**: If the bot doesn't respond, check the `WEBHOOK_URL` in `.env` and ensure it uses `https://`.
-- **Google OAuth**: Ensure the redirect URI in Google Console exactly matches the one in your `.env` (including the `/rest/oauth2-callback` suffix).

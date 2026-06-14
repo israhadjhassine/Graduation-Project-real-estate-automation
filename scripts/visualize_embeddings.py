@@ -218,7 +218,7 @@ def perform_dimensionality_reduction(embeddings):
 # 4. Standalone HTML Dashboard Template
 # ------------------------------------------------------------------------------
 HTML_TEMPLATE = """<!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<html lang="en" class="h-full bg-slate-50 text-slate-800">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -237,40 +237,42 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #050814;
+            background-color: #f8fafc;
         }
         h1, h2, h3, .font-display {
             font-family: 'Outfit', sans-serif;
         }
         .glass-panel {
-            background: rgba(15, 23, 42, 0.45);
+            background: rgba(255, 255, 255, 0.75);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
         }
         .glass-sidebar {
-            background: rgba(10, 15, 30, 0.7);
+            background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border-right: 1px solid rgba(255, 255, 255, 0.06);
+            border-right: 1px solid rgba(0, 0, 0, 0.08);
+            box-shadow: 4px 0 30px rgba(0, 0, 0, 0.02);
         }
         /* Custom scrollbar */
         ::-webkit-scrollbar {
             width: 6px;
         }
         ::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.1);
+            background: rgba(0, 0, 0, 0.05);
         }
         ::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.15);
             border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.25);
         }
         /* Glow animations */
         .neon-glow-primary {
-            text-shadow: 0 0 10px rgba(99, 102, 241, 0.5), 0 0 20px rgba(99, 102, 241, 0.2);
+            text-shadow: 0 0 10px rgba(79, 70, 229, 0.15);
         }
     </style>
 </head>
@@ -279,28 +281,28 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <!-- 1. SIDEBAR (CONTROLS & DETAILS) -->
     <aside class="w-full md:w-96 glass-sidebar flex flex-col z-10 flex-shrink-0 h-1/2 md:h-full overflow-y-auto">
         <!-- Logo / Title -->
-        <div class="p-6 border-b border-slate-800/80">
+        <div class="p-6 border-b border-slate-200">
             <div class="flex items-center gap-3">
-                <div class="p-2.5 bg-indigo-600/20 border border-indigo-500/40 rounded-xl text-indigo-400">
+                <div class="p-2.5 bg-indigo-50 border border-indigo-100 rounded-xl text-indigo-600">
                     <i class="fa-solid fa-cubes fa-lg"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold tracking-tight text-white neon-glow-primary">Elite Estate AI</h1>
-                    <p class="text-xs text-indigo-400 font-medium tracking-wide uppercase">3D Embedding Explorer</p>
+                    <h1 class="text-xl font-bold tracking-tight text-slate-900 neon-glow-primary">Elite Estate AI</h1>
+                    <p class="text-xs text-indigo-600 font-medium tracking-wide uppercase">3D Embedding Explorer</p>
                 </div>
             </div>
         </div>
 
         <!-- Section: Controls -->
-        <div class="p-6 border-b border-slate-800/50 space-y-5">
+        <div class="p-6 border-b border-slate-100 space-y-5">
             <!-- Projection Algorithm -->
             <div>
-                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Dimensionality Reduction</label>
-                <div class="grid grid-cols-2 gap-2 bg-slate-900/80 p-1 rounded-xl border border-slate-800">
+                <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Dimensionality Reduction</label>
+                <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200">
                     <button id="btn-pca" onclick="setAlgorithm('pca')" class="py-2 px-3 text-xs font-semibold rounded-lg transition-all duration-300 bg-indigo-600 text-white shadow-md shadow-indigo-600/20">
                         PCA <span class="block text-[9px] font-normal text-indigo-200">Global structure</span>
                     </button>
-                    <button id="btn-tsne" onclick="setAlgorithm('tsne')" class="py-2 px-3 text-xs font-semibold rounded-lg transition-all duration-300 text-slate-400 hover:text-white">
+                    <button id="btn-tsne" onclick="setAlgorithm('tsne')" class="py-2 px-3 text-xs font-semibold rounded-lg transition-all duration-300 text-slate-600 hover:text-slate-950">
                         t-SNE <span class="block text-[9px] font-normal text-slate-500">Local clusters</span>
                     </button>
                 </div>
@@ -308,15 +310,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
             <!-- Color By -->
             <div>
-                <label for="color-by" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Color Coding</label>
+                <label for="color-by" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Color Coding</label>
                 <div class="relative">
-                    <select id="color-by" onchange="updateVisualization()" class="w-full bg-slate-900 border border-slate-800 text-sm rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 appearance-none cursor-pointer">
+                    <select id="color-by" onchange="updateVisualization()" class="w-full bg-white border border-slate-200 text-sm rounded-xl px-4 py-2.5 text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 appearance-none cursor-pointer shadow-sm">
                         <option value="property_type">Property Type</option>
                         <option value="listing_type">Listing Type (Sale/Rent)</option>
                         <option value="city">City</option>
                         <option value="price">Price (Value spectrum)</option>
                     </select>
-                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-500">
+                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
                         <i class="fa-solid fa-chevron-down text-xs"></i>
                     </div>
                 </div>
@@ -325,45 +327,38 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <!-- Search -->
             <div>
                 <div class="flex justify-between items-center mb-2">
-                    <label for="search-box" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Search Properties</label>
-                    <div class="flex items-center gap-1.5 bg-slate-950 px-2 py-0.5 rounded-md border border-slate-800">
-                        <button id="search-mode-keyword" onclick="setSearchMode('keyword')" class="text-[10px] font-bold px-1.5 py-0.5 rounded transition-all text-slate-400 hover:text-white">Keyword</button>
+                    <label for="search-box" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider">Search Properties</label>
+                    <div class="flex items-center gap-1.5 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                        <button id="search-mode-keyword" onclick="setSearchMode('keyword')" class="text-[10px] font-bold px-1.5 py-0.5 rounded transition-all text-slate-600 hover:text-slate-950">Keyword</button>
                         <button id="search-mode-semantic" onclick="setSearchMode('semantic')" class="text-[10px] font-bold px-1.5 py-0.5 rounded transition-all bg-indigo-600 text-white shadow-sm shadow-indigo-600/20">Semantic</button>
                     </div>
                 </div>
                 <div class="relative">
                     <input type="text" id="search-box" oninput="debounceSearch(this.value)" placeholder="Ask AI: 'luxurious villa with a pool'..." 
-                           class="w-full bg-slate-900 border border-slate-800 text-sm rounded-xl pl-10 pr-4 py-2.5 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
-                    <div class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500">
+                           class="w-full bg-white border border-slate-200 text-sm rounded-xl pl-10 pr-4 py-2.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 shadow-sm">
+                    <div class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
                         <i class="fa-solid fa-magnifying-glass text-xs" id="search-icon"></i>
                     </div>
                 </div>
                 <div class="flex justify-between items-center mt-1.5 px-0.5">
-                    <div id="search-results-info" class="text-xs text-indigo-400/80 hidden"></div>
-                    <div id="api-status-badge" class="text-[10px] font-medium text-slate-500 flex items-center gap-1 cursor-pointer">
-                        <span class="h-1.5 w-1.5 rounded-full bg-slate-500"></span> API: Offline
+                    <div id="search-results-info" class="text-xs text-indigo-600/80 hidden"></div>
+                    <div id="api-status-badge" class="text-[10px] font-medium text-slate-400 flex items-center gap-1 cursor-pointer">
+                        <span class="h-1.5 w-1.5 rounded-full bg-slate-400"></span> API: Offline
                     </div>
                 </div>
                 
                 <!-- Expanded Settings Panel -->
-                <div id="api-config-container" class="mt-2 p-3 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2.5 hidden">
+                <div id="api-config-container" class="mt-2 p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5 hidden">
                     <div>
-                        <label for="api-url-input" class="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Backend API URL</label>
+                        <label for="api-url-input" class="block text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Backend API URL</label>
                         <div class="flex gap-1.5">
-                            <input type="text" id="api-url-input" value="http://localhost:8000" class="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-slate-200 text-xs w-full focus:outline-none focus:border-indigo-500">
+                            <input type="text" id="api-url-input" value="http://localhost:8000" class="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-slate-800 text-xs w-full focus:outline-none focus:border-indigo-500">
                             <button onclick="checkApiConnection()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-2.5 py-1 rounded-lg font-medium transition-all shadow-sm shadow-indigo-600/10">Test</button>
                         </div>
                     </div>
                     <div>
-                        <label for="ollama-url-input" class="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Local Ollama URL</label>
-                        <input type="text" id="ollama-url-input" value="http://localhost:11434" class="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-slate-200 text-xs w-full focus:outline-none focus:border-indigo-500">
-                    </div>
-                    <div>
-                        <label for="gemini-key-input" class="block text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Gemini API Key</label>
-                        <input type="password" id="gemini-key-input" placeholder="Injected from .env or enter key" class="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-slate-200 text-xs w-full focus:outline-none focus:border-indigo-500">
-                    </div>
-                    <div class="text-[9px] text-slate-500 leading-normal">
-                        <i class="fa-solid fa-triangle-exclamation text-amber-500/75 mr-0.5"></i> Keep this file private if it contains your Gemini key.
+                        <label for="ollama-url-input" class="block text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Local Ollama URL</label>
+                        <input type="text" id="ollama-url-input" value="http://localhost:11434" class="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-slate-800 text-xs w-full focus:outline-none focus:border-indigo-500">
                     </div>
                 </div>
                 
@@ -374,10 +369,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <!-- Section: Property details (Dynamic) -->
         <div class="flex-grow p-6 flex flex-col justify-between">
             <div id="details-container">
-                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Property Details</label>
-                <div id="details-placeholder" class="text-center py-10 px-4 border border-dashed border-slate-800 rounded-2xl bg-slate-950/40">
-                    <i class="fa-solid fa-hand-pointer text-slate-600 text-3xl mb-3"></i>
-                    <p class="text-sm text-slate-400 font-medium">Click an embedding node in 3D space to inspect property details</p>
+                <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Property Details</label>
+                <div id="details-placeholder" class="text-center py-10 px-4 border border-dashed border-slate-200 rounded-2xl bg-slate-50">
+                    <i class="fa-solid fa-hand-pointer text-slate-400 text-3xl mb-3"></i>
+                    <p class="text-sm text-slate-500 font-medium">Click an embedding node in 3D space to inspect property details</p>
                 </div>
                 
                 <!-- Detail Card (Initially hidden) -->
@@ -387,34 +382,34 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                             <span id="detail-type" class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"></span>
                             <span id="detail-listing" class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"></span>
                         </div>
-                        <h2 id="detail-title" class="text-lg font-bold text-white mt-2 leading-snug"></h2>
-                        <p id="detail-location" class="text-xs text-slate-400 mt-1">
-                            <i class="fa-solid fa-location-dot text-indigo-400 mr-1"></i> <span id="detail-city"></span>
+                        <h2 id="detail-title" class="text-lg font-bold text-slate-900 mt-2 leading-snug"></h2>
+                        <p id="detail-location" class="text-xs text-slate-500 mt-1">
+                            <i class="fa-solid fa-location-dot text-indigo-600 mr-1"></i> <span id="detail-city"></span>
                         </p>
                     </div>
                     
-                    <div class="p-3.5 bg-slate-900/60 rounded-xl border border-slate-800/80 flex justify-between items-center">
+                    <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
                         <div>
                             <span class="block text-[10px] text-slate-500 uppercase tracking-wider">Price</span>
-                            <span id="detail-price" class="text-base font-extrabold text-emerald-400"></span>
+                            <span id="detail-price" class="text-base font-extrabold text-emerald-600"></span>
                         </div>
                         <div class="text-right">
                             <span class="block text-[10px] text-slate-500 uppercase tracking-wider">Area</span>
-                            <span id="detail-area" class="text-sm font-bold text-slate-200"></span>
+                            <span id="detail-area" class="text-sm font-bold text-slate-700"></span>
                         </div>
                     </div>
 
                     <div>
-                        <span class="block text-xs font-semibold text-slate-400 mb-1">Description Semantic context:</span>
-                        <div class="p-3 bg-slate-950/60 border border-slate-900 rounded-xl max-h-40 overflow-y-auto">
-                            <p id="detail-desc" class="text-xs text-slate-300 leading-relaxed"></p>
+                        <span class="block text-xs font-semibold text-slate-500 mb-1">Description Semantic context:</span>
+                        <div class="p-3 bg-white border border-slate-200 rounded-xl max-h-40 overflow-y-auto">
+                            <p id="detail-desc" class="text-xs text-slate-600 leading-relaxed"></p>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Stats & Specs footer -->
-            <div class="mt-6 pt-4 border-t border-slate-800/50 flex justify-between text-[10px] text-slate-500 font-mono">
+            <div class="mt-6 pt-4 border-t border-slate-200 flex justify-between text-[10px] text-slate-400 font-mono">
                 <span>Vector Dimension: 768</span>
                 <span id="stat-extra"></span>
             </div>
@@ -422,21 +417,21 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </aside>
 
     <!-- 2. MAIN 3D CHART CANVAS -->
-    <main class="flex-grow h-1/2 md:h-full relative bg-[#04060f]">
+    <main class="flex-grow h-1/2 md:h-full relative bg-[#f8fafc]">
         <!-- Fullscreen Canvas -->
         <div id="plotly-chart" class="w-full h-full"></div>
         
         <!-- Legend Indicator/Helper on top-left of chart -->
-        <div class="absolute top-5 left-5 pointer-events-none bg-slate-950/80 px-4 py-2 rounded-xl border border-slate-800 flex items-center gap-3">
+        <div class="absolute top-5 left-5 pointer-events-none bg-white/95 px-4 py-2 rounded-xl border border-slate-200 flex items-center gap-3 shadow-md">
             <span class="flex h-2 w-2 relative">
               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-              <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-600"></span>
             </span>
-            <span class="text-xs font-semibold text-indigo-200 tracking-wide uppercase" id="selected-algorithm-label">PCA PROJECTION</span>
+            <span class="text-xs font-semibold text-slate-800 tracking-wide uppercase" id="selected-algorithm-label">PCA PROJECTION</span>
         </div>
 
-        <div class="absolute bottom-5 right-5 glass-panel p-3.5 rounded-xl text-xs text-slate-300 pointer-events-none space-y-1.5 border border-slate-700/30 max-w-xs shadow-xl shadow-black/40">
-            <h3 class="font-bold text-white mb-1"><i class="fa-solid fa-circle-info text-indigo-400 mr-1"></i> Interactive Help</h3>
+        <div class="absolute bottom-5 right-5 glass-panel p-3.5 rounded-xl text-xs text-slate-600 pointer-events-none space-y-1.5 border border-slate-200 max-w-xs shadow-md">
+            <h3 class="font-bold text-slate-800 mb-1"><i class="fa-solid fa-circle-info text-indigo-600 mr-1"></i> Interactive Help</h3>
             <div class="flex items-center gap-2"><i class="fa-solid fa-rotate text-slate-400 w-4"></i> Left-Click + Drag to Rotate</div>
             <div class="flex items-center gap-2"><i class="fa-solid fa-arrows-up-down-left-right text-slate-400 w-4"></i> Right-Click + Drag to Pan</div>
             <div class="flex items-center gap-2"><i class="fa-solid fa-magnifying-glass-plus text-slate-400 w-4"></i> Scroll / Pinch to Zoom</div>
@@ -453,7 +448,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         const pcaMean = _PCA_MEAN_;
         const pcaComponents = _PCA_COMPONENTS_;
         const propertyEmbeddings = _PROPERTY_EMBEDDINGS_;
-        const geminiApiKey = _GEMINI_API_KEY_;
 
         let currentQueryCoords = null; // will store { pca: [x,y,z], tsne: [x,y,z] }
         let currentQueryEmbedding = null; // will store the 768D query embedding
@@ -461,17 +455,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         // Colors corresponding to dark design tokens
         const colors = {
-            villa: '#f43f5e',      // rose-500
-            apartment: '#3b82f6',  // blue-500
-            house: '#10b981',      // emerald-500
-            studio: '#a855f7',     // purple-500
-            office: '#eab308',     // yellow-500
-            default: '#64748b',    // slate-500
+            villa: '#be123c',      // rose-700
+            apartment: '#1d4ed8',  // blue-700
+            house: '#047857',      // emerald-700
+            studio: '#7e22ce',     // purple-700
+            office: '#b45309',     // amber-700
+            default: '#475569',    // slate-600
             
-            sale: '#ec4899',       // pink-500
-            rent: '#14b8a6',       // teal-500
+            sale: '#be185d',       // pink-700
+            rent: '#0f766e',       // teal-700
             
-            cities: ['#6366f1', '#8b5cf6', '#d946ef', '#ff007f', '#f97316', '#22c55e', '#06b6d4', '#eab308']
+            cities: ['#4338ca', '#6d28d9', '#a21caf', '#be185d', '#c2410c', '#15803d', '#0e7490', '#b45309']
         };
 
         let currentAlgorithm = 'pca'; // 'pca' or 'tsne'
@@ -578,14 +572,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         colorbar: {
                             title: {
                                 text: 'Price (TND)',
-                                font: { color: '#94a3b8', size: 10 }
+                                font: { color: '#475569', size: 10 }
                             },
-                            tickfont: { color: '#94a3b8', size: 9 },
+                            tickfont: { color: '#475569', size: 9 },
                             thickness: 15,
                             len: 0.6
                         },
                         opacity: opacities,
-                        line: { color: 'rgba(255,255,255,0.1)', width: 1 }
+                        line: { color: 'rgba(0,0,0,0.15)', width: 1 }
                     },
                     type: 'scatter3d',
                     name: 'Properties'
@@ -627,7 +621,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                             size: sizes,
                             color: traceColor,
                             opacity: opacities,
-                            line: { color: 'rgba(255,255,255,0.2)', width: 1 }
+                            line: { color: 'rgba(0,0,0,0.15)', width: 1 }
                         },
                         type: 'scatter3d',
                         name: groupName.charAt(0).toUpperCase() + groupName.slice(1)
@@ -635,12 +629,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 });
             }
             
-            // Add connection lines to top 5 L2 and top 5 Cosine matches
+            // Add connection lines to top 5 L2 matches
             if (currentQueryCoords && currentQueryCoords[currentAlgorithm] && currentQueryEmbedding) {
                 const qCoords = currentQueryCoords[currentAlgorithm];
                 
                 const l2Dists = [];
-                const cosineDists = [];
                 
                 for (let i = 0; i < propertyEmbeddings.length; i++) {
                     const pEmb = propertyEmbeddings[i];
@@ -652,25 +645,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         l2Sum += diff * diff;
                     }
                     l2Dists.push({ index: i, dist: Math.sqrt(l2Sum) });
-                    
-                    // Cosine distance
-                    let dotProduct = 0;
-                    let normA = 0;
-                    let normB = 0;
-                    for (let j = 0; j < 768; j++) {
-                        dotProduct += currentQueryEmbedding[j] * pEmb[j];
-                        normA += currentQueryEmbedding[j] * currentQueryEmbedding[j];
-                        normB += pEmb[j] * pEmb[j];
-                    }
-                    const cosineDist = 1.0 - (dotProduct / (Math.sqrt(normA) * Math.sqrt(normB) + 1e-8));
-                    cosineDists.push({ index: i, dist: cosineDist });
                 }
                 
                 l2Dists.sort((a, b) => a.dist - b.dist);
-                cosineDists.sort((a, b) => a.dist - b.dist);
                 
                 const top5L2 = l2Dists.slice(0, 5);
-                const top5Cosine = cosineDists.slice(0, 5);
                 
                 // Construct L2 lines trace (color: vibrant rose/pink #f43f5e)
                 const l2X = [], l2Y = [], l2Z = [];
@@ -687,35 +666,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     z: l2Z,
                     mode: 'lines',
                     line: {
-                        color: 'rgba(244, 63, 94, 0.65)', // Semi-transparent Rose/Pink for L2 halo
-                        width: 6.0
+                        color: '#f43f5e', // Vibrant Rose/Pink
+                        width: 3.5
                     },
                     type: 'scatter3d',
                     name: 'Top 5 L2 Neighbors (Euclidean)',
-                    hoverinfo: 'none'
-                });
-                
-                // Construct Cosine lines trace (color: vibrant cyan #06b6d4)
-                const cosX = [], cosY = [], cosZ = [];
-                top5Cosine.forEach(item => {
-                    const pCoords = propertiesData[item.index][currentAlgorithm];
-                    cosX.push(qCoords[0], pCoords[0], null);
-                    cosY.push(qCoords[1], pCoords[1], null);
-                    cosZ.push(qCoords[2], pCoords[2], null);
-                });
-                
-                traces.push({
-                    x: cosX,
-                    y: cosY,
-                    z: cosZ,
-                    mode: 'lines',
-                    line: {
-                        color: '#06b6d4', // Vibrant Cyan core for Cosine
-                        width: 2.5,
-                        dash: 'dash' // Dashed line to contrast when overlapping
-                    },
-                    type: 'scatter3d',
-                    name: 'Top 5 Cosine Neighbors',
                     hoverinfo: 'none'
                 });
             }
@@ -727,21 +682,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     x: [qCoords[0]],
                     y: [qCoords[1]],
                     z: [qCoords[2]],
-                    mode: 'markers+text',
+                    mode: 'markers',
                     text: [`🔍 QUERY: "${currentSearchQueryText}"`],
-                    textposition: 'top center',
                     marker: {
                         size: 15,
-                        color: '#fbbf24', // Neon Gold/Yellow
+                        color: '#d97706', // Amber-600
                         symbol: 'diamond',
                         line: { color: '#ffffff', width: 2 },
                         opacity: 1.0
-                    },
-                    textfont: {
-                        color: '#fbbf24',
-                        family: 'Outfit, sans-serif',
-                        size: 12,
-                        weight: 'bold'
                     },
                     type: 'scatter3d',
                     name: 'Search Query'
@@ -753,29 +701,29 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 plot_bgcolor: 'rgba(0,0,0,0)',
                 scene: {
                     xaxis: {
-                        gridcolor: 'rgba(51, 65, 85, 0.3)',
-                        zerolinecolor: 'rgba(71, 85, 105, 0.4)',
-                        backgroundcolor: '#070b19',
+                        gridcolor: 'rgba(203, 213, 225, 0.4)',
+                        zerolinecolor: 'rgba(148, 163, 184, 0.5)',
+                        backgroundcolor: '#cbd5e1',
                         showbackground: true,
-                        color: '#64748b',
+                        color: '#475569',
                         tickfont: { size: 9 },
                         title: { text: 'Dim 1', font: { size: 10 } }
                     },
                     yaxis: {
-                        gridcolor: 'rgba(51, 65, 85, 0.3)',
-                        zerolinecolor: 'rgba(71, 85, 105, 0.4)',
-                        backgroundcolor: '#070b19',
+                        gridcolor: 'rgba(203, 213, 225, 0.4)',
+                        zerolinecolor: 'rgba(148, 163, 184, 0.5)',
+                        backgroundcolor: '#cbd5e1',
                         showbackground: true,
-                        color: '#64748b',
+                        color: '#475569',
                         tickfont: { size: 9 },
                         title: { text: 'Dim 2', font: { size: 10 } }
                     },
                     zaxis: {
-                        gridcolor: 'rgba(51, 65, 85, 0.3)',
-                        zerolinecolor: 'rgba(71, 85, 105, 0.4)',
-                        backgroundcolor: '#070b19',
+                        gridcolor: 'rgba(203, 213, 225, 0.4)',
+                        zerolinecolor: 'rgba(148, 163, 184, 0.5)',
+                        backgroundcolor: '#cbd5e1',
                         showbackground: true,
-                        color: '#64748b',
+                        color: '#475569',
                         tickfont: { size: 9 },
                         title: { text: 'Dim 3', font: { size: 10 } }
                     },
@@ -785,17 +733,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 },
                 margin: { l: 0, r: 0, b: 0, t: 0 },
                 legend: {
-                    font: { color: '#cbd5e1', size: 11 },
-                    bgcolor: 'rgba(10, 15, 30, 0.6)',
-                    bordercolor: 'rgba(255, 255, 255, 0.05)',
+                    font: { color: '#334155', size: 11 },
+                    bgcolor: 'rgba(255, 255, 255, 0.85)',
+                    bordercolor: 'rgba(0, 0, 0, 0.08)',
                     borderwidth: 1,
                     x: 0.9,
                     y: 0.9
                 },
                 hoverlabel: {
-                    bgcolor: '#0f172a',
-                    bordercolor: '#1e293b',
-                    font: { color: '#f8fafc', family: 'Inter', size: 11 }
+                    bgcolor: '#ffffff',
+                    bordercolor: '#cbd5e1',
+                    font: { color: '#0f172a', family: 'Inter', size: 11 }
                 }
             };
             
@@ -841,7 +789,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         // Generates the embedding for the query by calling local APIs or falling back to synthetic
         async function fetchQueryEmbedding(queryText) {
             const customOllamaUrl = document.getElementById('ollama-url-input')?.value.trim();
-            const customGeminiKey = document.getElementById('gemini-key-input')?.value.trim();
             
             // 1. Try local server API first
             if (window.location.protocol.startsWith('http')) {
@@ -870,27 +817,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 }
             } catch (e) {
                 console.log("Direct Ollama call failed:", e);
-            }
-            
-            // 3. Try direct call to Gemini API
-            const finalGeminiKey = customGeminiKey || geminiApiKey;
-            if (finalGeminiKey) {
-                try {
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${finalGeminiKey}`;
-                    const res = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            content: { parts: [{ text: queryText }] }
-                        })
-                    });
-                    if (res.ok) {
-                        const data = await res.json();
-                        return { type: 'embedding', vector: data.embedding.values };
-                    }
-                } catch (e) {
-                    console.log("Direct Gemini API call failed:", e);
-                }
             }
             
             return null;
@@ -1297,7 +1223,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 </html>
 """
 
-def generate_visualization(properties, coords_pca, coords_tsne, pca_variance, tsne_perplexity, pca_mean, pca_components, property_embeddings, gemini_api_key):
+def generate_visualization(properties, coords_pca, coords_tsne, pca_variance, tsne_perplexity, pca_mean, pca_components, property_embeddings):
     """Integrates coordinates into the HTML template and writes it to a file."""
     processed_properties = []
     for i, p in enumerate(properties):
@@ -1321,7 +1247,6 @@ def generate_visualization(properties, coords_pca, coords_tsne, pca_variance, ts
     html_content = html_content.replace("_PCA_MEAN_", json.dumps(pca_mean))
     html_content = html_content.replace("_PCA_COMPONENTS_", json.dumps(pca_components))
     html_content = html_content.replace("_PROPERTY_EMBEDDINGS_", json.dumps(property_embeddings))
-    html_content = html_content.replace("_GEMINI_API_KEY_", json.dumps(gemini_api_key))
     
     output_filename = "real_estate_embeddings_3d.html"
     output_path_file = os.path.join(os.getcwd(), output_filename)
@@ -1661,8 +1586,6 @@ def main():
     if not env:
         env = load_env()
         
-    gemini_api_key = env.get("GEMINI_API_KEY", "")
-    
     output_file = generate_visualization(
         properties=properties, 
         coords_pca=coords_pca, 
@@ -1671,8 +1594,7 @@ def main():
         tsne_perplexity=tsne_perplexity,
         pca_mean=pca.mean_.tolist(),
         pca_components=pca.components_.tolist(),
-        property_embeddings=embeddings.tolist(),
-        gemini_api_key=gemini_api_key
+        property_embeddings=embeddings.tolist()
     )
     
     # Assign global variables for server handler

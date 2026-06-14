@@ -1,5 +1,6 @@
 import sys
 import os
+import json
 
 # Add the current directory to sys.path so we can import from the same folder
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -9,6 +10,7 @@ from database import SessionLocal, engine
 import models
 import auth
 from services import ai
+from services.storage import upload_local_file_to_imagekit
 from datetime import datetime
 
 def seed_db():
@@ -29,11 +31,23 @@ def seed_db():
         # 2. Create Users
         print("👥 Creating Users...")
         # Admins
-        user_isra = models.User(email="israhadjhassine@gmail.com", full_name="Isra Hadj Hassine", role="admin", hashed_password=auth.get_password_hash("123"))
+        user_isra = models.User(
+            email="israhadjhassine@gmail.com",
+            full_name="Isra Hadj Hassine",
+            role="admin",
+            phone_number="+216 98 123 456",
+            hashed_password=auth.get_password_hash("123")
+        )
         db.add(user_isra)
         
         # Head Agents (Managers)
-        head1 = models.User(email="j6r.chebbi6@gmail.com", full_name="Hedi Kallel", role="head_agent", hashed_password=auth.get_password_hash("managerpassword"))
+        head1 = models.User(
+            email="j6r.chebbi6@gmail.com",
+            full_name="Hedi Kallel",
+            role="head_agent",
+            phone_number="+216 22 987 654",
+            hashed_password=auth.get_password_hash("managerpassword")
+        )
         db.add(head1)
         
         db.commit()
@@ -44,17 +58,45 @@ def seed_db():
             email="killer.chebbi@gmail.com", 
             full_name="Ahmed Trabelsi", 
             role="agent", 
+            phone_number="+216 55 456 789",
             hashed_password=auth.get_password_hash("agentpassword"), 
             manager_id=head1.id
         )
-        agent2 = models.User(email="s.dridi@elite.tn", full_name="Sonia Dridi", role="agent", hashed_password=auth.get_password_hash("agentpassword"), manager_id=head1.id)
-        agent3 = models.User(email="k.jelassi@elite.tn", full_name="Karim Jelassi", role="agent", hashed_password=auth.get_password_hash("agentpassword"), manager_id=head1.id)
-        agent4 = models.User(email="n.moussa@elite.tn", full_name="Nadine Moussa", role="agent", hashed_password=auth.get_password_hash("agentpassword"), manager_id=head1.id)
+        agent2 = models.User(
+            email="s.dridi@elite.tn",
+            full_name="Sonia Dridi",
+            role="agent",
+            phone_number="+216 97 654 321",
+            hashed_password=auth.get_password_hash("agentpassword"),
+            manager_id=head1.id
+        )
+        agent3 = models.User(
+            email="k.jelassi@elite.tn",
+            full_name="Karim Jelassi",
+            role="agent",
+            phone_number="+216 24 112 233",
+            hashed_password=auth.get_password_hash("agentpassword"),
+            manager_id=head1.id
+        )
+        agent4 = models.User(
+            email="n.moussa@elite.tn",
+            full_name="Nadine Moussa",
+            role="agent",
+            phone_number="+216 50 445 566",
+            hashed_password=auth.get_password_hash("agentpassword"),
+            manager_id=head1.id
+        )
         
         db.add_all([agent1, agent2, agent3, agent4])
         
         # Client (for testing visits)
-        client = models.User(email="ikaryo.chenji6@gmail.com", full_name="John Client", role="client", hashed_password=auth.get_password_hash("clientpassword"))
+        client = models.User(
+            email="ikaryo.chenji6@gmail.com",
+            full_name="John Client",
+            role="client",
+            phone_number="+216 98 765 432",
+            hashed_password=auth.get_password_hash("clientpassword")
+        )
         db.add(client)
         
         db.commit()
@@ -85,7 +127,7 @@ def seed_db():
                 "bedrooms": 6,
                 "bathrooms": 5,
                 "area": 850,
-                "image": "/static/seed-images/villa.png",
+                "image": "/static/seed-images/ocean-breeze-mansion.webp",
                 "agent_email": "killer.chebbi@gmail.com",
                 "owner_email": "j6r.chebbi6@gmail.com",
                 "features": ["Swimming Pool", "Sea View", "Smart Home", "Garage", "Garden"],
@@ -104,7 +146,7 @@ def seed_db():
                 "bedrooms": 3,
                 "bathrooms": 2,
                 "area": 220,
-                "image": "/static/seed-images/apartment.png",
+                "image": "/static/seed-images/blue-horizon-penthouse.webp",
                 "agent_email": "s.dridi@elite.tn",
                 "owner_email": "j6r.chebbi6@gmail.com",
                 "features": ["Sea View", "Elevator", "Gym", "Garage"],
@@ -123,7 +165,7 @@ def seed_db():
                 "bedrooms": 5,
                 "bathrooms": 4,
                 "area": 1200,
-                "image": "/static/seed-images/house.png",
+                "image": "/static/seed-images/mediterranean-dream-estate.webp",
                 "agent_email": "k.jelassi@elite.tn",
                 "owner_email": "j6r.chebbi6@gmail.com",
                 "features": ["Swimming Pool", "Garden", "Garage"],
@@ -142,7 +184,7 @@ def seed_db():
                 "bedrooms": 2,
                 "bathrooms": 1,
                 "area": 110,
-                "image": "/static/seed-images/apartment.png",
+                "image": "/static/seed-images/urban-oasis-lofts.webp",
                 "agent_email": "n.moussa@elite.tn",
                 "owner_email": "j6r.chebbi6@gmail.com",
                 "features": ["Smart Home", "Gym", "High-speed Internet"],
@@ -161,7 +203,7 @@ def seed_db():
                 "bedrooms": 4,
                 "bathrooms": 3,
                 "area": 450,
-                "image": "/static/seed-images/villa.png",
+                "image": "/static/seed-images/golden-sands-villa.webp",
                 "agent_email": "killer.chebbi@gmail.com",
                 "owner_email": "j6r.chebbi6@gmail.com",
                 "features": ["Swimming Pool", "Garden", "Garage"],
@@ -180,7 +222,7 @@ def seed_db():
                 "bedrooms": 7,
                 "bathrooms": 6,
                 "area": 950,
-                "image": "/static/seed-images/house.png",
+                "image": "/static/seed-images/carthage-heritage-house.webp",
                 "agent_email": "s.dridi@elite.tn",
                 "owner_email": "j6r.chebbi6@gmail.com",
                 "features": ["Garden", "Garage", "Central Heating"],
@@ -199,7 +241,7 @@ def seed_db():
                 "bedrooms": 3,
                 "bathrooms": 2,
                 "area": 180,
-                "image": "/static/seed-images/apartment.png",
+                "image": "/static/seed-images/emerald-garden-apartment.webp",
                 "agent_email": "k.jelassi@elite.tn",
                 "owner_email": "j6r.chebbi6@gmail.com",
                 "features": ["High-speed Internet", "Elevator", "Garage"],
@@ -218,7 +260,7 @@ def seed_db():
                 "bedrooms": 2,
                 "bathrooms": 2,
                 "area": 140,
-                "image": "/static/seed-images/apartment.png",
+                "image": "/static/seed-images/sapphire-bay-residence.webp",
                 "agent_email": "n.moussa@elite.tn",
                 "owner_email": "j6r.chebbi6@gmail.com",
                 "features": ["Sea View", "Smart Home", "Elevator"],
@@ -237,7 +279,7 @@ def seed_db():
                 "bedrooms": 3,
                 "bathrooms": 2,
                 "area": 320,
-                "image": "/static/seed-images/villa.png",
+                "image": "/static/seed-images/olive-grove-retreat.webp",
                 "agent_email": "killer.chebbi@gmail.com",
                 "owner_email": "j6r.chebbi6@gmail.com",
                 "features": ["Garden", "Garage", "Central Heating"],
@@ -256,7 +298,7 @@ def seed_db():
                 "bedrooms": 2,
                 "bathrooms": 2,
                 "area": 160,
-                "image": "/static/seed-images/apartment.png",
+                "image": "/static/seed-images/skyline-business-suite.webp",
                 "agent_email": "s.dridi@elite.tn",
                 "owner_email": "j6r.chebbi6@gmail.com",
                 "features": ["Smart Home", "Gym", "Garage", "Elevator"],
@@ -275,7 +317,7 @@ def seed_db():
                 "bedrooms": 4,
                 "bathrooms": 3,
                 "area": 380,
-                "image": "/static/seed-images/house.png",
+                "image": "/static/seed-images/jasmine-valley-estate.webp",
                 "agent_email": "k.jelassi@elite.tn",
                 "owner_email": "j6r.chebbi6@gmail.com",
                 "features": ["Garage", "Garden", "Central Heating"],
@@ -294,7 +336,7 @@ def seed_db():
                 "bedrooms": 2,
                 "bathrooms": 1,
                 "area": 90,
-                "image": "/static/seed-images/house.png",
+                "image": "/static/seed-images/coral-reef-cottage.webp",
                 "agent_email": "n.moussa@elite.tn",
                 "owner_email": "j6r.chebbi6@gmail.com",
                 "features": ["Garden", "Sea View"],
@@ -313,7 +355,7 @@ def seed_db():
                 "bedrooms": 1,
                 "bathrooms": 1,
                 "area": 75,
-                "image": "/static/seed-images/apartment.png",
+                "image": "/static/seed-images/ancient-city-loft.webp",
                 "agent_email": "killer.chebbi@gmail.com",
                 "owner_email": "j6r.chebbi6@gmail.com",
                 "features": ["High-speed Internet"],
@@ -332,7 +374,7 @@ def seed_db():
                 "bedrooms": 3,
                 "bathrooms": 3,
                 "area": 280,
-                "image": "/static/seed-images/villa.png",
+                "image": "/static/seed-images/desert-rose-villa.webp",
                 "agent_email": "s.dridi@elite.tn",
                 "owner_email": "j6r.chebbi6@gmail.com",
                 "features": ["Swimming Pool", "Garden", "Garage"],
@@ -351,7 +393,7 @@ def seed_db():
                 "bedrooms": 5,
                 "bathrooms": 4,
                 "area": 520,
-                "image": "/static/seed-images/villa.png",
+                "image": "/static/seed-images/azure-coast-villa.webp",
                 "agent_email": "k.jelassi@elite.tn",
                 "owner_email": "j6r.chebbi6@gmail.com",
                 "features": ["Sea View", "Swimming Pool", "Garden"],
@@ -370,7 +412,7 @@ def seed_db():
                 "bedrooms": 2,
                 "bathrooms": 1,
                 "area": 120,
-                "image": "/static/seed-images/apartment.png",
+                "image": "/static/seed-images/palm-grove-apartment.webp",
                 "agent_email": "n.moussa@elite.tn",
                 "owner_email": "j6r.chebbi6@gmail.com",
                 "features": ["Garden", "High-speed Internet"],
@@ -389,7 +431,7 @@ def seed_db():
                 "bedrooms": 2,
                 "bathrooms": 1,
                 "area": 105,
-                "image": "/static/seed-images/apartment.png",
+                "image": "/static/seed-images/roman-ruins-view.webp",
                 "agent_email": "killer.chebbi@gmail.com",
                 "owner_email": "j6r.chebbi6@gmail.com",
                 "features": ["Elevator", "Garage"],
@@ -408,7 +450,7 @@ def seed_db():
                 "bedrooms": 3,
                 "bathrooms": 2,
                 "area": 150,
-                "image": "/static/seed-images/house.png",
+                "image": "/static/seed-images/mountain-peak-lodge.webp",
                 "agent_email": "s.dridi@elite.tn",
                 "owner_email": "j6r.chebbi6@gmail.com",
                 "features": ["Central Heating", "Garden"],
@@ -427,7 +469,7 @@ def seed_db():
                 "bedrooms": 3,
                 "bathrooms": 2,
                 "area": 210,
-                "image": "/static/seed-images/house.png",
+                "image": "/static/seed-images/sun-kissed-bungalow.webp",
                 "agent_email": "k.jelassi@elite.tn",
                 "owner_email": "j6r.chebbi6@gmail.com",
                 "features": ["Sea View", "Garden"],
@@ -446,7 +488,7 @@ def seed_db():
                 "bedrooms": 4,
                 "bathrooms": 3,
                 "area": 400,
-                "image": "/static/seed-images/villa.png",
+                "image": "/static/seed-images/lavender-fields-estate.webp",
                 "agent_email": "n.moussa@elite.tn",
                 "owner_email": "j6r.chebbi6@gmail.com",
                 "features": ["Garden", "Garage", "Smart Home"],
@@ -465,7 +507,7 @@ def seed_db():
                 "bedrooms": 1,
                 "bathrooms": 1,
                 "area": 55,
-                "image": "/static/seed-images/apartment.png",
+                "image": "/static/seed-images/old-port-studio.webp",
                 "agent_email": "killer.chebbi@gmail.com",
                 "owner_email": "j6r.chebbi6@gmail.com",
                 "features": ["Sea View", "High-speed Internet"],
@@ -484,7 +526,7 @@ def seed_db():
                 "bedrooms": 3,
                 "bathrooms": 2,
                 "area": 165,
-                "image": "/static/seed-images/apartment.png",
+                "image": "/static/seed-images/central-park-residence.webp",
                 "agent_email": "s.dridi@elite.tn",
                 "owner_email": "j6r.chebbi6@gmail.com",
                 "features": ["Elevator", "Garage", "Smart Home"],
@@ -503,7 +545,7 @@ def seed_db():
                 "bedrooms": 6,
                 "bathrooms": 4,
                 "area": 480,
-                "image": "/static/seed-images/house.png",
+                "image": "/static/seed-images/historic-medina-mansion.webp",
                 "agent_email": "k.jelassi@elite.tn",
                 "owner_email": "j6r.chebbi6@gmail.com",
                 "features": ["Garden", "Sea View"],
@@ -522,7 +564,7 @@ def seed_db():
                 "bedrooms": 2,
                 "bathrooms": 2,
                 "area": 145,
-                "image": "/static/seed-images/apartment.png",
+                "image": "/static/seed-images/modern-tech-loft.webp",
                 "agent_email": "n.moussa@elite.tn",
                 "owner_email": "j6r.chebbi6@gmail.com",
                 "features": ["Smart Home", "High-speed Internet", "Gym", "Garage"],
@@ -533,6 +575,14 @@ def seed_db():
 
         # Map emails to IDs for quick lookup
         user_map = {u.email: u.id for u in db.query(models.User).all()}
+
+        # Load Cache
+        cache_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "seed-images", "imagekit_cache.json")
+        try:
+            with open(cache_path, "r", encoding="utf-8") as f:
+                image_cache = json.load(f)
+        except Exception:
+            image_cache = {}
 
         for p in properties_data:
             prop = models.Property(
@@ -559,7 +609,43 @@ def seed_db():
             db.add(prop)
             db.commit()
             
-            img = models.PropertyImage(property_id=prop.id, image_url=p["image"], is_primary=True)
+            slug = p["slug"]
+            image_url = p["image"]
+            file_id = None
+            
+            if slug in image_cache:
+                print(f"📦 Reusing cached ImageKit URL for: {slug}")
+                image_url = image_cache[slug]["url"]
+                file_id = image_cache[slug]["file_id"]
+            else:
+                # Convert relative path to absolute path
+                rel_path = p["image"].lstrip("/")
+                abs_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
+                print(f"📤 Uploading {rel_path} to ImageKit for property {slug}...")
+                upload_res = upload_local_file_to_imagekit(abs_path)
+                if upload_res:
+                    image_url = upload_res["url"]
+                    file_id = upload_res["file_id"]
+                    # Update cache
+                    image_cache[slug] = {
+                        "url": image_url,
+                        "file_id": file_id,
+                        "uploaded_at": datetime.now().isoformat()
+                    }
+                    try:
+                        with open(cache_path, "w", encoding="utf-8") as f:
+                            json.dump(image_cache, f, indent=4)
+                    except Exception as ce:
+                        print(f"⚠️ Failed to write cache: {ce}")
+                else:
+                    print(f"❌ Failed to upload local file: {abs_path}. Reverting to local path.")
+            
+            img = models.PropertyImage(
+                property_id=prop.id,
+                image_url=image_url,
+                file_id=file_id,
+                is_primary=True
+            )
             db.add(img)
 
         # 6. Create Sample Interactions

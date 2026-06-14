@@ -38,7 +38,7 @@ Computers are great at math (numbers), but they don't actually understand human 
 ## 2. RAG: Retrieval-Augmented Generation (The "Open-Book Exam" Metaphor)
 
 ### The Problem: The "Know-it-all" AI
-Standard AI models (like ChatGPT or Gemini) were trained on a massive amount of data, but they don't know the *specific* details of your private business. If you ask them a specific question they don't know, they might "hallucinate" (confidently make up a fake answer).
+Standard AI models (like ChatGPT or DeepSeek) were trained on a massive amount of data, but they don't know the *specific* details of your private business. If you ask them a specific question they don't know, they might "hallucinate" (confidently make up a fake answer).
 
 ### The Solution: RAG (The "Open-Book Exam")
 **RAG** ensures the AI remains truthful by giving it a specific set of documents to read before it answers.
@@ -52,13 +52,13 @@ Standard AI models (like ChatGPT or Gemini) were trained on a massive amount of 
 ## 3. n8n: The "Digital Orchestrator"
 
 ### What is n8n?
-In a complex project, you have many different "workers": a Database, an AI Model, Telegram, and Google Calendar. Normally, they don't know how to talk to each other. **n8n** is the **Workflow Automation** tool that acts as the supervisor, connecting everyone together.
+In a complex project, you have many different "workers": a Database, an AI Model, and Telegram. Normally, they don't know how to talk to each other. **n8n** is the **Workflow Automation** tool that acts as the supervisor, connecting everyone together.
 
 ### How we are using it
 n8n is the "brain" behind our automation. We use it to create **active workflows**:
 
 1.  **The Telegram Bridge**: When a user sends a message on Telegram, n8n catches it, sends it to the AI for a response, and then sends that response back to the user.
-2.  **The Calendar Sync**: When a visit is booked, n8n automatically reaches out to Google Calendar to create the event without any human intervention.
+2.  **The Visit Booking Flow**: When a client requests a visit, the AI agent uses tools to check sub-agent availability and schedule the visit, writing the record directly to the database via FastAPI.
 3.  **Smart Reminders**: n8n has a clock that "wakes up" every hour. It checks the database for upcoming visits and sends a "Don't forget!" message to the client on Telegram automatically.
 
 **Why it’s better than custom code:**

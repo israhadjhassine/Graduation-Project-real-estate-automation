@@ -14,6 +14,12 @@ def dump_sql(sql, *multiparams, **params):
         # Convert the statement to a string, removing newlines to make it cleaner but maintaining the raw SQL
         statement = str(sql.compile(dialect=engine.dialect)).strip()
         if statement:
+            try:
+                table_name = sql.element.name
+                if table_name:
+                    f.write(f"-- Table: {table_name}\n")
+            except AttributeError:
+                pass
             f.write(statement + ";\n\n")
 
 # Clear the file first

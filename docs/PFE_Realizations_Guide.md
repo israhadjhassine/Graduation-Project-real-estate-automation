@@ -23,7 +23,7 @@ The objective of this PFE was to develop **Elite Estate**, an automated real est
 | **Backend** | **FastAPI** | High-performance asynchronous Python API. Offers native JSON request validation via Pydantic, auto-generated OpenAPI documentation, and fast execution speeds. |
 | **Database** | **PostgreSQL + `pgvector`** | Keeps relational tables and vector embeddings in a single ACID-compliant database. Prevents synchronization lag inherent in external vector DBs (e.g., Pinecone). |
 | **Automation** | **n8n (Self-hosted)** | Visual node-based workflow builder that manages LLM chains, database transactions, webhook listeners, and cron schedules with minimal overhead. |
-| **Embeddings** | **Gemini API** | Uses `text-embedding-004` to output 768-dimensional float arrays from property titles and descriptions for semantic search. |
+| **Embeddings** | **Ollama** | Uses `nomic-embed-text` to output 768-dimensional float arrays from property titles and descriptions for semantic search. |
 | **LLM Model** | **DeepSeek-V4-Flash** | Invoked via OpenRouter inside the n8n agent. Provides exceptional reasoning and tool-calling capabilities at low latency and cost. |
 
 ---

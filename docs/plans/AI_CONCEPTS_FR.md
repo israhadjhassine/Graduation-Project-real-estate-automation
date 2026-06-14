@@ -38,7 +38,7 @@ Les ordinateurs sont excellents en mathématiques (nombres), mais ils ne compren
 ## 2. RAG : Génération Augmentée par Récupération (La métaphore de l' "Examen à Livre Ouvert")
 
 ### ❌ Le Problème : L'IA "Je-sais-tout"
-Les modèles d'IA standards (comme ChatGPT ou Gemini) ont été formés sur une quantité massive de données, mais ils ne connaissent pas les détails *spécifiques* de votre entreprise privée. Si vous leur posez une question spécifique qu'ils ne connaissent pas, ils pourraient "halluciner" (inventer une réponse fausse avec assurance).
+Les modèles d'IA standards (comme ChatGPT ou DeepSeek) ont été formés sur une quantité massive de données, mais ils ne connaissent pas les détails *spécifiques* de votre entreprise privée. Si vous leur posez une question spécifique qu'ils ne connaissent pas, ils pourraient "halluciner" (inventer une réponse fausse avec assurance).
 
 ### ✅ La Solution : RAG (L' "Examen à Livre Ouvert")
 Le **RAG** garantit que l'IA reste véridique en lui donnant un ensemble spécifique de documents à lire avant de répondre.
@@ -52,13 +52,13 @@ Le **RAG** garantit que l'IA reste véridique en lui donnant un ensemble spécif
 ## 3. n8n : L' "Orchestrateur Numérique"
 
 ### 🧩 Qu'est-ce que n8n ?
-Dans un projet complexe, vous avez de nombreux "travailleurs" différents : une base de données, un modèle d'IA, Telegram et Google Calendar. Normalement, ils ne savent pas comment se parler. **n8n** est l'outil d' **Automatisation des flux de travail (Workflow)** qui agit comme le superviseur, connectant tout le monde ensemble.
+Dans un projet complexe, vous avez de nombreux "travailleurs" différents : une base de données, un modèle d'IA et Telegram. Normalement, ils ne savent pas comment se parler. **n8n** est l'outil d' **Automatisation des flux de travail (Workflow)** qui agit comme le superviseur, connectant tout le monde ensemble.
 
 ### 🚀 Comment nous l'utilisons
 n8n est le "cerveau" derrière notre automatisation. Nous l'utilisons pour créer des **flux de travail actifs** :
 
 1.  **Le Pont Telegram** : Lorsqu'un utilisateur envoie un message sur Telegram, n8n l'intercepte, l'envoie à l'IA pour une réponse, puis renvoie cette réponse à l'utilisateur.
-2.  **La Synchronisation du Calendrier** : Lorsqu'une visite est réservée, n8n contacte automatiquement Google Calendar pour créer l'événement sans aucune intervention humaine.
+2.  **La Réservation des Visites** : Lorsqu'un client demande une visite, l'agent IA utilise des outils pour vérifier la disponibilité du sous-agent et planifier la visite, écrivant l'enregistrement directement dans la base de données via FastAPI.
 3.  **Rappels Intelligents** : n8n possède une horloge qui "se réveille" toutes les heures. Il vérifie dans la base de données les visites à venir et envoie automatiquement un message "N'oubliez pas !" au client sur Telegram.
 
 **Pourquoi c'est mieux que du code personnalisé :**

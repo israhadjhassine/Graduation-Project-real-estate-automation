@@ -1,65 +1,60 @@
 @startuml
-autonumber
 
 actor ":Client" as Client
 boundary ":PropertyDetailsPage" as PropertyDetailsPage
 boundary ":Telegram" as Telegram
 control ":SmartAgent" as SmartAgent
 control ":PropertyController" as PropertyController
-control ":OllamaEmbeddingModel" as OllamaEmbeddingModel
+control ":OllamaEmbeddingModel" as OllamaEmbeddingModel 
 entity ":propertyModel" as propertyModel
 entity ":pgvector" as pgvector
 
+
+ref over Client, PropertyDetailsPage, SmartAgent,PropertyController,OllamaEmbeddingModel,propertyModel,pgvector : 	 telegram paire
 Client -> PropertyDetailsPage : handleTelegramInquiry()
 activate PropertyDetailsPage
 
-alt telegram_paired == false
-    ref over Client, PropertyDetailsPage, SmartAgent : 	 telegram paire
-    deactivate PropertyDetailsPage
-else telegram_paired == true
-    PropertyDetailsPage -> Telegram : openTelegramBot(start_command)
-    deactivate PropertyDetailsPage
+
+PropertyDetailsPage -> Telegram : openTelegramBot(start_command)
+deactivate PropertyDetailsPage
+
+activate Telegram
     
-    activate Telegram
+Telegram -> SmartAgent : send_query(chat_id, query)
+activate SmartAgent
     
-    Telegram -> SmartAgent : send_query(chat_id, query)
-    activate SmartAgent
+SmartAgent -> PropertyController : rag_search(query)
+activate PropertyController
     
-    SmartAgent -> PropertyController : rag_search(query)
-    activate PropertyController
+PropertyController -> OllamaEmbeddingModel : get_query_embedding(query)
+activate OllamaEmbeddingModel
     
-    PropertyController -> OllamaEmbeddingModel : get_query_embedding(query)
-    activate OllamaEmbeddingModel
+       
+OllamaEmbeddingModel --> PropertyController : return (embedded_query)
+deactivate OllamaEmbeddingModel
+        
+PropertyController -> propertyModel : get_property(embedded_query)
+activate propertyModel
+        
+propertyModel -> pgvector : searchWith_l2_distance(embedded_query)
+activate pgvector
+pgvector --> propertyModel : return (embedded_properties_result)
+deactivate pgvector
+        
+propertyModel --> PropertyController : return (embedded_properties_results)
+
+
+PropertyController -> propertyModel : get_by_description_vector(embedded_properties_results)
+propertyModel --> PropertyController :  return (properties_results)
+deactivate propertyModel
+PropertyController -> PropertyController : create_RAGresponse(properties_results)  
+PropertyController --> SmartAgent : return (RAGresponse)
+deactivate PropertyController
+        
+SmartAgent -> SmartAgent : generate_message(RAGresponse)
+SmartAgent -> Telegram : send_message(text)
+deactivate SmartAgent
+deactivate Telegram
     
-    alt ollama_unavailable
-        OllamaEmbeddingModel --> PropertyController : returns_false()
-        
-        PropertyController --> SmartAgent : alert("ollama unavailbale")
-        deactivate PropertyController
-        SmartAgent --> Telegram : ErrorMessage("ollama unavailbale")
-        deactivate SmartAgent
-        deactivate Telegram
-    else embedding_generated
-        OllamaEmbeddingModel --> PropertyController : embedding
-        deactivate OllamaEmbeddingModel
-        
-        PropertyController -> propertyModel : get_properties(embedding)
-        activate propertyModel
-        
-        propertyModel -> pgvector : searchWith_l2_distance(embedding)
-        activate pgvector
-        pgvector --> propertyModel : return_properties(embedding)
-        deactivate pgvector
-        
-        propertyModel --> PropertyController : return_properties(embedding)
-        deactivate propertyModel
-        
-        PropertyController --> SmartAgent : RAGresponse(context)
-        deactivate PropertyController
-        
-        SmartAgent --> Telegram : response_message(text)
-        deactivate SmartAgent
-        deactivate Telegram
-    end
-end
+
 @enduml

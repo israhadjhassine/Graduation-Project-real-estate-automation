@@ -1,5 +1,5 @@
 @startuml
-autonumber
+
 
 actor ":HeadAgent" as HeadAgent
 boundary ":PropertyManagementPage" as PropertyManagementPage
@@ -19,20 +19,19 @@ alt confirm_deletion
     opt property_has_images
         PropertyController -> StorageService : delete_all_images(property_id)
         activate StorageService
-        StorageService --> PropertyController : returns_true()
+        StorageService --> PropertyController : return (true)
         deactivate StorageService
     end
     
     PropertyController -> propertyModel : remove_property(property_id)
     activate propertyModel
-    propertyModel --> PropertyController : returns_true()
+    propertyModel --> PropertyController : return (true)
     deactivate propertyModel
     
-    PropertyController --> PropertyManagementPage : returns_true()
+    PropertyController --> PropertyManagementPage : alert ("property deleted")
     deactivate PropertyController
     
-    PropertyManagementPage -> PropertyManagementPage : showSuccessMessage()
-    deactivate PropertyManagementPage
+    PropertyManagementPage -> PropertyManagementPage : closeDialog()
 else cancel_deletion
     PropertyManagementPage -> PropertyManagementPage : closeDialog()
     deactivate PropertyManagementPage

@@ -18,7 +18,7 @@ def book_visit(
     payload: schemas.VisitCreate,
     db: Session = Depends(database.get_db)
 ):
-    """Called by n8n after a Google Calendar event is successfully created."""
+    """Endpoint for booking a new visit, usually called by n8n or the frontend client."""
     # Convert to UTC to match original behavior
     visit_date_utc = payload.visit_date.astimezone(timezone.utc)
     
@@ -180,16 +180,20 @@ def check_agent_availability(
                 is_available = False
                 break
             
-    # 6. Find 5 available slots starting from parsed_date_utc
+    # 6. Find available slots starting from parsed_date_utc
     available_slots = []
     current_time_utc = parsed_date_utc
     # Round to clean hour if minutes/seconds/microseconds exist
     if current_time_utc.minute > 0 or current_time_utc.second > 0 or current_time_utc.microsecond > 0:
         current_time_utc = current_time_utc.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
         
+    is_date_only = ("T" not in requested_date) and (" " not in requested_date)
+    requested_tunis_date = parsed_date_utc.replace(tzinfo=timezone.utc).astimezone(tunis_tz).date()
+
     checked_slots = 0
+    limit = 10
     # Search up to 1 week (168 hours) to prevent infinite loops
-    while len(available_slots) < 5 and checked_slots < 168:
+    while checked_slots < 168:
         # Convert slot time in UTC to Tunis time (Africa/Tunis)
         tunis_time = current_time_utc.replace(tzinfo=timezone.utc).astimezone(tunis_tz)
         hour = tunis_time.hour
@@ -203,10 +207,21 @@ def check_agent_availability(
                     conflict = True
                     break
             if not conflict:
-                available_slots.append(tunis_time.isoformat(timespec='seconds'))
-                
+                if is_date_only:
+                    # If date-only query, we restrict slots strictly to that specific day
+                    if tunis_time.date() == requested_tunis_date:
+                        available_slots.append(tunis_time.isoformat(timespec='seconds'))
+                else:
+                    available_slots.append(tunis_time.isoformat(timespec='seconds'))
+                    if len(available_slots) >= limit:
+                        break
+                        
         current_time_utc += timedelta(hours=1)
         checked_slots += 1
+        
+        # If date-only, break as soon as we move beyond the requested day
+        if is_date_only and tunis_time.date() > requested_tunis_date:
+            break
         
     return {
         "agent_id": agent_id,

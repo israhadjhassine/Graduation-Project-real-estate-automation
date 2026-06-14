@@ -61,7 +61,7 @@ export const useAdminDashboard = () => {
     statistics: analyticsDomain.statistics,
     visits: analyticsDomain.visits,
     statsLoading: analyticsDomain.loading,
-    userRolesChartData: analyticsDomain.userRolesChartData,
+    transactionRequestsPipelineChartData: analyticsDomain.transactionRequestsPipelineChartData,
     topAgentsChartData: analyticsDomain.topAgentsChartData,
     propertyStatusChartData: analyticsDomain.propertyStatusChartData,
 

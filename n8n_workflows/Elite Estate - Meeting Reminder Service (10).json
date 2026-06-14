@@ -3,15 +3,15 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Meeting Reminder Service\n\n**Updates:**\n- Trigger set to 1 minute.\n- Backend window set to 60 mins.\n- Fixed Loop with Split In Batches.\n- Cleaned up variable references ($json).\n- Applied 'Look Back' fix for Telegram ID.",
-        "height": 608,
-        "width": 1680
+        "content": "## Meeting Reminder Service",
+        "height": 496,
+        "width": 1408
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        3632,
-        1776
+        3696,
+        1888
       ],
       "id": "061da76c-84e8-4cc5-8a0a-9a8ae585821e",
       "name": "Sticky Note"
@@ -91,7 +91,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        4272,
+        4224,
         1968
       ],
       "id": "a12ce62f-0e0e-45c5-88f9-392c9fe4893d",
@@ -106,8 +106,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4496,
-        1984
+        4400,
+        1968
       ],
       "id": "91cde53a-0c4f-4a3b-93e1-1651ec34d66a",
       "name": "Get Agent Details1"
@@ -124,8 +124,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        4688,
-        1984
+        4576,
+        1968
       ],
       "id": "3a7498ab-7c5b-48a1-be3e-ba3e85cac5e5",
       "name": "Notify Client Telegram1",
@@ -149,8 +149,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4880,
-        1984
+        4752,
+        1968
       ],
       "id": "8937b6d7-1606-4954-9ae1-8b83cde8eafa",
       "name": "Notify Agent Email1"
@@ -164,8 +164,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        5072,
-        1984
+        4928,
+        1968
       ],
       "id": "3825b9f7-690a-4622-8d07-0d11f179ec46",
       "name": "Mark Reminder Sent1"
@@ -183,7 +183,7 @@
       "typeVersion": 1.2,
       "position": [
         3712,
-        2176
+        2128
       ],
       "id": "489600b1-398d-41de-b693-e1cac09a20fb",
       "name": "Error Notification1",
@@ -207,8 +207,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        4288,
-        2224
+        4176,
+        2128
       ],
       "id": "8b53d66f-2c01-46a9-b92d-acf4d80825ce",
       "name": "Debug: No Visits Found1",
@@ -314,7 +314,7 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "263c5db6-c0b6-42f1-bf36-372fc36d1188",
+  "versionId": "d1000b26-7f25-49f2-bac9-1a463683dc98",
   "meta": {
     "instanceId": "d04c073b691b19605c03318f28dd5dbd9a3f2858f68df4a3b248acf9052573d4",
     "templateCredsSetupCompleted": true

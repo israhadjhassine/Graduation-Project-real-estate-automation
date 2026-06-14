@@ -1,0 +1,69 @@
+@startuml
+
+actor ":SubAgent" as SubAgent
+boundary ":PropertyManagementPage" as PropertyManagementPage
+control ":PropertyController" as PropertyController
+entity ":propertyModel" as propertyModel
+entity ":visitModel" as visitModel
+entity ":transactionRequest" as transactionRequest
+
+ref over SubAgent, PropertyManagementPage, PropertyController, propertyModel: consult assigned properties
+
+SubAgent -> PropertyManagementPage : finalizeTransaction(property_id, action)
+activate PropertyManagementPage
+
+PropertyManagementPage -> PropertyController : finalize_property_transaction(property_id, action)
+activate PropertyController
+
+PropertyController -> propertyModel : get_by_id(property_id)
+activate propertyModel
+propertyModel --> PropertyController : return (property)
+deactivate propertyModel
+
+PropertyController -> transactionRequest : get_approved_request(property_id)
+activate transactionRequest
+transactionRequest --> PropertyController : return (transaction_request)
+deactivate transactionRequest
+
+alt no approved request exists
+    PropertyController --> PropertyManagementPage : return (error)
+    PropertyManagementPage -> PropertyManagementPage : renderAlertMessage()
+else approved request exists
+    alt action is "cancel"
+        PropertyController -> transactionRequest : update_status("cancelled")
+        activate transactionRequest
+        transactionRequest --> PropertyController : return (true)
+        deactivate transactionRequest
+
+        PropertyController -> propertyModel : set_property_status("available")
+        activate propertyModel
+        propertyModel --> PropertyController : return (property)
+        deactivate propertyModel
+        
+        PropertyController --> PropertyManagementPage : return (property)
+        PropertyManagementPage -> PropertyManagementPage : renderFinalizationResult()
+
+    else action is "complete"
+        PropertyController -> transactionRequest : update_status("completed")
+        activate transactionRequest
+        transactionRequest --> PropertyController : return (true)
+        deactivate transactionRequest
+        
+        PropertyController -> visitModel : cancel_scheduled_visits(property_id)
+        activate visitModel
+        visitModel --> PropertyController : return (true)
+        deactivate visitModel
+        
+        PropertyController -> propertyModel : finalize_transaction(property_id)
+        activate propertyModel
+        propertyModel --> PropertyController : return (property)
+        deactivate propertyModel
+        
+        PropertyController --> PropertyManagementPage : return (property)
+        PropertyManagementPage -> PropertyManagementPage : renderFinalizationResult()
+    end
+end
+deactivate PropertyController
+deactivate PropertyManagementPage
+
+@enduml

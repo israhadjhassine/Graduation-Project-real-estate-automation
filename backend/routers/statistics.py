@@ -26,6 +26,9 @@ def get_admin_statistics(db: Session = Depends(database.get_db), current_user: m
     
     # 4. User Roles Breakdown
     user_roles = AnalyticsRepository.get_role_counts(db)
+
+    # 5. Transaction Request Pipeline
+    transaction_requests_pipeline = AnalyticsRepository.get_transaction_request_pipeline_counts(db)
     
     return {
         "property_statuses": property_statuses,
@@ -34,8 +37,10 @@ def get_admin_statistics(db: Session = Depends(database.get_db), current_user: m
             "rentals": float(total_rent_value)
         },
         "top_agents": top_agents_data,
-        "user_roles": user_roles
+        "user_roles": user_roles,
+        "transaction_requests_pipeline": transaction_requests_pipeline
     }
+
 
 @router.get("/agency")
 def get_agency_statistics(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):

@@ -59,7 +59,7 @@ real-estate-automation/
 │   │   ├── statistics.py        # Dashboard Analytics & Graphs
 │   │   └── visits.py            # Scheduler, Overlaps, Agent Availability
 │   ├── services/                # Third-party API Clients
-│   │   ├── ai.py                # Gemini Embedding Engine & Semantic Search
+│   │   ├── ai.py                # Ollama Embedding Engine & Semantic Search
 │   │   ├── email.py             # SMTP Mailer Templates
 │   │   └── storage.py           # ImageKit Client SDK Configuration
 │   ├── utils/                   # Shared Helper Utilities

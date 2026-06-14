@@ -1,10 +1,6 @@
 import os
 import requests
-import google.generativeai as genai
 from typing import List
-
-# Configure the Gemini API for the assistant part
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
 def get_embedding(text: str) -> List[float]:
     """

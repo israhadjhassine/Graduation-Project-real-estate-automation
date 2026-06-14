@@ -1,0 +1,38 @@
+@startuml
+
+actor ":User" as ActorUser
+
+boundary ":SignupPage" as SignupPage
+control ":AuthController" as AuthController
+entity ":UserModel" as UserModel
+boundary ":LoginPage" as LoginPage
+
+ActorUser -> SignupPage : handleRegister(email, name,phone_number, password)
+activate SignupPage
+
+SignupPage -> AuthController : register(email, name,phone_number, password)
+activate AuthController
+
+AuthController -> UserModel : get_by_email(email)
+activate UserModel
+
+
+
+alt email_already_exists
+    UserModel --> AuthController : return (false)
+    AuthController --> SignupPage : alert("Email already registered")
+else email_is_new
+    UserModel --> AuthController : return (true)
+    AuthController -> AuthController : hash_password(password)
+    AuthController -> UserModel : create(email, name,phone_number,hashed_password)
+    UserModel --> AuthController : return (user)
+    deactivate UserModel
+    
+    AuthController --> SignupPage : alert("register success")
+    deactivate AuthController
+    
+    SignupPage -> LoginPage : navigateTo()
+    deactivate SignupPage
+end
+
+@enduml

@@ -6,7 +6,7 @@ This document explains the architecture, issues, and solutions related to image 
 
 The image handling flow is as follows:
 
-1.  **Frontend (Nuxt 3)**: Users select images in the `UploadModal.vue`.
+1.  **Frontend (Nuxt 4)**: Users select images in the `UploadModal.vue`.
 2.  **API Layer**: The frontend sends a multi-part form request to the FastAPI backend at `/properties/{id}/images`.
 3.  **Backend (FastAPI)**: 
     - The `properties` router receives the file list.

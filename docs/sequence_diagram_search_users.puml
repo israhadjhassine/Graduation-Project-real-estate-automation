@@ -1,0 +1,27 @@
+@startuml
+
+actor ":Admin" as ActorAdmin
+
+boundary ":AdminDashboard" as AdminDashboard
+control ":UserController" as UserController
+entity ":UserModel" as UserModel
+
+ref over ActorAdmin,UserController ,UserModel: view users
+ActorAdmin -> AdminDashboard : searchUsers(query)
+activate AdminDashboard
+
+AdminDashboard -> UserController : get_filtered_users(query)
+activate UserController
+
+UserController -> UserModel : get_filtered_users(query)
+activate UserModel
+UserModel --> UserController : returns (filtered_staff_users)
+deactivate UserModel
+
+UserController --> AdminDashboard : returns (filtered_staff_users)
+deactivate UserController
+AdminDashboard -> AdminDashboard : render_staff_listing(filtered_staff_users) 
+
+deactivate AdminDashboard
+
+@enduml

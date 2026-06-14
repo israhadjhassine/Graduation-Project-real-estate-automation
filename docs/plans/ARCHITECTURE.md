@@ -8,23 +8,23 @@ The project follows a **Containerized Micro-Architecture** approach, using Docke
 
 ```mermaid
 graph TD
-    User((User/Visitor))
-    Nuxt[Nuxt.js Frontend]
+    User((User/Client))
+    Nuxt[Nuxt 4 Frontend]
     FastAPI[FastAPI Backend]
     DB[(PostgreSQL + pgvector)]
     n8n[n8n Automation]
-    Gemini[Google Gemini AI]
-    Google[Google Services]
+    Ollama[Ollama local - nomic-embed-text]
+    OpenRouter[OpenRouter AI - DeepSeek]
     Telegram[Telegram Bot]
 
     User <--> Nuxt
     Nuxt <--> FastAPI
     FastAPI <--> DB
-    FastAPI <--> n8n
+    FastAPI <--> Ollama
+    n8n <--> FastAPI
     n8n <--> DB
-    n8n <--> Google
+    n8n <--> OpenRouter
     n8n <--> Telegram
-    FastAPI <--> Gemini
 ```
 
 ---
@@ -62,13 +62,13 @@ graph TD
 ### 4. Automation & Integration (The Workflow Layer)
 - **Engine**: [n8n](https://n8n.io/) (Self-hosted)
 - **Role**: Handles complex, asynchronous workflows:
-  - **Google Calendar**: Real-time meeting sync and reminders.
+  - **Visit Management**: Sub-agent assignment, visit creation in PostgreSQL database, and automated notifications.
   - **Telegram**: Intelligent bot service for leads and property inquiries.
   - **Notifications**: Emailing reports and alerts.
 
 ### 5. Artificial Intelligence
-- **Models**: Google Gemini 1.5 Pro & Embedding-001.
-- **Capability**: Intelligent property Q&A, sentiment analysis for leads, and automated report summaries.
+- **Models**: DeepSeek-V4-Flash (via OpenRouter) & Ollama (`nomic-embed-text` embeddings).
+- **Capability**: Semantic search via vector matching (`pgvector`), intelligent chatbot interactions, and automated visit planning.
 
 ---
 
@@ -176,6 +176,6 @@ backend/
   - **Services**: Encapsulate logic for third-party integrations (AI, Email, Storage).
   - **Core**: Contains models, schemas, and security engines.
 - **`frontend/`**: The Nuxt 4 user interface, focusing on a premium property browsing experience with localized SSR.
-- **`n8n_workflows/`**: Automation logic for Google Calendar, Telegram, and advanced reporting.
+- **`n8n_workflows/`**: Automation logic for database-driven visit scheduling, Telegram, and advanced reporting.
 - **`docs/`**: Centralized documentation for setup, architecture, and AI logic.
 - **`infrastructure/`**: Docker Compose configuration for multi-container orchestration.

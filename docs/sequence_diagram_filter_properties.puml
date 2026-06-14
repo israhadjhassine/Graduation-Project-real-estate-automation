@@ -17,7 +17,7 @@ activate propertyModel
 propertyModel --> PropertyController :returns(filtered_properties)
 deactivate propertyModel
 
-PropertyController --> PropertyManagementPage : returns(filtered_properties)
+PropertyController --> PropertyManagementPage : return (filtered_properties)
 deactivate PropertyController
 
 PropertyManagementPage -> PropertyManagementPage : renderPropertiesList()

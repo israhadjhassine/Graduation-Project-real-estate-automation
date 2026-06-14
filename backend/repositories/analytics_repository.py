@@ -34,6 +34,15 @@ class AnalyticsRepository:
         return {row[0]: row[1] for row in role_counts}
 
     @staticmethod
+    def get_transaction_request_pipeline_counts(db: Session) -> dict:
+        pipeline_counts = db.query(
+            models.TransactionRequest.status,
+            func.count(models.TransactionRequest.id)
+        ).group_by(models.TransactionRequest.status).all()
+        return {row[0]: row[1] for row in pipeline_counts}
+
+
+    @staticmethod
     def get_team_performance(db: Session, team_ids: list[int]) -> list:
         return db.query(
             models.User.full_name,

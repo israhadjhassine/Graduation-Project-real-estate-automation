@@ -1,0 +1,27 @@
+@startuml
+
+actor ":SubAgent" as SubAgent
+boundary ":PropertyManagementPage" as AssignedPropertiesPage
+control ":PropertyController" as PropertyController
+entity ":propertyModel" as propertyModel
+
+ref over SubAgent, PropertyController, propertyModel: Authenticate
+
+SubAgent -> AssignedPropertiesPage : loadPage()
+activate AssignedPropertiesPage
+
+AssignedPropertiesPage -> PropertyController : get_agent_properties(agent_id)
+activate PropertyController
+
+PropertyController -> propertyModel : get_all_for_agent(agent_id)
+activate propertyModel
+propertyModel --> PropertyController : return (properties_list)
+deactivate propertyModel
+
+PropertyController --> AssignedPropertiesPage : return (properties_list)
+deactivate PropertyController
+
+AssignedPropertiesPage -> AssignedPropertiesPage : renderProperties(properties_list)
+deactivate AssignedPropertiesPage
+
+@enduml

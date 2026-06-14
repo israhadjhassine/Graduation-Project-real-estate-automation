@@ -8,14 +8,25 @@ export const useAdminAnalytics = () => {
   const visits = ref<any[]>([])
   const loading = ref(false)
 
-  const userRolesChartData = computed(() => {
-    if (!statistics.value || !statistics.value.user_roles) return null
-    const data = statistics.value.user_roles
+  const transactionRequestsPipelineChartData = computed(() => {
+    if (!statistics.value || !statistics.value.transaction_requests_pipeline) return null
+    const data = statistics.value.transaction_requests_pipeline
+    
+    const colorsMap: Record<string, string> = {
+      pending: '#f59e0b',
+      approved: '#10b981',
+      completed: '#10b981',
+      rejected: '#ef4444'
+    }
+    
+    const labels = Object.keys(data)
+    const backgroundColors = labels.map(label => colorsMap[label.toLowerCase()] || '#6366f1')
+
     return {
-      labels: Object.keys(data).map(k => k.replace('_', ' ').toUpperCase()),
+      labels: labels.map(k => k.replace('_', ' ').toUpperCase()),
       datasets: [{
         data: Object.values(data),
-        backgroundColor: ['#6366f1', '#a855f7', '#ec4899', '#14b8a6', '#f59e0b'],
+        backgroundColor: backgroundColors,
         borderWidth: 0,
         hoverOffset: 10
       }]
@@ -70,7 +81,7 @@ export const useAdminAnalytics = () => {
     statistics,
     visits,
     loading,
-    userRolesChartData,
+    transactionRequestsPipelineChartData,
     topAgentsChartData,
     propertyStatusChartData,
     fetchAnalytics

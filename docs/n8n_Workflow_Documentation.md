@@ -82,7 +82,7 @@ The AI Agent utilizes **6 custom HTTP tools** to interact with the FastAPI backe
     "query": "string (semantic search query, e.g., 'villa with pool in La Marsa')"
   }
   ```
-* **Endpoint**: `POST /search/rag` (Uses Gemini embeddings and `pgvector` similarity).
+* **Endpoint**: `POST /search/rag` (Uses Ollama (nomic-embed-text) embeddings and `pgvector` similarity).
 * **Response**: Context block containing property titles, descriptions, status, pricing, and coordinates.
 
 #### 3. `check_agent_availability`

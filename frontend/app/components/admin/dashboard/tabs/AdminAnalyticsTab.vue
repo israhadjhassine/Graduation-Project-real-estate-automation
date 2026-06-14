@@ -30,11 +30,11 @@
     </div>
 
     <div v-if="!statsLoading && statistics" class="grid lg:grid-cols-2 gap-8">
-       <!-- Doughnut: User Roles -->
+       <!-- Doughnut: Transaction Request Pipeline -->
        <div class="card-premium h-[400px] flex flex-col">
-          <h3 class="text-sm font-bold text-primary-400 uppercase tracking-widest mb-4">Platform Users by Role</h3>
+          <h3 class="text-sm font-bold text-primary-400 uppercase tracking-widest mb-4">Transaction Request Pipeline</h3>
           <div class="flex-1 relative pb-4">
-             <ChartsDoughnutChart v-if="userRolesChartData" :chart-data="userRolesChartData" />
+             <ChartsDoughnutChart v-if="transactionRequestsPipelineChartData" :chart-data="transactionRequestsPipelineChartData" />
           </div>
        </div>
        
@@ -61,7 +61,7 @@
 defineProps<{
   statsLoading: boolean
   statistics: any
-  userRolesChartData: any
+  transactionRequestsPipelineChartData: any
   topAgentsChartData: any
   propertyStatusChartData: any
 }>()

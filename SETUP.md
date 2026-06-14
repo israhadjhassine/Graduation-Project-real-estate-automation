@@ -50,17 +50,18 @@ To allow Telegram to talk to your local n8n instance, you need a public tunnel.
 
 ## 3. AI & External Services
 
-We use **OpenRouter** for the AI Agent to keep it flexible and free for testing.
+We use **OpenRouter** for the AI Agent to keep it flexible and cost-effective.
 
 1.  **OpenRouter**:
     - Sign up at [openrouter.ai](https://openrouter.ai/).
     - Create an API Key.
-    - In the n8n **Smart Agent** workflow, choose the model: `google/gemini-2.0-flash-001`.
+    - In the n8n **Smart Agent** workflow, choose the model: `deepseek/deepseek-v4-flash`.
 2.  **Telegram**: Create a bot via [@BotFather](https://t.me/botfather) and copy the token.
 3.  **ImageKit.io**: Register a free account to handle property images.
 
 > [!NOTE]
-> You do **not** need a direct Google Gemini API key if you are using OpenRouter.
+> Visit scheduling is completely database-driven and handled locally. You do **not** need Google Calendar developer OAuth credentials or calendar credentials.
+
 
 ---
 
@@ -83,7 +84,7 @@ We use **OpenRouter** for the AI Agent to keep it flexible and free for testing.
 ### Access Points:
 - **Frontend**: [http://localhost:3000](http://localhost:3000)
 - **API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
-- **n8n Agent**: [http://localhost:5678](http://localhost:5678)
+- **n8n Agent**: `https://your-name.ngrok-free.app` (or [http://localhost:5678](http://localhost:5678) locally)
 
 ---
 

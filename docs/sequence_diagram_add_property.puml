@@ -1,5 +1,5 @@
 @startuml
-autonumber
+
 
 actor ":HeadAgent" as HeadAgent
 boundary ":PropertyManagementPage" as PropertyManagementPage
@@ -14,7 +14,7 @@ activate PropertyManagementPage
 
 PropertyManagementPage -> PropertyModal : openAddModal()
 activate PropertyModal
-PropertyManagementPage <-- PropertyModal : returns_true()
+PropertyManagementPage <-- PropertyModal : return (true)
 deactivate PropertyManagementPage
 
 HeadAgent -> PropertyModal : submitPropertyData(property_data, coordinates, images)
@@ -24,22 +24,22 @@ activate PropertyController
 
 PropertyController -> OllamaEmbeddingModel : get_embedding(property_data)
 activate OllamaEmbeddingModel
-OllamaEmbeddingModel --> PropertyController : returns(property_data)
+OllamaEmbeddingModel --> PropertyController : return (embedding_description)
 deactivate OllamaEmbeddingModel
 
-PropertyController -> StorageService : upload_images(images)
+PropertyController -> StorageService : upload_image(images)
 activate StorageService
-StorageService --> PropertyController : image_urls
+StorageService --> PropertyController : return ( images_urls)
 deactivate StorageService
 
-PropertyController -> propertyModel : save_property(property_data, coordinates, embedding_description, image_urls)
+PropertyController -> propertyModel : save_property(property_data, coordinates, embedding_description, images_urls)
 activate propertyModel
-propertyModel --> PropertyController : returns_true()
+propertyModel --> PropertyController : return (true)
 deactivate propertyModel
 
-PropertyController --> PropertyModal : returns_true()
+PropertyController --> PropertyModal : return (true)
 deactivate PropertyController
 
-PropertyModal -> PropertyModal : closeAndshowSuccess()
+PropertyModal -> PropertyModal : close()
 deactivate PropertyModal
 @enduml

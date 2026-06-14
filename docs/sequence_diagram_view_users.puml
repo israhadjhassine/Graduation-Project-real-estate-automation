@@ -1,0 +1,25 @@
+@startuml
+
+actor ":Admin" as ActorAdmin
+
+boundary ":AdminDashboard" as AdminDashboard
+control ":UserController" as UserController
+entity ":UserModel" as UserModel
+ref over ActorAdmin,UserController ,UserModel: Authenticate
+ActorAdmin -> AdminDashboard : loadPage()
+activate AdminDashboard
+
+AdminDashboard -> UserController : get_all_staff()
+activate UserController
+
+UserController -> UserModel : get_all_staff()
+activate UserModel
+UserModel --> UserController : return (staff_users)
+deactivate UserModel
+
+UserController --> AdminDashboard : return (staff_users)
+deactivate UserController
+AdminDashboard -> AdminDashboard : render_staff_listing(staff_users) 
+deactivate AdminDashboard
+
+@enduml 

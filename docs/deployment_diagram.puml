@@ -1,0 +1,137 @@
+@startuml
+title UML Deployment Diagram - Elite Estate Platform
+
+left to right direction
+
+skinparam BackgroundColor #FFFFFF
+skinparam Shadowing false
+skinparam RoundCorner 8
+
+' Style Definitions
+skinparam node {
+    BackgroundColor #F8F9FA
+    BorderColor #333333
+    FontName "Helvetica"
+    FontSize 12
+    FontStyle bold
+}
+
+skinparam node<<device>> {
+    BackgroundColor #EBF3FF
+    BorderColor #2B5B84
+    FontColor #2B5B84
+}
+
+skinparam node<<executionEnvironment>> {
+    BackgroundColor #E6F8E6
+    BorderColor #2E7D32
+    FontColor #1B5E20
+}
+
+skinparam node<<database>> {
+    BackgroundColor #FFF8E1
+    BorderColor #F57F17
+    FontColor #E65100
+}
+
+skinparam node<<externalService>> {
+    BackgroundColor #FFEBEE
+    BorderColor #C62828
+    FontColor #B71C1C
+}
+
+skinparam artifact {
+    BackgroundColor #ECEFF1
+    BorderColor #37474F
+    FontColor #263238
+    FontSize 11
+}
+
+skinparam database {
+    BackgroundColor #FFF8E1
+    BorderColor #F57F17
+    FontColor #E65100
+}
+
+' Nodes Definitions
+
+node "Client Machine / User Device" <<device>> as ClientDevice {
+    node "Web Browser" <<device>> as Browser
+    node "Client Telegram App" <<device>> as TelegramApp
+}
+
+node "Host Machine (Ubuntu/Windows/macOS)" <<device>> as HostMachine {
+    node "Host OS Service" <<executionEnvironment>> as HostOS {
+        node "Ollama AI Service" <<executionEnvironment>> as OllamaService {
+            artifact "nomic-embed-text Model" as OllamaModel
+        }
+    }
+
+    node "Docker Compose Environment" <<executionEnvironment>> as DockerCompose {
+        
+        node "Container: nuxt_ui" <<executionEnvironment>> as NuxtContainer {
+            node "NuxtJS Frontend Application" <<executionEnvironment>> as NuxtApp
+            artifact "Vue components" as VueComponents
+            artifact "composables" as Composables
+            artifact "TailwindCSS UI" as TailwindUI
+        }
+        
+        node "Container: FastAPI_backend" <<executionEnvironment>> as FastAPIContainer {
+            node "FastAPI Backend Server" <<executionEnvironment>> as FastAPIServer
+            artifact "Routers" as Routers
+            artifact "Services" as Services
+            artifact "Repositories" as Repositories
+            artifact "JWT Authentication" as JWTAuth
+            artifact "AI Search Module" as AISearch
+        }
+        
+        node "Container: real_estate_db" <<executionEnvironment>> as DbContainer {
+            database "PostgreSQL Database" <<database>> as PostgresDB
+            artifact "pgvector extension" as PgVector
+        }
+        
+        node "Container: n8n_automation" <<executionEnvironment>> as N8NContainer {
+            node "n8n Automation" <<executionEnvironment>> as N8NApp
+            artifact "workflows (visit reminder, smart agent)" as N8NWorkflows
+        }
+        
+        node "Container: ngrok" <<executionEnvironment>> as NgrokContainer {
+            node "ngrok Tunnel" <<executionEnvironment>> as NgrokTunnel
+        }
+    }
+}
+
+' External Services
+node "Telegram API" <<externalService>> as TelegramAPI
+node "ImageKit.io CDN" <<externalService>> as ImageKit
+node "SMTP Mail Server" <<externalService>> as SMTPServer
+node "OpenRouter API (DeepSeek)" <<externalService>> as OpenRouterAPI
+
+
+' Deployment Dependencies and Connections
+
+' Client Connections
+Browser --> NuxtApp : "HTTP / HTTPS\nPort 3000"
+Browser --> FastAPIServer : "HTTP / HTTPS\nPort 8000"
+TelegramApp --> TelegramAPI : "HTTPS\nPort 443"
+
+' Webhook Tunnelling Path
+TelegramAPI --> NgrokTunnel : "HTTPS (Webhook)\nPort 443"
+NgrokTunnel --> N8NApp : "HTTP\nPort 5678"
+
+' Docker Bridge Internal Connections
+NuxtApp --> FastAPIServer : "HTTP\nPort 8000\n(Docker Network)"
+N8NApp --> FastAPIServer : "HTTP\nPort 8000\n(Docker Network)"
+FastAPIServer --> PostgresDB : "PostgreSQL Protocol\nPort 5432\n(Docker Network)"
+N8NApp --> PostgresDB : "PostgreSQL Protocol\nPort 5432\n(Docker Network)"
+
+' Bridge to Host OS Service
+FastAPIServer --> OllamaService : "HTTP\nPort 11434\n(host.docker.internal)"
+
+' Outgoing Third-Party Integration Paths
+FastAPIServer --> ImageKit : "HTTPS\nPort 443"
+FastAPIServer --> SMTPServer : "SMTP / SMTPS\nPort 587 or 465"
+N8NApp --> TelegramAPI : "HTTPS\nPort 443"
+N8NApp --> OpenRouterAPI : "HTTPS\nPort 443"
+
+@enduml

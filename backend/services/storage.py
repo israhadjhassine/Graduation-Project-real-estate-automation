@@ -87,6 +87,61 @@ async def upload_to_imagekit(file_obj, original_filename):
         log_debug(traceback.format_exc())
         return None
 
+def upload_local_file_to_imagekit(file_path: str):
+    if not imagekit:
+        log_debug("❌ Upload failed: ImageKit not initialized.")
+        return None
+        
+    try:
+        if not os.path.exists(file_path):
+            log_debug(f"❌ Local file not found: {file_path}")
+            return None
+            
+        original_filename = os.path.basename(file_path)
+        log_debug(f"🚀 Starting upload for local file: {file_path}")
+        with open(file_path, "rb") as f:
+            content = f.read()
+        log_debug(f"📊 File read size: {len(content)} bytes")
+        
+        upload_options = UploadFileRequestOptions(
+            folder="/properties/",
+            use_unique_file_name=True
+        )
+        
+        encoded = base64.b64encode(content).decode('utf-8')
+        log_debug(f"📤 Calling ImageKit SDK upload for {original_filename}...")
+        
+        result = imagekit.upload_file(
+            file=encoded,
+            file_name=f"{uuid4()}_{original_filename}",
+            options=upload_options
+        )
+        
+        if result:
+            log_debug(f"DEBUG: result type: {type(result)}")
+            log_debug(f"DEBUG: raw result: {result}")
+            
+            url = None
+            f_id = None
+            if hasattr(result, 'url'):
+                url = result.url
+                f_id = result.file_id if hasattr(result, 'file_id') else None
+            elif isinstance(result, dict):
+                url = result.get('url')
+                f_id = result.get('fileId')
+            
+            if url:
+                log_debug(f"✅ ImageKit Upload Success: {url} (ID: {f_id})")
+                return {"url": url, "file_id": f_id}
+            else:
+                log_debug(f"❌ ImageKit Upload returned result without URL: {result}")
+                return None
+    except Exception as e:
+        import traceback
+        log_debug(f"❌ CRITICAL error during ImageKit upload: {str(e)}")
+        log_debug(traceback.format_exc())
+        return None
+
 def delete_from_imagekit(file_id):
     if not imagekit or not file_id:
         return False

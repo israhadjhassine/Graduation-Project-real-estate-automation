@@ -1,0 +1,33 @@
+@startuml
+
+
+actor ":Client" as Client
+boundary ":Telegram" as Telegram
+boundary ":SmartAgent" as SmartAgent
+control ":visits" as visits
+entity ":visitModel" as visitModel
+
+Client -> Telegram : request_cancellation()
+activate Telegram
+
+Telegram -> SmartAgent : send_message(text)
+activate SmartAgent
+
+SmartAgent -> visits : cancel_visit_db(visit_dateTime, property_id)
+activate visits
+
+visits -> visits : encrypt_telegram_id(client_telegram_chat_id)
+
+visits -> visitModel : cancel_visit(visit_dateTime, property_id, encrypted_telegram_chat_id)
+activate visitModel
+visitModel --> visits : return(true)
+deactivate visitModel
+
+visits --> SmartAgent : return("visit canceled")
+
+deactivate visits
+SmartAgent -> SmartAgent : generate_message ("visit canceled")
+SmartAgent -> Telegram : send_canceling_message(text)
+deactivate SmartAgent
+deactivate Telegram
+@enduml

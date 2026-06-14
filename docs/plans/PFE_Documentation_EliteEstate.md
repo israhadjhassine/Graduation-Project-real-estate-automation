@@ -38,12 +38,12 @@
 | Team Member | Domain |
 |---|---|
 | Member A | Full-stack platform engineering (Backend, Frontend, Database, DevOps) |
-| Member B | AI automation and workflow engineering (n8n, Telegram, Google Calendar, RAG) |
+| Member B | AI automation and workflow engineering (n8n, Telegram, Visit Scheduling, RAG) |
 
 The platform is designed to digitize and automate the full lifecycle of a real estate agency: from property listing and client discovery, through visit scheduling, to the final transaction report generation. It targets the Tunisian real estate market and is currency-aware (TND).
 
 > [!NOTE]
-> This project goes significantly beyond a standard ISET PFE scope. It incorporates enterprise-grade patterns including AI/ML vector embeddings, OAuth2, multi-container Docker orchestration, and real-time webhook automation — technologies more commonly seen in engineering school final-year projects.
+> This project goes significantly beyond a standard ISET PFE scope. It incorporates enterprise-grade patterns including AI/ML vector embeddings, multi-container Docker orchestration, and real-time webhook automation — technologies more commonly seen in engineering school final-year projects.
 
 ---
 
@@ -64,13 +64,13 @@ The project was designed to solve each of these problems through a single, unifi
 
 | # | Objective | Solution Built |
 |---|---|---|
-| 1 | Intelligent property search beyond keyword matching | AI Semantic Search (pgvector + Gemini Embeddings) |
+| 1 | Intelligent property search beyond keyword matching | AI Semantic Search (pgvector + Ollama nomic-embed-text) |
 | 2 | Structured client inquiry and visit request system | Visit management module with RBAC |
 | 3 | Automated appointment reminders for clients and agents | n8n Meeting Reminder Workflow |
 | 4 | Real-time client engagement via messaging apps | Telegram bot with AI agent (RAG) |
-| 5 | Calendar synchronization for agent availability | Google Calendar OAuth2 integration via n8n |
+| 5 | Visit scheduling and agent availability tracking | FastAPI database scheduling via n8n |
 | 6 | Transaction tracking and report generation | Automated email reports and approval workflow |
-| 7 | Role-based multi-stakeholder platform | 4-role RBAC: Admin, Head Agent, Sub-Agent, Client (with anonymous Visitor) |
+| 7 | Role-based multi-stakeholder platform | 4-role RBAC: Admin, Head Agent, Sub-Agent, Client |
 
 ---
 
@@ -94,7 +94,7 @@ Phase 4: Frontend Development
   → Nuxt 4 UI, role-based dashboards, component library
 
 Phase 5: AI & Automation Integration
-  → Gemini embeddings, RAG pipeline, n8n workflows
+  → Ollama embeddings, RAG pipeline, n8n workflows
 
 Phase 6: Testing & Documentation
   → End-to-end testing, UML finalization, PFE report
@@ -152,17 +152,16 @@ n8n was selected because:
 1. It is **self-hosted** — all workflow data stays within the project's Docker network without any third-party SaaS dependency.
 2. It provides a **low-code visual editor** for building complex, multi-step automation flows with conditional logic.
 3. It natively supports **webhook triggers**, essential for the Telegram bot integration.
-4. It has first-class support for **Google Calendar OAuth2** and **AI Agent nodes** with tool-use capabilities.
+4. It has first-class support for **HTTP Request nodes** and **AI Agent nodes** with tool-use capabilities.
 
-### 4.5 AI Models: OpenRouter (Gemini 2.0 Flash) + Ollama (nomic-embed-text)
+### 4.5 AI Models: OpenRouter (DeepSeek-V4-Flash) + Ollama (nomic-embed-text)
 
 | Model | Purpose | Provider |
 |---|---|---|
 | `nomic-embed-text` (768-dim) | Generating vector embeddings for property descriptions | Ollama (local) |
-| `gemini-1.5-pro` | RAG-based property Q&A assistant (generative) | OpenRouter |
-| `gemini-2.0-flash` (n8n agent) | Intelligent Telegram bot responses with tool use | OpenRouter (via n8n) |
+| `deepseek/deepseek-v4-flash` (n8n agent) | Intelligent Telegram bot responses with tool use | OpenRouter (via n8n) |
 
-The dual-model strategy separates embedding generation (local, fast, no cost) from generation (cloud, powerful, context-aware). The switch to OpenRouter ensures high availability and access to the latest frontier models like Gemini 2.0.
+The AI strategy separates embedding generation (local, fast, no cost) from generative reasoning (cloud, powerful, context-aware). The use of OpenRouter ensures high availability and cost-effective access to the latest models like DeepSeek.
 
 ---
 
@@ -182,7 +181,7 @@ The platform follows a **Containerized Micro-Architecture** pattern. All service
 │                         │                                   │
 │                  ┌──────▼───────┐    ┌─────────────────┐  │
 │                  │ External APIs│    │  n8n Automation  │  │
-│                  │ - Gemini API │    │  :5678           │  │
+│                  │ - OpenRouter │    │  :5678           │  │
 │                  │ - ImageKit   │    └────────┬────────┘   │
 │                  │ - SMTP       │             │            │
 │                  └──────────────┘    ┌────────▼────────┐   │
@@ -194,8 +193,7 @@ The platform follows a **Containerized Micro-Architecture** pattern. All service
                                ┌────────────────▼──────────────────┐
                                │         External Services          │
                                │  - Telegram Bot API               │
-                               │  - Google Calendar API            │
-                               │  - Google OAuth2                  │
+                               │  - OpenRouter API                 │
                                └───────────────────────────────────┘
 ```
 
@@ -323,25 +321,26 @@ This means a search for "family home with space for children" can return listing
 
 #### 6.3.2 AI Property Assistant (RAG Q&A)
 
-**The Problem**: Visitors have specific questions about individual properties ("Is there parking?", "How sunny is this apartment?") that are not always explicitly in the listing.
+**The Problem**: Visitors have specific questions about individual properties ("Is there parking?", "How sunny is this apartment?") that are not always explicitly in the listing description.
 
-**The Solution**: A Retrieval-Augmented Generation (RAG) chatbot, scoped to a single property.
+**The Solution**: A Retrieval-Augmented Generation (RAG) agent workflow integrated within the Telegram Bot.
 
 **The Workflow**:
 ```
-1. Visitor asks: "Does this property have good sun exposure?"
+1. Client asks the Telegram bot: "Does the property in Tunis have good sun exposure?"
 
-2. FastAPI retrieves from PostgreSQL:
-   - Property title, description, amenity list, location, dimensions
+2. The n8n AI Agent triggers the search_properties tool:
+   - Calls FastAPI POST /search/rag?query=...
+   - FastAPI queries PostgreSQL using vector similarity (pgvector) to find the property and retrieves title, description, amenities, location, and dimensions.
 
-3. Constructs a structured context string and sends to Gemini 1.5 Pro:
-   "You are a real estate assistant. Answer ONLY from this context:
+3. n8n constructs a structured context string and feeds it to the DeepSeek-V4-Flash model:
+   "Answer the user's question using only this property context:
     Title: Sunny Villa in Tunis...
     Amenities: Pool, Garden...
     Question: Does this property have good sun exposure?"
 
-4. Gemini generates a grounded, context-specific answer.
-   → Returned to user in real time.
+4. DeepSeek-V4-Flash generates a grounded, context-specific answer.
+   → Returned to the user via Telegram bot in real time.
 ```
 
 The critical RAG constraint — "answer *only* from this context" — prevents the AI from hallucinating facts about a property.
@@ -408,7 +407,7 @@ A major technical focus was the development of high-performance filtering and ma
 
 A sophisticated calendar component was developed to provide head agents with total oversight of their team's field operations:
 
-- **Daily Timeline View**: A Google Calendar-inspired vertical timeline that renders visits with minute-level precision.
+- **Daily Timeline View**: An interactive timeline-inspired vertical layout that renders visits with minute-level precision.
 - **Conflict & Overlap Detection**: Implemented a collision-detection algorithm that dynamically calculates the horizontal position and width of overlapping visits to ensure all events remain visible and readable.
 - **Real-Time Indicators**: Includes a dynamic "current time" line and agent-specific color coding for rapid visual identification.
 - **Scoped Filtering**: Head agents can toggle visibility for individual sub-agents to focus on specific team members.
@@ -520,7 +519,7 @@ The entire platform (5 services) is orchestrated via a single `docker-compose.ym
 - **Volume Persistence**: `pg_data/` is mounted to preserve the PostgreSQL database across container restarts.
 - **Hot-Reloading**: The `backend` and `frontend` source directories are mounted as bind volumes, enabling live code changes without container rebuilds during development.
 - **Environment Variable Management**: All secrets are stored in a `.env` file (never committed to Git). A `.env.example` template is provided for team collaboration.
-- **Timezone Configuration**: All containers are configured with `TZ=Africa/Tunis` and mount `/etc/timezone` to ensure consistent timestamps in logs, visit schedules, and Google Calendar events.
+- **Timezone Configuration**: All containers are configured with `TZ=Africa/Tunis` and mount `/etc/timezone` to ensure consistent timestamps in logs, visit schedules, and database visit records.
 
 ---
 
@@ -534,7 +533,7 @@ The entire platform (5 services) is orchestrated via a single `docker-compose.ym
 | 4 | **Multi-image upload 404 error** | Frontend sent batch upload to an endpoint that only accepted single files | Implemented new `POST /properties/{id}/images` endpoint accepting `List[UploadFile]` |
 | 5 | **Hardcoded localhost image URLs breaking ImageKit** | Frontend was prepending `http://localhost:8000/` to all image paths | Created `useAssetUrl` composable with absolute URL detection logic |
 | 6 | **Database startup race condition** | FastAPI started before PostgreSQL was fully ready | Added `service_healthy` condition with `pg_isready` health check |
-| 7 | **Google OAuth2 redirect mismatch** | Development and production URLs differed from registered Google Console URIs | Maintained separate `GOOGLE_WEB_CLIENT_ID` (for FastAPI) and `N8N_GOOGLE_CLIENT_ID` (for n8n) |
+| 7 | **Timezone conversion mismatch** | Different timezone interpretations between frontend, backend and n8n scheduler | Enforced strict Tunis timezone conversion (`Africa/Tunis`) across all services |
 | 8 | **pgvector embedding dimension mismatch** | Property embeddings stored with 768 dims; search query used different model | Standardized all embedding calls to `nomic-embed-text` via Ollama at 768 dimensions |
 | 9 | **Telegram Webhook "Gateway Timeout"** | Communication failure between Telegram and local n8n via ngrok | Implemented tunnel recovery script and updated `WEBHOOK_URL` registration |
 | 10 | **Consolidated Team Oversight** | Head Agents lacked a unified view of sub-agent schedules | Built custom TeamCalendar component with multi-agent eager loading |
@@ -556,12 +555,12 @@ All planned features from the initial project checklist were successfully implem
 | RBAC (4 registered roles) | Complete | `RoleChecker` dependency enforced on all protected routes |
 | Property CRUD with Multi-Image Upload | Complete | ImageKit CDN integration, batch upload endpoint |
 | AI Semantic Search (pgvector) | Complete | 768-dim cosine similarity search via Ollama |
-| RAG Property Q&A Assistant | Complete | Gemini 1.5 Pro, property-scoped context |
+| RAG Property Q&A Assistant | Complete | DeepSeek-V4-Flash, property-scoped context in bot |
 | Visit Scheduling & Management | Complete | Sub-agent and head-agent dashboards, **Team Visit Calendar** |
 | Role-Specific Filters | Complete | Search/Filter engines for Admin and Agent dashboards |
 | Transaction Approval Workflow | Complete | Email notifications, status state machine |
-| Telegram AI Bot (5 tools) | Complete | Multi-turn memory via PostgreSQL |
-| Google Calendar Integration | Complete | OAuth2, event creation on visit booking |
+| Telegram AI Bot (6 tools) | Complete | Multi-turn memory via PostgreSQL |
+| Visit Database Scheduling | Complete | FastAPI database booking and status updates |
 | Meeting Reminder Automation | Complete | Hourly CRON, Telegram push notification |
 | Admin & Analytics Dashboard | Complete | Platform-wide statistics charts (LineChart, BarChart) |
 | Docker Multi-Container Orchestration | Complete | 5 services, health checks, persistent volumes |
@@ -570,7 +569,7 @@ All planned features from the initial project checklist were successfully implem
 
 - **API Response Times**: Standard CRUD endpoints consistently responded under `200ms` locally.
 - **Semantic Search Latency**: pgvector cosine similarity queries on the seeded dataset (50+ properties) returned results in under `150ms`.
-- **RAG Q&A Latency**: Gemini 1.5 Pro responses averaged `1.5–3 seconds`, acceptable for an interactive chat feature.
+- **RAG Q&A Latency**: DeepSeek-V4-Flash responses averaged `1.5–3 seconds`, acceptable for an interactive chat feature.
 - **Telegram Bot**: Average end-to-end response time (message to reply) was `2–4 seconds` depending on the complexity of the AI tool calls.
 
 ### 8.3 Security Validation
@@ -854,22 +853,21 @@ User (1) ──────────────── (0..1) TelegramPairing
        ↓
 [Telegram Trigger in n8n] → Receives message
        ↓
-[AI Agent Node — Gemini 1.5 Flash]
+[AI Agent Node — DeepSeek-V4-Flash]
   → Invokes Tool: Search Properties
-  → Calls FastAPI GET /search/rag?query=...
-  → Receives matching properties with agent calendar IDs
+  → Calls FastAPI POST /search/rag?query=...
+  → Receives matching properties with assigned agent IDs
        ↓
 [AI Agent] → Confirms property and proposes visit time
        ↓
 [AI Agent] → Invokes Tool: Schedule Visit
-  → POST /visits  (FastAPI creates visit record)
-  → Google Calendar API creates event on agent's calendar
+  → POST /visits/book  (FastAPI creates visit record in DB)
   → Stores telegram_chat_id on the visit record
        ↓
 [Meeting Reminder Workflow — runs hourly]
   → Finds visit within 24 hours with reminder_sent=false
   → Sends Telegram message to client
-  → PATCH /visits/{id}: reminder_sent=true
+  → PUT /visits/{id}/reminder-sent: reminder_sent=true
 ```
 
 ---
@@ -882,8 +880,8 @@ This project successfully delivered a production-grade, AI-enhanced real estate 
 - A **secure, multi-role RESTful API** with proper RBAC and JWT authentication.
 - A **relational database with built-in vector search**, eliminating the need for a separate AI infrastructure service.
 - A **premium, multi-page web frontend** with role-specific dashboards and an interactive property map.
-- An **AI-powered Telegram bot** with persistent memory and 5 callable tools, turning a simple messaging app into a full-featured client engagement channel.
-- **Fully automated workflows** for appointment reminders and Google Calendar synchronization.
+- An **AI-powered Telegram bot** with persistent memory and 6 callable tools, turning a simple messaging app into a full-featured client engagement channel.
+- **Fully automated workflows** for appointment reminders and database-driven visit scheduling.
 - A **fully containerized deployment** that can be launched on any machine with Docker in a single command.
 
 ### 10.2 Lessons Learned
@@ -896,7 +894,7 @@ This project successfully delivered a production-grade, AI-enhanced real estate 
 
 4. **Separation of Concerns Enables Collaboration**: The strict division between Member A (platform) and Member B (automation) was possible because the FastAPI REST API served as a well-defined contract between the two domains. Member B's n8n workflows consumed the same API endpoints as the web frontend.
 
-5. **AI Features Require Grounding**: Early prototypes of the RAG assistant returned hallucinated property details. Constraining the Gemini prompt to "answer ONLY from this context" eliminated this problem and made the feature trustworthy and production-safe.
+5. **AI Features Require Grounding**: Early prototypes of the RAG assistant returned hallucinated property details. Constraining the AI agent's prompt to "answer ONLY from this context" eliminated this problem and made the feature trustworthy and production-safe.
 
 ### 10.3 Limitations
 

@@ -1,11 +1,10 @@
 @startuml
-autonumber
+
 
 actor ":Client" as Client
 boundary ":Telegram" as Telegram
 boundary ":SmartAgent" as SmartAgent
 control ":visits" as visits
-control ":security" as security
 entity ":visitModel" as visitModel
 
 Client -> Telegram : request_reschedule()
@@ -14,42 +13,34 @@ activate Telegram
 Telegram -> SmartAgent : process_message(text)
 activate SmartAgent
 
-SmartAgent -> visits : check_agent_availability(agent_id, new_date)
+SmartAgent -> visits : check_agent_availability(agent_id, new_dateTime)
 activate visits
-visits -> visitModel : find_agent_visits(agent_id, new_date)
+visits -> visitModel : find_agent_visits(agent_id, new_dateTime)
 activate visitModel
-visitModel --> visits : returns(visits_list)
-deactivate visitModel
-visits --> SmartAgent : returns(available_slots)
-deactivate visits
+visitModel --> visits : return (visits_list)
 
-SmartAgent --> Telegram : show_available_slots(available_slots)
-deactivate SmartAgent
-deactivate Telegram
+visits --> SmartAgent : return (available_slots)
+SmartAgent -> SmartAgent : generate_message (available_slots)
 
-Client -> Telegram : confirm_new_slot(slot)
-activate Telegram
+SmartAgent --> Telegram : show_available_slots(text)
 
-Telegram -> SmartAgent : process_message(text)
-activate SmartAgent
+Client -> Telegram : confirm_new_slot()
 
-SmartAgent -> visits : update_visit_db(original_visit_date, new_visit_date, property_id)
-activate visits
+Telegram -> SmartAgent : send_message(text)
 
-visits -> security : encrypt_telegram_id(client_telegram_id)
-activate security
-security --> visits : returns(encrypted_chat_id)
-deactivate security
+SmartAgent -> visits : update_visit(original_visit_dateTime, new_visit_dateTime, property_id)
 
-visits -> visitModel : update_visit(original_visit_date, new_visit_date, property_id, encrypted_chat_id)
-activate visitModel
-visitModel --> visits : returns_true()
+visits -> visits : encrypt_sequence diagram schedule visit(client_telegram_chat_id)
+
+visits -> visitModel : update_visit(original_visit_dateTime, new_visit_dateTime, property_id, encrypted_telegram_chat_id)
+visitModel --> visits : return (new_visit_dateTime)
 deactivate visitModel
 
-visits --> SmartAgent : returns_true()
-deactivate visits
+visits --> SmartAgent : return (new_visit_dateTime)
 
-SmartAgent --> Telegram : rescheduling_confirmation_msg
+deactivate visits
+SmartAgent -> SmartAgent : generate_message (new_visit_dateTime)
+SmartAgent -> Telegram : send_confirmation_msg(text)
 deactivate SmartAgent
 deactivate Telegram
 @enduml
