@@ -49,3 +49,5 @@ ENV/
 
 # 8. AI Generated Reports (NEVER COMMIT THESE)
 report/
+
+docs/
