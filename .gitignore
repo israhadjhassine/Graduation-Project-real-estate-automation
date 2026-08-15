@@ -45,3 +45,7 @@ venv/
 ENV/
 .pytest_cache/
 .mypy_cache/
+
+
+# 8. AI Generated Reports (NEVER COMMIT THESE)
+report/

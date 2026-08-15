@@ -2,7 +2,7 @@
 
 A premium, modular real estate platform that leverages AI (DeepSeek-V4-Flash + RAG) and advanced automation (n8n + Telegram) to streamline property management and appointment scheduling.
 
-## 🌟 Core Features
+##  Core Features
 
 -   **Modular Backend**: Professionally organized FastAPI architecture using the Service-Router pattern.
 -   **AI Assistant (RAG)**: Retrieval-Augmented Generation for intelligent property search using local Ollama (`nomic-embed-text`) embeddings and `pgvector`.
@@ -10,7 +10,7 @@ A premium, modular real estate platform that leverages AI (DeepSeek-V4-Flash + R
 -   **Smart Reporting**: Automated transaction reports and lead management.
 -   **Premium UI**: High-performance frontend built with Nuxt 4 and Tailwind CSS.
 
-## 🛠 Tech Stack
+##   Tech Stack
 
 -   **Backend**: FastAPI (Python), SQLAlchemy, PostgreSQL/pgvector.
 -   **AI**: DeepSeek-V4-Flash (via OpenRouter), Ollama (Local nomic-embed-text Embeddings).
@@ -19,7 +19,7 @@ A premium, modular real estate platform that leverages AI (DeepSeek-V4-Flash + R
 -   **Frontend**: Nuxt 4, Vue 3, Tailwind CSS.
 -   **Infrastructure**: Docker, Docker Compose.
 
-## 🚀 Getting Started
+##  Getting Started
 
 1.  **Environment Setup**: Copy `.env.example` to `.env` and fill in your API keys (OpenRouter, ImageKit, SMTP).
 2.  **Launch Services**: Run `docker-compose up -d`.
